@@ -232,39 +232,3 @@ def update_all_lessons():
         affected_groups_deactivated = deactivate_canceled_lessons(Lesson, timedelta(hours=1))
         affected_groups.update(affected_groups_deactivated)
         # notify_users(affected_groups)
-
-# def parse_lessons(group):
-#     url = MAIN_URL + group.link
-#     soup = get_soup_from_url(url)
-#
-#     current_date = None
-#     for row in soup.find_all('tr', class_='shadow'):
-#         if row.find(colspan=True):  # Это строка с датой
-#             date_str = row.text.strip().split(' - ')[0]
-#             current_date = datetime.strptime(date_str, '%d.%m.%Y').date()
-#
-#         else:
-#             cells = row.find_all('td')
-#             if len(cells) == 5:
-#                 lesson_number = cells[0].text.strip()
-#                 subject_title = cells[1].text.strip()
-#                 classroom_title = cells[2].text.strip() or "Дист."
-#                 teacher_name = cells[3].text.strip()
-#                 subgroup = cells[4].text.strip()  # or '0'
-#
-#                 teacher = get_or_create_cached(Teacher, {'full_name': teacher_name})
-#                 classroom = get_or_create_cached(Classroom, {'title': classroom_title})
-#                 subject = get_or_create_cached(Subject, {'title': subject_title})
-#
-#                 Lesson.objects.update_or_create(
-#                     group=group,
-#                     date=current_date,
-#                     lesson_number=lesson_number,
-#                     subject=subject,
-#                     defaults={
-#                         'classroom': classroom,
-#                         'teacher': teacher,
-#                         'subgroup': subgroup,
-#                         'is_active': True,
-#                     }
-#                 )
