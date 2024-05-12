@@ -1,0 +1,58 @@
+services:
+  pgdb:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    env_file:
+      - ./.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+  django:
+    build: .
+    container_name: django
+    command: >
+      sh -c "dockerize -wait tcp://pgdb:5432 -wait tcp://redis:6379 -timeout 30s
+      && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - 8010:8000
+    env_file:
+      - ./.env
+    depends_on:
+      - pgdb
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+
+
+  celery-worker:
+    build: .
+    container_name: celery_worker
+    command: celery -A eazyclass worker --loglevel=debug # заменить потом на info
+    volumes:
+      - .:/app
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+      - pgdb
+
+  celery-beat:
+    build: .
+    container_name: celery_beat
+    command: celery -A eazyclass beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+      - pgdb
+
+volumes:
+  postgres_data:

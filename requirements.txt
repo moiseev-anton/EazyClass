@@ -1,0 +1,10 @@
+Django==5.0.4
+psycopg2-binary==2.9.9
+celery==5.4.0
+redis==5.0.4
+django-celery-beat==2.6.0
+django-redis==5.4.0
+beautifulsoup4==4.12.3
+requests==2.31.0
+lxml==5.2.1
+python-dotenv
