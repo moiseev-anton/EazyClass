@@ -2,6 +2,7 @@ FROM python:3.12-alpine
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
+#TODO Попробовать сделать для Django отдельный Dockerfile и requirements.txt
 # Установка dockerize
 RUN apk add --no-cache openssl \
     && apk --no-cache add ca-certificates wget \
@@ -12,4 +13,4 @@ RUN apk add --no-cache openssl \
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-#COPY . .
+COPY . .

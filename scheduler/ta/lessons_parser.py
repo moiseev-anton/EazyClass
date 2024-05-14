@@ -7,17 +7,19 @@ from datetime import timedelta
 
 import requests
 from bs4 import BeautifulSoup
+from celery import group
 from celery import shared_task
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Model, Max
 from django.utils import timezone
 
-from .models import Group, Subject, Lesson, Classroom, Teacher
+from ..models import Group, Subject, Lesson, Classroom, Teacher
 
 MAIN_URL = 'https://bincol.ru/rasp/'
-TIMEOUT_LESSONS = 172800
-TIMEOUT_OTHER = 86400
+TIMEOUT_LESSONS = 60 * 60 * 24 * 3
+TIMEOUT_OTHER = 60 * 60 * 24 * 7
+LESSON_CUTOFF_TIMEDELTA = timedelta(hours=1)
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +90,8 @@ def get_soup_from_url(url: str) -> BeautifulSoup:
         return BeautifulSoup()
 
 
-def parse_lessons_data(group: Group) -> list[dict]:
+# @shared_task
+def parse_lessons_data(group_id: int) -> list[dict]:
     """
     Парсит данные уроков для конкретной группы и возвращает список уроков в виде словарей.
 
@@ -98,7 +101,8 @@ def parse_lessons_data(group: Group) -> list[dict]:
     Returns:
         list[dict]: Список словарей, каждый из которых содержит данные об уроке.
     """
-    url = MAIN_URL + group.link
+    group_ = Group.objects.get(id=group_id)
+    url = MAIN_URL + group_.link
     soup = get_soup_from_url(url)
 
     current_date = None
@@ -117,27 +121,19 @@ def parse_lessons_data(group: Group) -> list[dict]:
                     'classroom_title': cells[2].text.strip() or "(дист)",
                     'teacher_name': cells[3].text.strip(),
                     'subgroup': cells[4].text.strip(),
-                    'group': group
+                    'group': group_
                 }
                 lessons_data.append(lesson_dict)
     return lessons_data
 
 
-def fetch_all_lessons_data() -> list[dict]:
-    """
-    Получает данные всех уроков для всех активных групп и формирует общий список данных уроков.
-
-    Returns:
-        list[dict]: Список, содержащий данные уроков для всех активных групп.
-    """
-    all_lessons_data = []
-    active_groups = Group.objects.filter(is_active=True)  # Получаем все активные группы
-
-    for group in active_groups:
-        group_lessons_data = parse_lessons_data(group)  # Получаем данные занятий текущей группы
-        all_lessons_data.extend(group_lessons_data)  # Добавляем данные занятий текущей группы к общему списку
-
-    return all_lessons_data
+def fetch_all_lessons_data_async():
+    group_ids = Group.objects.filter(is_active=True).values_list('id', flat=True)
+    tasks = [parse_lessons_data.s(group_id) for group_id in group_ids]
+    task_group = group(tasks)
+    result = task_group.apply_async()
+    lessons_data = result.get()  # Получение результатов выполнения всех задач
+    return [item for sublist in lessons_data for item in sublist]
 
 
 def classify_lessons(all_lessons_data: list[dict]) -> (list[Lesson], list[Lesson]):
@@ -215,7 +211,7 @@ def deactivate_canceled_lessons(model: Model, delta: timedelta):
     return affected_groups_dates
 
 
-@shared_task
+# @shared_task
 def update_all_lessons():
     """
     Задача, выполняемая Celery. Извлекает данные всех уроков, классифицирует их для обновления
@@ -224,11 +220,27 @@ def update_all_lessons():
     Выполняет также деактивацию отмененых занятий.
     """
     with transaction.atomic():
-        # Получаем
-        all_lessons_data = fetch_all_lessons_data()
+        # Получаем данные о всех занятиях
+        all_lessons_data = fetch_all_lessons_data_async()
+
+        # Сепарируем старые данные от новых, отбираем данные для рассылки уведомлений
         lessons_to_create, lessons_to_update, affected_groups = classify_lessons(all_lessons_data)
+
         Lesson.objects.bulk_create(lessons_to_create)
         Lesson.objects.bulk_update(lessons_to_update, ['updated_at'])
-        affected_groups_deactivated = deactivate_canceled_lessons(Lesson, timedelta(hours=1))
+
+        affected_groups_deactivated = deactivate_canceled_lessons(Lesson, LESSON_CUTOFF_TIMEDELTA)
         affected_groups.update(affected_groups_deactivated)
         # notify_users(affected_groups)
+
+
+
+
+
+
+
+
+
+
+
+
