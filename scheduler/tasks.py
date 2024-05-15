@@ -14,19 +14,14 @@ from django.db import transaction
 from django.db.models import Model, Max
 from django.utils import timezone
 
-from ..models import Group, Subject, Lesson, Classroom, Teacher
+from .models import Group, Subject, Lesson, Classroom, Teacher
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 TIMEOUT_LESSONS = 60 * 60 * 24 * 3
-TIMEOUT_OTHER = 60 * 60 * 24 * 7
+TIMEOUT_OTHER = 60 * 60 * 24 * 30
 LESSON_CUTOFF_TIMEDELTA = timedelta(hours=1)
 
 logger = logging.getLogger(__name__)
-
-
-# class ScheduleParser():
-#     def __init__(self):
-#         pass
 
 
 def get_response_from_url(url: str):
@@ -68,27 +63,20 @@ def get_soup_from_url(url: str) -> BeautifulSoup:
         return BeautifulSoup()
 
 
-def generate_cache_key(model_name: str, params: dict) -> str:
+def generate_cache_key(params: dict) -> str:
     """
     Генерирует уникальный ключ кэша для заданной модели и параметров.
 
     Args:
-        model_name (str): Название модели.
         params (dict): Словарь параметров, которые идентифицируют объект модели.
 
     Returns:
         str: Уникальный ключ кэша.
     """
-    serializable_params = {}
-    for key, value in params.items():
-        if isinstance(value, Model):
-            serializable_params[key] = value.id  # Преобразование модели в ID
-        else:
-            serializable_params[key] = value
+    serializable_params = {key: str(value) for key, value in params.items()}
     params_string = json.dumps(serializable_params, sort_keys=True)
     hash_digest = hashlib.md5(params_string.encode()).hexdigest()
-    return f"{model_name}_{hash_digest}"
-
+    return hash_digest
 
 def cache_lesson_key(data: dict):
     """
@@ -97,7 +85,7 @@ def cache_lesson_key(data: dict):
     Args:
         data (Dict): Данные урока для генерации ключа кэша.
     """
-    key = generate_cache_key('Lesson', data)
+    key = generate_cache_key(data)
     cache.set(key, 'exists', timeout=TIMEOUT_LESSONS)
 
 
@@ -113,7 +101,7 @@ def get_or_create_cached(model: Model, defaults: dict, timeout: int = TIMEOUT_OT
     Returns:
         Model: Экземпляр найденного или созданного объекта.
     """
-    key = generate_cache_key(model.__name__, defaults)
+    key = generate_cache_key(defaults)
     obj = cache.get(key)
     if not obj:
         obj, created = model.objects.get_or_create(**defaults)
@@ -246,7 +234,7 @@ def classify_lessons(all_lessons_data: list[dict]) -> (list[Lesson], list[Lesson
             subject=subject,
             is_active=True
         )
-        key = generate_cache_key('Lesson', data)
+        key = generate_cache_key(data)
         if cache.get(key):
             lesson.updated_at = current_time
             lessons_to_update.append(lesson)
@@ -317,5 +305,3 @@ def update_all_lessons():
     if affected_groups:
         pass
     # notify_users(affected_groups)
-
-

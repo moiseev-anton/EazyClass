@@ -147,6 +147,10 @@ LOGGING = {
         'standard': {
             'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
         },
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process} {thread} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'console': {
@@ -158,7 +162,8 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': 'celery.log',
-            'formatter': 'standard',
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
     },
     'loggers': {

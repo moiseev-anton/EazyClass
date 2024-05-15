@@ -21,7 +21,7 @@ class Faculty(models.Model):
             self.save(update_fields=['short_title'])
 
     def __str__(self):
-        return self.title
+        return f"{self.short_title} [ID: {self.id}]"
 
 
 class Group(models.Model):
@@ -33,32 +33,54 @@ class Group(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} [ID: {self.id}]"
 
 
 class Teacher(models.Model):
-    full_name = models.CharField(max_length=64)
+    full_name = models.CharField(max_length=64, unique=True)
     short_name = models.CharField(max_length=30)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.full_name
+        return f"{self.full_name} [ID: {self.id}]"
+
+    def save(self, *args, **kwargs):
+        if not self.short_name:
+            self.short_name = self.generate_short_name()
+        super().save(*args, **kwargs)
+
+    def generate_short_name(self):
+        full_name = str(self.full_name).strip()
+        if full_name in ("не указано", ""):
+            self.full_name = "не указано"
+            return "не указано"
+
+        names = full_name.split()
+        short_name = names[0]  # Берем первый элемент полностью
+
+        # Добавляем первые буквы второго и третьего элементов, если они есть
+        if len(names) > 1:
+            short_name += f" {names[1][0]}."
+        if len(names) > 2:
+            short_name += f"{names[2][0]}."
+
+        return short_name
 
 
 class Subject(models.Model):
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} [ID: {self.id}]"
 
 
 class Classroom(models.Model):
-    title = models.CharField(max_length=10)
+    title = models.CharField(max_length=10, unique=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.title
+        return f"{self.title}"
 
 
 class Lesson(models.Model):
@@ -73,11 +95,11 @@ class Lesson(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.group}-{self.date}-{self.lesson_number}-{self.subject}"
+        return f"{self.group.title} - {self.date} - #{self.lesson_number} - {self.subject.title} [ID: {self.id}]"
 
 
 class User(models.Model):
-    telegram_id = models.BigIntegerField(unique=True,)
+    telegram_id = models.BigIntegerField(unique=True, )
     user_name = models.CharField(max_length=32)
     first_name = models.CharField(max_length=32)
     last_name = models.CharField(max_length=32)
@@ -88,4 +110,37 @@ class User(models.Model):
     registration_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.user_name
+        return f"{self.user_name} ({self.first_name} {self.last_name}) [ID: {self.id}]"
+
+
+class LessonTimeTemplate(models.Model):
+    day_of_week = models.CharField(max_length=10, unique=True, choices=[
+        ('Monday', 'Понедельник'),
+        ('Tuesday', 'Вторник'),
+        ('Wednesday', 'Среда'),
+        ('Thursday', 'Четверг'),
+        ('Friday', 'Пятница'),
+        ('Saturday', 'Суббота')
+    ])
+    lesson_number = models.IntegerField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        unique_together = ('day_of_week', 'lesson_number')
+
+    def __str__(self):
+        return f"{self.get_day_of_week_display()} - Пара {self.lesson_number}: {self.start_time} - {self.end_time}"
+
+
+class LessonTime(models.Model):
+    date = models.DateField()
+    lesson_number = models.IntegerField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        unique_together = ('date', 'lesson_number')
+
+    def __str__(self):
+        return f"{self.date} - Пара {self.lesson_number}: {self.start_time} - {self.end_time}"

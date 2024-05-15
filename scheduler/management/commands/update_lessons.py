@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from scheduler.tasks import update_all_lessons, parse_lessons_data
+from scheduler.tasks import update_all_lessons, parse_group_lessons_data
 # from scheduler.models import Group
 
 
