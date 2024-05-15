@@ -12,7 +12,10 @@ UPDATE_ACTIVE_PERIOD = timedelta(weeks=1)
 
 @shared_task
 def update_last_active_records():
-    # TODO задокументировать
+    """
+    Обновляет поле `last_active` для учителей, кабинетов и предметов,
+    которые были использованы в уроках за последнюю неделю.
+    """
     one_week_ago = timezone.now() - UPDATE_ACTIVE_PERIOD
     current_time = timezone.now()
 
@@ -36,7 +39,7 @@ def update_last_active_records():
 
 @shared_task
 def delete_inactive_records():
-    # TODO задокументоровать
+    """Удаляет записи учителей, кабинетов и предметов, которые не использовались более года."""
     one_year_ago = timezone.now() - DELETE_INACTIVE_PERIOD
 
     with transaction.atomic():

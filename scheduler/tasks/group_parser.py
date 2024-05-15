@@ -7,7 +7,7 @@ from celery import shared_task
 from django.db import transaction
 from django.db.models import Model, Max
 
-from .models import Faculty, Group
+from ..models import Faculty, Group
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 GROUPS_PAGE_LINK = 'grupp.php'
