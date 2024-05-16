@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 
@@ -21,7 +22,7 @@ class Faculty(models.Model):
             self.save(update_fields=['short_title'])
 
     def __str__(self):
-        return f"{self.short_title} [ID: {self.id}]"
+        return f"{self.short_title}"
 
 
 class Group(models.Model):
@@ -33,7 +34,7 @@ class Group(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.title} [ID: {self.id}]"
+        return f"{self.title}"
 
 
 class Teacher(models.Model):
@@ -42,7 +43,7 @@ class Teacher(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.full_name} [ID: {self.id}]"
+        return f"{self.short_name}"
 
     def save(self, *args, **kwargs):
         if not self.short_name:
@@ -72,7 +73,7 @@ class Subject(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.title} [ID: {self.id}]"
+        return f"{self.title}"
 
 
 class Classroom(models.Model):
@@ -83,19 +84,45 @@ class Classroom(models.Model):
         return f"{self.title}"
 
 
+class LessonTime(models.Model):
+    date = models.DateField()
+    lesson_number = models.IntegerField()
+    start_time = models.TimeField(null=True)
+    end_time = models.TimeField(null=True)
+
+    class Meta:
+        unique_together = ('date', 'lesson_number')
+        indexes = [
+            models.Index(fields=['date', 'lesson_number']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.start_time or not self.end_time:
+            try:
+                template = LessonTimeTemplate.objects.get(day_of_week=self.date.strftime('%A'),
+                                                          lesson_number=self.lesson_number)
+                self.start_time = template.start_time
+                self.end_time = template.end_time
+            except ObjectDoesNotExist:
+                self.start_time = None
+                self.end_time = None
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.date} - {self.lesson_number} пара"
+
+
 class Lesson(models.Model):
     group = models.ForeignKey(Group, related_name='lessons', on_delete=models.CASCADE, null=True)
-    date = models.DateField(null=True)
+    lesson_time = models.ForeignKey(LessonTime, related_name='lessons', on_delete=models.CASCADE, null=True)
     subject = models.ForeignKey(Subject, related_name='lessons', on_delete=models.CASCADE, null=True)
     teacher = models.ForeignKey(Teacher, related_name='lessons', on_delete=models.CASCADE, null=True)
     classroom = models.ForeignKey(Classroom, related_name='lessons', on_delete=models.CASCADE, null=True)
-    lesson_number = models.CharField(max_length=1)
-    subgroup = models.CharField(max_length=1)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.group.title} - {self.date} - #{self.lesson_number} - {self.subject.title} [ID: {self.id}]"
+        return f"{self.group.title}-{self.lesson_time}-{self.subject}"
 
 
 class User(models.Model):
@@ -114,7 +141,7 @@ class User(models.Model):
 
 
 class LessonTimeTemplate(models.Model):
-    day_of_week = models.CharField(max_length=10, unique=True, choices=[
+    day_of_week = models.CharField(max_length=10, choices=[
         ('Monday', 'Понедельник'),
         ('Tuesday', 'Вторник'),
         ('Wednesday', 'Среда'),
@@ -131,16 +158,3 @@ class LessonTimeTemplate(models.Model):
 
     def __str__(self):
         return f"{self.get_day_of_week_display()} - Пара {self.lesson_number}: {self.start_time} - {self.end_time}"
-
-
-class LessonTime(models.Model):
-    date = models.DateField()
-    lesson_number = models.IntegerField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-
-    class Meta:
-        unique_together = ('date', 'lesson_number')
-
-    def __str__(self):
-        return f"{self.date} - Пара {self.lesson_number}: {self.start_time} - {self.end_time}"

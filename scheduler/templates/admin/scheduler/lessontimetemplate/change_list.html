@@ -1,0 +1,15 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools %}
+  {{ block.super }}
+  <div class="object-tools">
+    <ul class="object-tools">
+      <li>
+        <a href="{% url 'admin:apply_template_changes' %}" class="link">
+          {% trans "Применить шаблон звонков" %}
+        </a>
+      </li>
+    </ul>
+  </div>
+{% endblock %}

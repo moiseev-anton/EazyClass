@@ -8,4 +8,5 @@ flower==2.0.1
 beautifulsoup4==4.12.3
 requests==2.31.0
 lxml==5.2.1
+django-admin-rangefilter==0.12.4
 python-dotenv

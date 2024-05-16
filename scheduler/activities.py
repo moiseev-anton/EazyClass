@@ -1,6 +1,11 @@
+from datetime import datetime, timedelta
 from datetime import time
+
 from django.db import transaction
-from .models import LessonTimeTemplate
+from django.db.models import Max
+from django.utils import timezone
+
+from .models import LessonTime, LessonTimeTemplate
 
 
 def make_active(modeladmin, request, queryset):
@@ -79,3 +84,29 @@ def reset_timetable(modeladmin, request, queryset):
 
 
 reset_timetable.short_description = "Сбросить шаблон звонков к станд. виду"
+
+
+def apply_template_changes(start_date_str):
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        raise ValueError('Неверный формат . Use YYYY-MM-DD format.')
+
+    today = timezone.now().date()
+    if start_date < today:
+        raise ValueError('Шаблон не применяется к прошедшим датам')
+
+    end_date = LessonTime.objects.aggregate(max_date=Max('date'))['max_date']
+
+    if end_date:
+        with transaction.atomic():
+            for single_date in (start_date + timedelta(n) for n in range((end_date - start_date).days + 1)):
+                day_of_week = single_date.strftime('%A')
+                templates = LessonTimeTemplate.objects.filter(day_of_week=day_of_week)
+                for template in templates:
+                    LessonTime.objects.filter(date=single_date, lesson_number=template.lesson_number).update(
+                        start_time=template.start_time,
+                        end_time=template.end_time
+                    )
+    else:
+        raise ValueError('No records found in LessonTime to update.')

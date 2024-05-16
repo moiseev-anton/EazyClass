@@ -14,12 +14,12 @@ from django.db import transaction
 from django.db.models import Model, Max
 from django.utils import timezone
 
-from ..models import Group, Subject, Lesson, Classroom, Teacher
+from ..models import Group, Subject, Lesson, Classroom, Teacher, LessonTime
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 TIMEOUT_LESSONS = 60 * 60 * 24 * 3
 TIMEOUT_OTHER = 60 * 60 * 24 * 30
-LESSON_CUTOFF_TIMEDELTA = timedelta(hours=1)
+# LESSON_CUTOFF_TIMEDELTA = timedelta(hours=1)
 
 logger = logging.getLogger(__name__)
 
@@ -225,17 +225,19 @@ def classify_lessons(all_lessons_data: list[dict]) -> (list[Lesson], list[Lesson
         if not group_:
             continue
 
+        lesson_time = get_or_create_cached(LessonTime, {'date': data['date'], 'lesson_number': data['lesson_number']},
+                                           TIMEOUT_OTHER)
+
         lesson = Lesson(
             group=group_,
-            date=data['date'],
-            lesson_number=data['lesson_number'],
+            lesson_time=lesson_time,
             teacher=teacher,
             classroom=classroom,
             subject=subject,
             is_active=True
         )
-        key = generate_cache_key(data)
-        if cache.get(key):
+        lesson_key = generate_cache_key(data)
+        if cache.get(lesson_key):
             lesson.updated_at = current_time
             lessons_to_update.append(lesson)
         else:
@@ -286,9 +288,11 @@ def update_all_lessons():
 
     Выполняет также деактивацию отмененых занятий.
     """
+    global current_timestamp
+    current_timestamp = timezone.now().timestamp()
     try:
         get_response_from_url(MAIN_URL)
-        logger.info(f"Сайт {MAIN_URL} доступен. Начинаем обновление уроков.")
+        logger.info(f"Сайт {MAIN_URL} доступен. Начинается обновление уроков.")
     except requests.RequestException as e:
         logger.error(f"Обновление уроков не выполнено: {str(e)}.")
         return
