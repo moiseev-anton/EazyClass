@@ -1,21 +1,19 @@
 import hashlib
 import json
 import logging
-from collections import defaultdict
 from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
-from celery import shared_task, group, chain
+from celery import shared_task, group
 from django.core.cache import cache
-from django.db import transaction
 from django.db.models import Model
 from django.utils import timezone
 
 from ..models import Group, Subject, Lesson, Classroom, Teacher, LessonTime
 
 MAIN_URL = 'https://bincol.ru/rasp/'
-TIMEOUT_LESSONS = 60 * 60 * 24 * 3
+TIMEOUT_LESSONS = 60 * 60 * 24
 TIMEOUT_OTHER = 60 * 60 * 24 * 30
 
 logger = logging.getLogger(__name__)
@@ -23,7 +21,7 @@ logger = logging.getLogger(__name__)
 current_timestamp = 0
 
 
-def get_response_from_url(url: str):
+def get_response_from_url(url: str) -> requests.Response:
     """Отправляет HTTP-запрос GET к указанному URL и возвращает ответ.
 
     Args:
@@ -62,18 +60,22 @@ def get_soup_from_url(url: str) -> BeautifulSoup:
         return BeautifulSoup()
 
 
-def generate_cache_key(params: dict) -> str:
+def generate_cache_key(model_class: Model, params: dict) -> str:
     """
     Генерирует уникальный ключ кэша для заданной модели и параметров.
 
     Args:
+        model:
         params (dict): Словарь параметров, которые идентифицируют объект модели.
 
     Returns:
         str: Уникальный ключ кэша.
     """
+    if params.get('date'):
+        params['date'] = params['date'].isoformat()
     params_string = json.dumps(params, sort_keys=True)
-    hash_digest = hashlib.md5(params_string.encode()).hexdigest()
+    key = model_class.__name__ + params_string
+    hash_digest = hashlib.md5(key.encode()).hexdigest()
     return hash_digest
 
 
@@ -88,7 +90,28 @@ def cache_lesson_key(key: str, timestamp: float):
     cache.set(key, timestamp, timeout=TIMEOUT_LESSONS)
 
 
-def get_or_create_cached(model: Model, defaults: dict, timeout: int = TIMEOUT_OTHER):
+def make_lesson_cache_key(lesson: Lesson) -> str:
+    """
+    Создает ключ кэша для урока.
+
+    Args:
+        lesson (Lesson): Экземпляр урока.
+
+    Returns:
+        str: Уникальный ключ кэша для урока.
+    """
+    lesson_key_data = {
+        'group_id': lesson.group.id,
+        'subgroup': lesson.subgroup,
+        'lesson_time_id': lesson.lesson_time.id,
+        'subject_id': lesson.subject.id,
+        'teacher_id': lesson.teacher.id,
+        'classroom_id': lesson.classroom.id,
+    }
+    return generate_cache_key(Lesson, lesson_key_data)
+
+
+def get_or_create_cached(model_class: Model, defaults: dict, timeout: int = TIMEOUT_OTHER) -> Model:
     """
     Получает из кэша или создает объект модели в БД с кэшированием, используя словарь атрибутов.
 
@@ -100,17 +123,28 @@ def get_or_create_cached(model: Model, defaults: dict, timeout: int = TIMEOUT_OT
     Returns:
         Model: Экземпляр найденного или созданного объекта.
     """
-    key = generate_cache_key(defaults)
+    key = generate_cache_key(model_class, defaults)
     obj = cache.get(key)
     if not obj:
-        obj, created = model.objects.get_or_create(**defaults)
+        obj, created = model_class.objects.get_or_create(**defaults)
         cache.set(key, obj, timeout=timeout)  # Установка кэша с заданным тайм-аутом
     return obj
 
 
-def get_cached_by_id(model: Model, obj_id: int, timeout: int = TIMEOUT_OTHER):
+def get_cached_by_id(model: Model, obj_id: int, timeout: int = TIMEOUT_OTHER) -> Model:
+    """
+    Получает объект модели из кэша по ID или из базы данных.
+
+    Args:
+        model (Model): Класс модели Django.
+        obj_id (int): Идентификатор объекта.
+        timeout (int): Время жизни кэша в секундах.
+
+    Returns:
+        Model: Экземпляр объекта модели.
+    """
     obj_params = {model.__name__: obj_id}
-    cache_key = generate_cache_key(obj_params)
+    cache_key = generate_cache_key(model, obj_params)
     obj = cache.get(cache_key)
     if obj:
         logger.debug(f"{model.__name__} с ID {obj_id} получен из кэша.")
@@ -127,18 +161,18 @@ def get_cached_by_id(model: Model, obj_id: int, timeout: int = TIMEOUT_OTHER):
 
 def parse_group_schedule_soup(group_id: int, soup: BeautifulSoup) -> list[dict]:
     """
-        Парсит данные расписания из объекта BeautifulSoup для определённой группы.
-        Обрабатывает каждую строку таблицы расписания, извлекая даты и информацию об уроках.
+    Парсит данные расписания из объекта BeautifulSoup для определённой группы.
+    Обрабатывает каждую строку таблицы расписания, извлекая даты и информацию об уроках.
 
-        Args:
-            group_id (int): Идентификатор группы, для которой происходит парсинг расписания.
-            soup (BeautifulSoup): Объект BeautifulSoup, содержащий HTML-код страницы расписания.
+    Args:
+        group_id (int): Идентификатор группы, для которой происходит парсинг расписания.
+        soup (BeautifulSoup): Объект BeautifulSoup, содержащий HTML-код страницы расписания.
 
-        Returns:
-            list[dict]: Список словарей, где каждый словарь содержит информацию о конкретном уроке.
-                        Ключи словаря включают 'date', 'lesson_number', 'subject_title',
-                        'classroom_title', 'teacher_name', и 'subgroup'.
-        """
+    Returns:
+        list[dict]: Список словарей, где каждый словарь содержит информацию о конкретном уроке.
+                    Ключи словаря включают 'date', 'lesson_number', 'subject_title',
+                    'classroom_title', 'teacher_name', и 'subgroup'.
+    """
     current_date = None
     lessons_data = []
     for row in soup.find_all('tr', class_='shadow'):
@@ -180,41 +214,40 @@ def parse_group_lessons_data(group_id: int) -> list[dict]:
     """
     group_ = get_cached_by_id(Group, group_id, timeout=TIMEOUT_OTHER)
     if not group_:
-        return []  # Возвращаем пустой список, если не получили группу
+        return []
 
     url = MAIN_URL + group_.link
     schedule_soup = get_soup_from_url(url)
     if not schedule_soup:
-        return []  # Возвращаем пустой список, если soup пустой
+        return []
 
-    return parse_group_schedule_soup(group_id, schedule_soup)
+    lessons_data = parse_group_schedule_soup(group_id, schedule_soup)
 
+    # Если расписание доступно, но пустое, значит надо все равно вернуть id группы
+    # для деактивации занятий (очищаем расписание на эти дни)
+    if not lessons_data:
+        lessons_data.append({'group_id': group_id})
 
-def fetch_all_lessons_data_async():
-    group_ids = Group.objects.filter(is_active=True).values_list('id', flat=True)
-    tasks = [parse_group_lessons_data.s(group_id) for group_id in group_ids]
-    task_group = group(tasks)
-    result = task_group.apply_async()
-    lessons_data = result.get()  # Получение результатов выполнения всех задач
-    return [item for sublist in lessons_data for item in sublist]
+    return lessons_data
 
 
-def classify_lessons(all_lessons_data: list[dict]) -> (list[Lesson], dict):
+def save_lessons(lessons_data: list[dict]) -> set:
     """
-    Классифицирует уроки на основе данных из списка всех уроков, определяя, какие из них следует создать
-    или обновить в базе данных.
+    Сохраняет данные новых уроков в базе данных.
 
     Args:
-        all_lessons_data (list[dict]): Список словарей, содержащий данные уроков.
+        lessons_data (list[dict]): Список словарей, содержащий данные уроков.
 
     Returns:
-        (list[Lesson], list[Lesson]): Два списка объектов Lesson:
-                                          первый для создания новых уроков, второй для обновления существующих.
+        set: Множество дат, для которых обнаружены изменения.
     """
     lessons_to_create = []
-    affected_groups_dates = defaultdict(set)
+    affected_dates = set()
 
-    for data in all_lessons_data:
+    for data in lessons_data:
+        if 'date' not in data:
+            continue  # Пропускаем данные без даты (т.е. только с идентификатором группы)
+
         teacher = get_or_create_cached(Teacher, {'full_name': data['teacher_name']}, TIMEOUT_OTHER)
         classroom = get_or_create_cached(Classroom, {'title': data['classroom_title']}, TIMEOUT_OTHER)
         subject = get_or_create_cached(Subject, {'title': data['subject_title']}, TIMEOUT_OTHER)
@@ -233,72 +266,80 @@ def classify_lessons(all_lessons_data: list[dict]) -> (list[Lesson], dict):
             lesson_time=lesson_time,
             teacher=teacher,
             classroom=classroom,
-            subject=subject,
-            is_active=True
+            subject=subject
         )
-        lesson_key = make_lesson_cache_key(lesson) # data возможно лучше переделать в словарь из id полeй
+        lesson_key = make_lesson_cache_key(lesson)
         if not cache.get(lesson_key):
             lessons_to_create.append(lesson)
-            cache_lesson_key(lesson_key, current_timestamp)  # Кэшируем ключ
-            affected_groups_dates[lesson.group.id].add(lesson.lesson_time.date)  # Наполняем словарь для уведомлений
+            affected_dates.add(lesson.lesson_time.date)  # Аккумулируем множество дат для которых обнаружены изменения
 
-    return lessons_to_create, affected_groups_dates
+        cache_lesson_key(lesson_key, current_timestamp)  # Кэшируем ключ(сохраняем/обновляем timestamp)
 
+    # Записываем новые данные в БД
+    if lessons_to_create:
+        Lesson.objects.bulk_create(lessons_to_create)
 
-def make_lesson_cache_key(lesson: Lesson):
-    lesson_key_data = {
-        'group_id': lesson.group.id,
-        'subgroup': lesson.subgroup,
-        'lesson_time_id': lesson.lesson_time.id,
-        'subject_id': lesson.subject.id,
-        'teacher_id': lesson.teacher.id,
-        'classroom_id': lesson.classroom.id,
-        'is_active': True
-    }
-    return generate_cache_key(lesson_key_data)
+    return affected_dates
 
 
-def deactivate_canceled_lessons():
+def deactivate_canceled_lessons(group_id: int) -> set:
     """
-    Деактивирует записи, которые не обновлялись в течение заданного временного интервала и
-    имеют при этом дату проведения не раньше сегодняшней. Это предназначено для отмененных или измененных
-    занятий, которые не актуальны на момент проведения.
+    Деактивирует занятия в БД, которые не обновлялись в течение заданного временного интервала и
+    имеют при этом дату проведения не раньше сегодняшней.
 
     Args:
-    model (Model): Класс модели Django, который нужно обновить.
-    delta (timedelta): Временной интервал, после которого записи считаются устаревшими.
+        group_id (int): Идентификатор группы, для которой деактивируются занятия.
+
+    Returns:
+        set: Множество дат, для которых обнаружены изменения.
     """
     today = timezone.now().date()
     lessons_to_deactivate_ids = set()
+    affected_dates = set()
 
     # Получаем QuerySet занятий, которые будут деактивированы
-    lessons = Lesson.objects.filter(lesson_time__date__gte=today, is_active=True)
+    lessons = Lesson.objects.filter(group__id=group_id, lesson_time__date__gte=today, is_active=True)
 
-    # Собираем идентификаторы затронутых групп и даты для уведомлений
-    affected_groups_dates = defaultdict(set)
     for lesson in lessons:
         lesson_key = make_lesson_cache_key(lesson)
         cached_timestamp = cache.get(lesson_key)
 
         if not cached_timestamp or cached_timestamp != current_timestamp:
             lessons_to_deactivate_ids.add(lesson.id)
-            affected_groups_dates[lesson.group.id].add(lesson.lesson_time.date)
+            affected_dates.add(lesson.lesson_time.date)  # Аккумулируем множество дат для которых обнаружены изменения
             cache.delete(lesson_key)
 
     # Производим деактивацию
     if lessons_to_deactivate_ids:
         Lesson.objects.filter(id__in=lessons_to_deactivate_ids).update(is_active=False)
 
-    return affected_groups_dates
+    return affected_dates
 
 
 @shared_task
-def update_all_lessons():
+def process_group_lessons_data(lessons_data: list[dict]):
     """
-    Задача, выполняемая Celery. Извлекает данные всех уроков, классифицирует их для обновления
-    или создания в базе данных, и выполняет соответствующие массовые операции.
+    Обрабатывает данные уроков для группы, сохраняя новые уроки и деактивируя отменённые.
 
-    Выполняет также деактивацию отмененых занятий.
+    Args:
+        lessons_data (list[dict]): Список словарей, содержащий данные об уроке.
+    """
+    if lessons_data:
+        group_id = lessons_data[0]['group_id']
+        affected_dates = save_lessons(lessons_data)
+        affected_dates_deactivated = deactivate_canceled_lessons(group_id)
+        affected_dates.update(affected_dates_deactivated)
+        if affected_dates:
+            pass
+            # notify_users(group_id, affected_dates)
+
+
+@shared_task
+def update_schedule():
+    """
+    Обновляет данные уроков для всех активных групп.
+
+    Выполняет также деактивацию отмененных занятий.
     """
     global current_timestamp
     current_timestamp = timezone.now().timestamp()
@@ -309,14 +350,9 @@ def update_all_lessons():
         logger.error(f"Обновление уроков не выполнено: {str(e)}.")
         return
 
-    with transaction.atomic():
-        all_lessons_data = fetch_all_lessons_data_async()
-        lessons_to_create, affected_groups = classify_lessons(all_lessons_data)
-        Lesson.objects.bulk_create(lessons_to_create)
-        affected_groups_deactivated = deactivate_canceled_lessons(Lesson)
-        affected_groups.update(affected_groups_deactivated)
-        logger.info(f"Уроки успешно обновлены.")
+    group_ids = Group.objects.filter(is_active=True).values_list('id', flat=True)
+    tasks = [parse_group_lessons_data.s(group_id).set(link=process_group_lessons_data.s()) for group_id in
+             group_ids]
+    group(tasks).apply_async()
 
-    if affected_groups:
-        pass
-    # notify_users(affected_groups)
+    logger.info(f"Запущены задачи для обновления уроков для {len(group_ids)} групп.")
