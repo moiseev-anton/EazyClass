@@ -36,21 +36,21 @@ def fill_default_lesson_time_template():
     Заполняет таблицу LessonTimeTemplate значениями по умолчанию.
     """
     weekday_times = [
-        {'lesson_number': 1, 'start_time': time(8, 0), 'end_time': time(9, 35)},
-        {'lesson_number': 2, 'start_time': time(9, 45), 'end_time': time(11, 20)},
-        {'lesson_number': 3, 'start_time': time(12, 20), 'end_time': time(13, 55)},
-        {'lesson_number': 4, 'start_time': time(14, 5), 'end_time': time(15, 40)},
-        {'lesson_number': 5, 'start_time': time(15, 50), 'end_time': time(17, 25)},
-        {'lesson_number': 6, 'start_time': time(17, 35), 'end_time': time(19, 10)},
+        {'lesson_number': '1', 'start_time': time(8, 0), 'end_time': time(9, 35)},
+        {'lesson_number': '2', 'start_time': time(9, 45), 'end_time': time(11, 20)},
+        {'lesson_number': '3', 'start_time': time(12, 20), 'end_time': time(13, 55)},
+        {'lesson_number': '4', 'start_time': time(14, 5), 'end_time': time(15, 40)},
+        {'lesson_number': '5', 'start_time': time(15, 50), 'end_time': time(17, 25)},
+        {'lesson_number': '6', 'start_time': time(17, 35), 'end_time': time(19, 10)},
     ]
 
     saturday_times = [
-        {'lesson_number': 1, 'start_time': time(8, 0), 'end_time': time(9, 35)},
-        {'lesson_number': 2, 'start_time': time(9, 45), 'end_time': time(11, 20)},
-        {'lesson_number': 3, 'start_time': time(11, 50), 'end_time': time(13, 25)},
-        {'lesson_number': 4, 'start_time': time(13, 35), 'end_time': time(15, 10)},
-        {'lesson_number': 5, 'start_time': time(15, 20), 'end_time': time(16, 55)},
-        {'lesson_number': 6, 'start_time': time(17, 5), 'end_time': time(18, 40)},
+        {'lesson_number': '1', 'start_time': time(8, 0), 'end_time': time(9, 35)},
+        {'lesson_number': '2', 'start_time': time(9, 45), 'end_time': time(11, 20)},
+        {'lesson_number': '3', 'start_time': time(11, 50), 'end_time': time(13, 25)},
+        {'lesson_number': '4', 'start_time': time(13, 35), 'end_time': time(15, 10)},
+        {'lesson_number': '5', 'start_time': time(15, 20), 'end_time': time(16, 55)},
+        {'lesson_number': '6', 'start_time': time(17, 5), 'end_time': time(18, 40)},
     ]
 
     weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']

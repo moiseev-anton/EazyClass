@@ -44,19 +44,19 @@ def fill_lesson_times():
     # logger.info(f"Расписание звонков заполнены на период {start_date} - {end_date}.")
 
 
-@shared_task
-def apply_template_changes(start_date=None):
-    if start_date is None:
-        start_date = timezone.now().date()
-    lessons_to_update = LessonTime.objects.filter(date__gte=start_date)
-    for lesson in lessons_to_update:
-        day_of_week = lesson.date.strftime('%A')
-        try:
-            template = LessonTimeTemplate.objects.get(day_of_week=day_of_week, lesson_number=lesson.lesson_number)
-            lesson.start_time = template.start_time
-            lesson.end_time = template.end_time
-            lesson.save()
-        except LessonTimeTemplate.DoesNotExist:
-            continue
+# @shared_task
+# def apply_template_changes(start_date=None):
+#     if start_date is None:
+#         start_date = timezone.now().date()
+#     lessons_to_update = LessonTime.objects.filter(date__gte=start_date)
+#     for lesson in lessons_to_update:
+#         day_of_week = lesson.date.strftime('%A')
+#         try:
+#             template = LessonTimeTemplate.objects.get(day_of_week=day_of_week, lesson_number=lesson.lesson_number)
+#             lesson.start_time = template.start_time
+#             lesson.end_time = template.end_time
+#             lesson.save()
+#         except LessonTimeTemplate.DoesNotExist:
+#             continue
     # logger.info(f"Измененый шаблон \"звонков\" применен")
 

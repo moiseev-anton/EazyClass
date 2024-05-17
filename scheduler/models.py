@@ -86,7 +86,7 @@ class Classroom(models.Model):
 
 class LessonTime(models.Model):
     date = models.DateField()
-    lesson_number = models.IntegerField()
+    lesson_number = models.CharField(max_length=1)
     start_time = models.TimeField(null=True)
     end_time = models.TimeField(null=True)
 
@@ -118,15 +118,15 @@ class Lesson(models.Model):
     subject = models.ForeignKey(Subject, related_name='lessons', on_delete=models.CASCADE, null=True)
     teacher = models.ForeignKey(Teacher, related_name='lessons', on_delete=models.CASCADE, null=True)
     classroom = models.ForeignKey(Classroom, related_name='lessons', on_delete=models.CASCADE, null=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.group.title}-{self.lesson_time}-{self.subject}"
+        return f"{self.group.title}({self.subgroup})-{self.lesson_time}-{self.subject}"
 
 
 class User(models.Model):
-    telegram_id = models.BigIntegerField(unique=True, )
+    telegram_id = models.BigIntegerField(unique=True)
     user_name = models.CharField(max_length=32)
     first_name = models.CharField(max_length=32)
     last_name = models.CharField(max_length=32)
