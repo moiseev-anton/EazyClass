@@ -130,28 +130,6 @@ class Lesson(models.Model):
     def __str__(self):
         return f"{self.group.title}({self.subgroup})-{self.lesson_time}-{self.subject}"
 
-    def __eq__(self, other):
-        if isinstance(other, Lesson):
-            return (
-                self.group_id == other.group_id and
-                self.lesson_time_id == other.lesson_time_id and
-                self.subject_id == other.subject_id and
-                self.teacher_id == other.teacher_id and
-                self.classroom_id == other.classroom_id and
-                self.subgroup == other.subgroup
-            )
-        return False
-
-    def __hash__(self):
-        return hash((
-            self.group_id,
-            self.lesson_time_id,
-            self.subject_id,
-            self.teacher_id,
-            self.classroom_id,
-            self.subgroup
-        ))
-
     class Meta:
         indexes = [
             models.Index(fields=['group', 'lesson_time']),

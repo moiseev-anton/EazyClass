@@ -11,7 +11,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Model
 
-from .db_query import synchronize_lessons
+from .db_queries import synchronize_lessons
 from ..models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
 
 MAIN_URL = 'https://bincol.ru/rasp/'
@@ -62,7 +62,7 @@ def get_lesson_obj_from_data(data: dict, timeout=CACHE_TIMEOUT) -> Lesson:
     classroom_id = get_or_create_cached_id(Classroom, {'title': data['classroom_title']}, timeout)
     subject_id = get_or_create_cached_id(Subject, {'title': data['subject_title']}, timeout)
     lesson_time_id = get_or_create_cached_id(
-        LessonTime,{'date': date, 'lesson_number': data['lesson_number']}, timeout
+        LessonTime, {'date': date, 'lesson_number': data['lesson_number']}, timeout
     )
 
     lesson = Lesson(
@@ -91,7 +91,7 @@ def extract_lessons_data(group_id: int, soup: BeautifulSoup):
             if date_pattern.match(date_str):
                 current_date = date_str
             else:
-                logger.error(f"Получен неверный формат даты '{date_str}'")
+                logger.warning(f"Получен неверный формат даты '{date_str}'")
                 raise ValueError
 
         elif current_date and row.find('td'):
@@ -201,6 +201,7 @@ def send_notifications(group_date_map):
 
     # Создаем группу задач и выполняем их параллельно
     group(tasks).apply_async()
+
 
 @shared_task
 def send_group_notification(group_id, dates):
