@@ -19,7 +19,7 @@ class FacultyAdmin(admin.ModelAdmin):
 
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
-    list_display = ('title', 'faculty', 'grade', 'is_active', 'updated_at')
+    list_display = ('id', 'title', 'faculty', 'grade', 'is_active', 'updated_at')
     search_fields = ('title',)
     list_filter = ('faculty', 'grade', 'is_active')
     ordering = ('title',)
@@ -52,6 +52,12 @@ class ClassroomAdmin(admin.ModelAdmin):
     ordering = ('title',)
     actions = [make_active, make_inactive, toggle_active]
 
+@admin.register(LessonBuffer)
+class LessonBufferAdmin(admin.ModelAdmin):
+    list_display = ('group', 'lesson_time', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+    search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
+    list_filter = ('group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+    actions = [make_active, make_inactive, toggle_active]
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):

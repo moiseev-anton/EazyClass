@@ -36,6 +36,11 @@ class Group(models.Model):
     def __str__(self):
         return f"{self.title}"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_active']),
+        ]
+
 
 class Teacher(models.Model):
     full_name = models.CharField(max_length=64, unique=True)
@@ -94,6 +99,7 @@ class LessonTime(models.Model):
         unique_together = ('date', 'lesson_number')
         indexes = [
             models.Index(fields=['date', 'lesson_number']),
+            models.Index(fields=['date']),
         ]
 
     def save(self, *args, **kwargs):
@@ -120,6 +126,53 @@ class Lesson(models.Model):
     classroom = models.ForeignKey(Classroom, related_name='lessons', on_delete=models.CASCADE, null=True)
     subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.group.title}({self.subgroup})-{self.lesson_time}-{self.subject}"
+
+    def __eq__(self, other):
+        if isinstance(other, Lesson):
+            return (
+                self.group_id == other.group_id and
+                self.lesson_time_id == other.lesson_time_id and
+                self.subject_id == other.subject_id and
+                self.teacher_id == other.teacher_id and
+                self.classroom_id == other.classroom_id and
+                self.subgroup == other.subgroup
+            )
+        return False
+
+    def __hash__(self):
+        return hash((
+            self.group_id,
+            self.lesson_time_id,
+            self.subject_id,
+            self.teacher_id,
+            self.classroom_id,
+            self.subgroup
+        ))
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['group', 'lesson_time']),
+            models.Index(fields=['group', 'lesson_time', 'subgroup']),
+        ]
+
+
+class LessonBuffer(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
+    lesson_time = models.ForeignKey(LessonTime, on_delete=models.CASCADE, null=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True)
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, null=True)
+    subgroup = models.CharField(max_length=1, default='0')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['group', 'lesson_time']),
+            models.Index(fields=['group', 'lesson_time', 'subgroup']),
+        ]
 
     def __str__(self):
         return f"{self.group.title}({self.subgroup})-{self.lesson_time}-{self.subject}"
