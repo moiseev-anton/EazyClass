@@ -69,8 +69,13 @@ def synchronize_lessons(group_ids):
                 FROM scheduler_lesson l_sub
                 JOIN scheduler_lessontime lt ON l_sub.lesson_time_id = lt.id
                 LEFT JOIN scheduler_lessonbuffer lb ON l_sub.group_id = lb.group_id AND l_sub.lesson_time_id = lb.lesson_time_id
-                WHERE l_sub.group_id = l.group_id AND l_sub.lesson_time_id = l.lesson_time_id
-                AND l_sub.group_id IN %s AND lt.date >= %s AND lb.group_id IS NULL AND lb.lesson_time_id IS NULL
+                WHERE l_sub.group_id = l.group_id
+                    AND l_sub.lesson_time_id = l.lesson_time_id
+                    AND l_sub.group_id IN %s
+                    AND lt.date >= %s AND
+                    lb.group_id IS NULL 
+                    AND lb.lesson_time_id IS NULL
+                    AND l.is_active = true
                 RETURNING l.group_id, l.lesson_time_id
             )
             SELECT d.group_id, lt.date

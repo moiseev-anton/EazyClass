@@ -170,8 +170,8 @@ def process_data_final(results):
     # Обрабатываем успешные результаты
 
 
-@shared_task
-def update_schedule():
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def update_schedule(self):
     try:
         fetch_response_from_url(MAIN_URL)
         logger.info('Сайт доступен. Начинается обновление расписания.')
@@ -190,6 +190,7 @@ def update_schedule():
         logger.info(f"Обновление расписания завершено.")
     except Exception as e:
         logger.error(f"Ошибка обновления расписания: {e}")
+        raise self.retry(exc=e)
 
 
 @shared_task

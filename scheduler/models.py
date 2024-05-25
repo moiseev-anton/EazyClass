@@ -24,6 +24,10 @@ class Faculty(models.Model):
     def __str__(self):
         return f"{self.short_title}"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_active']),
+        ]
 
 class Group(models.Model):
     title = models.CharField(max_length=255)
