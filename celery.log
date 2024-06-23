@@ -1067,3 +1067,1072 @@ WARNING 2024-05-25 12:54:01,975 inspector 1 140213754886968 Inspect method regis
 WARNING 2024-05-25 12:54:01,976 inspector 1 140213749582648 Inspect method conf failed
 WARNING 2024-05-25 12:54:01,976 inspector 1 140213757008696 Inspect method stats failed
 INFO 2024-05-25 23:48:25,257 command 1 140213852707624 15 detected, shutting down
+INFO 2024-05-26 13:00:43,468 command 1 140649620319016 Visit me at http://0.0.0.0:5555
+INFO 2024-05-26 13:00:43,482 command 1 140649620319016 Broker: redis://redis:6379/0
+INFO 2024-05-26 13:00:43,490 command 1 140649620319016 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records']
+INFO 2024-05-26 13:00:43,499 mixins 1 140649525664568 Connected to redis://redis:6379/0
+WARNING 2024-05-26 13:00:44,540 inspector 1 140649522481976 Inspect method registered failed
+WARNING 2024-05-26 13:00:44,545 inspector 1 140649520360248 Inspect method active failed
+WARNING 2024-05-26 13:00:44,546 inspector 1 140649524603704 Inspect method stats failed
+WARNING 2024-05-26 13:00:44,552 inspector 1 140649519299384 Inspect method reserved failed
+WARNING 2024-05-26 13:00:44,553 inspector 1 140649517177656 Inspect method conf failed
+WARNING 2024-05-26 13:00:44,554 inspector 1 140649518238520 Inspect method revoked failed
+WARNING 2024-05-26 13:00:44,555 inspector 1 140649521421112 Inspect method scheduled failed
+WARNING 2024-05-26 13:00:44,555 inspector 1 140649523542840 Inspect method active_queues failed
+INFO 2024-05-26 18:19:38,471 command 1 139786084993832 Visit me at http://0.0.0.0:5555
+INFO 2024-05-26 18:19:38,487 command 1 139786084993832 Broker: redis://redis:6379/0
+INFO 2024-05-26 18:19:38,496 command 1 139786084993832 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records']
+INFO 2024-05-26 18:19:38,504 mixins 1 139785990433592 Connected to redis://redis:6379/0
+WARNING 2024-05-26 18:19:39,543 inspector 1 139785987251000 Inspect method registered failed
+WARNING 2024-05-26 18:19:39,544 inspector 1 139785986190136 Inspect method scheduled failed
+WARNING 2024-05-26 18:19:39,550 inspector 1 139785984068408 Inspect method reserved failed
+WARNING 2024-05-26 18:19:39,550 inspector 1 139785981946680 Inspect method conf failed
+WARNING 2024-05-26 18:19:39,555 inspector 1 139785989372728 Inspect method stats failed
+WARNING 2024-05-26 18:19:39,556 inspector 1 139785983007544 Inspect method revoked failed
+WARNING 2024-05-26 18:19:39,556 inspector 1 139785985129272 Inspect method active failed
+WARNING 2024-05-26 18:19:39,557 inspector 1 139785988311864 Inspect method active_queues failed
+INFO 2024-05-27 02:32:06,991 command 1 139786084993832 15 detected, shutting down
+INFO 2024-05-27 02:32:16,995 command 1 140036865014568 Visit me at http://0.0.0.0:5555
+INFO 2024-05-27 02:32:17,009 command 1 140036865014568 Broker: redis://redis:6379/0
+INFO 2024-05-27 02:32:17,020 command 1 140036865014568 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records']
+INFO 2024-05-27 02:32:17,029 mixins 1 140036770396984 Connected to redis://redis:6379/0
+WARNING 2024-05-27 02:32:18,078 inspector 1 140036767214392 Inspect method registered failed
+WARNING 2024-05-27 02:32:18,086 inspector 1 140036761910072 Inspect method conf failed
+WARNING 2024-05-27 02:32:18,087 inspector 1 140036768275256 Inspect method active_queues failed
+WARNING 2024-05-27 02:32:18,087 inspector 1 140036762970936 Inspect method revoked failed
+WARNING 2024-05-27 02:32:18,093 inspector 1 140036764031800 Inspect method reserved failed
+WARNING 2024-05-27 02:32:18,094 inspector 1 140036769336120 Inspect method stats failed
+WARNING 2024-05-27 02:32:18,095 inspector 1 140036766153528 Inspect method scheduled failed
+WARNING 2024-05-27 02:32:18,096 inspector 1 140036765092664 Inspect method active failed
+INFO 2024-05-29 10:50:27,426 command 1 140036865014568 15 detected, shutting down
+INFO 2024-05-31 02:52:57,158 command 1 139804679994152 Visit me at http://0.0.0.0:5555
+INFO 2024-05-31 02:52:57,173 command 1 139804679994152 Broker: redis://redis:6379/0
+INFO 2024-05-31 02:52:57,181 command 1 139804679994152 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records']
+INFO 2024-05-31 02:52:57,191 mixins 1 139804585380664 Connected to redis://redis:6379/0
+WARNING 2024-05-31 02:52:58,241 inspector 1 139804582198072 Inspect method registered failed
+WARNING 2024-05-31 02:52:58,246 inspector 1 139804583258936 Inspect method active_queues failed
+WARNING 2024-05-31 02:52:58,246 inspector 1 139804576893752 Inspect method conf failed
+WARNING 2024-05-31 02:52:58,247 inspector 1 139804581137208 Inspect method scheduled failed
+WARNING 2024-05-31 02:52:58,248 inspector 1 139804579015480 Inspect method reserved failed
+WARNING 2024-05-31 02:52:58,256 inspector 1 139804577954616 Inspect method revoked failed
+WARNING 2024-05-31 02:52:58,256 inspector 1 139804584319800 Inspect method stats failed
+WARNING 2024-05-31 02:52:58,256 inspector 1 139804580076344 Inspect method active failed
+ERROR 2024-05-31 17:17:44,559 signal 18 140171025890104 Signal handler <promise@0x7f7c1ea20910 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f7c1ea4f8c0>>> raised: ModuleNotFoundError("No module named 'telebot'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 5, in <module>
+    import telebot
+ModuleNotFoundError: No module named 'telebot'
+ERROR 2024-05-31 17:27:34,169 signal 18 140171025890104 Signal handler <promise@0x7f7c1ea20910 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f7c1ea4f8c0>>> raised: ModuleNotFoundError("No module named 'telebot'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 5, in <module>
+    import telebot
+ModuleNotFoundError: No module named 'telebot'
+ERROR 2024-05-31 17:27:48,808 signal 18 140171025890104 Signal handler <promise@0x7f7c1ea20910 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f7c1ea4f8c0>>> raised: ModuleNotFoundError("No module named 'telebot'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 5, in <module>
+    import telebot
+ModuleNotFoundError: No module named 'telebot'
+INFO 2024-05-31 17:28:29,920 command 1 139804679994152 15 detected, shutting down
+ERROR 2024-05-31 17:28:38,935 signal 1 139872107428648 Signal handler <promise@0x7f36801bc870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f368019c1a0>>> raised: ModuleNotFoundError("No module named 'eazyclass.scheduler'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 8, in <module>
+    from .bot_keyboards import generate_faculty_keyboard, generate_group_keyboard, generate_course_keyboard
+  File "/app/telegrambot/bot_keyboards.py", line 8, in <module>
+    from eazyclass.scheduler.models import Faculty, Group, Teacher
+ModuleNotFoundError: No module named 'eazyclass.scheduler'
+ERROR 2024-05-31 17:28:39,081 signal 1 140304260594472 Signal handler <promise@0x7f9b1e734870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f9b1e70be30>>> raised: ModuleNotFoundError("No module named 'telebot'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 5, in <module>
+    import telebot
+ModuleNotFoundError: No module named 'telebot'
+ERROR 2024-05-31 17:28:39,092 signal 1 139850083818280 Signal handler <promise@0x7f315f660870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f315f801130>>> raised: ModuleNotFoundError("No module named 'eazyclass.scheduler'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 8, in <module>
+    from .bot_keyboards import generate_faculty_keyboard, generate_group_keyboard, generate_course_keyboard
+  File "/app/telegrambot/bot_keyboards.py", line 8, in <module>
+    from eazyclass.scheduler.models import Faculty, Group, Teacher
+ModuleNotFoundError: No module named 'eazyclass.scheduler'
+ERROR 2024-05-31 17:28:39,099 signal 1 140645971331880 Signal handler <promise@0x7feaadff0870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7feaaf4d4ad0>>> raised: ModuleNotFoundError("No module named 'eazyclass.scheduler'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 8, in <module>
+    from .bot_keyboards import generate_faculty_keyboard, generate_group_keyboard, generate_course_keyboard
+  File "/app/telegrambot/bot_keyboards.py", line 8, in <module>
+    from eazyclass.scheduler.models import Faculty, Group, Teacher
+ModuleNotFoundError: No module named 'eazyclass.scheduler'
+ERROR 2024-05-31 17:30:05,113 signal 1 140034764196648 Signal handler <promise@0x7f5c5f3d4870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f5c5f39c350>>> raised: ModuleNotFoundError("No module named 'telebot'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 278, in find_related_module
+    raise e
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 5, in <module>
+    import telebot
+ModuleNotFoundError: No module named 'telebot'
+INFO 2024-05-31 17:31:01,713 command 1 140350626515752 Visit me at http://0.0.0.0:5555
+INFO 2024-05-31 17:31:01,725 command 1 140350626515752 Broker: redis://redis:6379/0
+INFO 2024-05-31 17:31:01,735 command 1 140350626515752 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records']
+INFO 2024-05-31 17:31:01,745 mixins 1 140350532328248 Connected to redis://redis:6379/0
+WARNING 2024-05-31 17:31:02,798 inspector 1 140350530206520 Inspect method active_queues failed
+WARNING 2024-05-31 17:31:02,799 inspector 1 140350522792760 Inspect method conf failed
+WARNING 2024-05-31 17:31:02,803 inspector 1 140350528084792 Inspect method scheduled failed
+WARNING 2024-05-31 17:31:02,805 inspector 1 140350531267384 Inspect method stats failed
+WARNING 2024-05-31 17:31:02,808 inspector 1 140350529145656 Inspect method registered failed
+WARNING 2024-05-31 17:31:02,810 inspector 1 140350525963064 Inspect method reserved failed
+WARNING 2024-05-31 17:31:02,810 inspector 1 140350527023928 Inspect method active failed
+WARNING 2024-05-31 17:31:02,813 inspector 1 140350523853624 Inspect method revoked failed
+INFO 2024-06-19 21:17:11,191 command 1 140319282707240 Visit me at http://0.0.0.0:5555
+INFO 2024-06-19 21:17:11,214 command 1 140319282707240 Broker: redis://redis:6379/0
+INFO 2024-06-19 21:17:11,223 command 1 140319282707240 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records']
+INFO 2024-06-19 21:17:11,233 mixins 1 140319188036408 Connected to redis://redis:6379/0
+WARNING 2024-06-19 21:17:12,277 inspector 1 140319179549496 Inspect method conf failed
+WARNING 2024-06-19 21:17:12,284 inspector 1 140319181671224 Inspect method reserved failed
+WARNING 2024-06-19 21:17:12,285 inspector 1 140319180610360 Inspect method revoked failed
+WARNING 2024-06-19 21:17:12,287 inspector 1 140319184853816 Inspect method registered failed
+WARNING 2024-06-19 21:17:12,289 inspector 1 140319183792952 Inspect method scheduled failed
+WARNING 2024-06-19 21:17:12,293 inspector 1 140319182732088 Inspect method active failed
+WARNING 2024-06-19 21:17:12,295 inspector 1 140319186975544 Inspect method stats failed
+WARNING 2024-06-19 21:17:12,295 inspector 1 140319185914680 Inspect method active_queues failed
+INFO 2024-06-20 00:13:30,819 command 1 140319282707240 15 detected, shutting down
+ERROR 2024-06-24 00:54:30,820 signal 1 140107370146600 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7f6d47282b70>> raised: ModuleNotFoundError("No module named 'debug_toolbar'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 91, in populate
+    app_config = AppConfig.create(entry)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 193, in create
+    import_module(entry)
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'debug_toolbar'
+ERROR 2024-06-24 00:54:30,824 signal 1 140107370146600 Signal handler <promise@0x7f6d46e00870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f6d46fb7cb0>>> raised: AppRegistryNotReady("Apps aren't loaded yet.")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 706, in _autodiscover_tasks_from_fixups
+    for pkg in fixup.autodiscover_tasks()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 110, in autodiscover_tasks
+    return [config.name for config in apps.get_app_configs()]
+                                      ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 147, in get_app_configs
+    self.check_apps_ready()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 138, in check_apps_ready
+    raise AppRegistryNotReady("Apps aren't loaded yet.")
+django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+ERROR 2024-06-24 00:54:30,858 signal 1 140594372213544 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7fdeaa6f81d0>> raised: ModuleNotFoundError("No module named 'debug_toolbar'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 91, in populate
+    app_config = AppConfig.create(entry)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 193, in create
+    import_module(entry)
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'debug_toolbar'
+ERROR 2024-06-24 00:54:30,861 signal 1 140594372213544 Signal handler <promise@0x7fdeaa6fc870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7fdeaa6f8050>>> raised: AppRegistryNotReady("Apps aren't loaded yet.")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 706, in _autodiscover_tasks_from_fixups
+    for pkg in fixup.autodiscover_tasks()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 110, in autodiscover_tasks
+    return [config.name for config in apps.get_app_configs()]
+                                      ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 147, in get_app_configs
+    self.check_apps_ready()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 138, in check_apps_ready
+    raise AppRegistryNotReady("Apps aren't loaded yet.")
+django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+ERROR 2024-06-24 00:54:31,255 signal 1 139745978034984 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7f192364d4c0>> raised: ModuleNotFoundError("No module named 'debug_toolbar'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 91, in populate
+    app_config = AppConfig.create(entry)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 193, in create
+    import_module(entry)
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'debug_toolbar'
+ERROR 2024-06-24 00:54:31,254 signal 1 139833691675432 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7f2d8fac4d70>> raised: ModuleNotFoundError("No module named 'debug_toolbar'")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 91, in populate
+    app_config = AppConfig.create(entry)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 193, in create
+    import_module(entry)
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'debug_toolbar'
+ERROR 2024-06-24 00:54:31,260 signal 1 139833691675432 Signal handler <promise@0x7f2d8e57c870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f2d8e5701a0>>> raised: AppRegistryNotReady("Apps aren't loaded yet.")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 706, in _autodiscover_tasks_from_fixups
+    for pkg in fixup.autodiscover_tasks()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 110, in autodiscover_tasks
+    return [config.name for config in apps.get_app_configs()]
+                                      ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 147, in get_app_configs
+    self.check_apps_ready()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 138, in check_apps_ready
+    raise AppRegistryNotReady("Apps aren't loaded yet.")
+django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+ERROR 2024-06-24 00:54:31,260 signal 1 139745978034984 Signal handler <promise@0x7f1922324870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f1922320230>>> raised: AppRegistryNotReady("Apps aren't loaded yet.")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 706, in _autodiscover_tasks_from_fixups
+    for pkg in fixup.autodiscover_tasks()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 110, in autodiscover_tasks
+    return [config.name for config in apps.get_app_configs()]
+                                      ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 147, in get_app_configs
+    self.check_apps_ready()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 138, in check_apps_ready
+    raise AppRegistryNotReady("Apps aren't loaded yet.")
+django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+ERROR 2024-06-24 00:57:02,949 signal 1 140539471268648 Signal handler <promise@0x7fd1e218c870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7fd1e45bd1f0>>> raised: ImportError('attempted relative import beyond top-level package')
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 8, in <module>
+    from .keyboards import start_keyboard, get_keyboard
+  File "/app/telegrambot/keyboards.py", line 8, in <module>
+    from ..scheduler.models import Faculty, Group, Teacher
+ImportError: attempted relative import beyond top-level package
+ERROR 2024-06-24 00:57:03,230 signal 1 140305263700776 Signal handler <promise@0x7f9b5a388870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f9b5a380140>>> raised: ImportError('attempted relative import beyond top-level package')
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 8, in <module>
+    from .keyboards import start_keyboard, get_keyboard
+  File "/app/telegrambot/keyboards.py", line 8, in <module>
+    from ..scheduler.models import Faculty, Group, Teacher
+ImportError: attempted relative import beyond top-level package
+ERROR 2024-06-24 00:57:03,482 signal 1 140551160601384 Signal handler <promise@0x7fd49ad48870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7fd49ad3c320>>> raised: ImportError('attempted relative import beyond top-level package')
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 8, in <module>
+    from .keyboards import start_keyboard, get_keyboard
+  File "/app/telegrambot/keyboards.py", line 8, in <module>
+    from ..scheduler.models import Faculty, Group, Teacher
+ImportError: attempted relative import beyond top-level package
+ERROR 2024-06-24 00:57:03,488 signal 1 140203606276904 Signal handler <promise@0x7f83aefc0870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f83aefa0470>>> raised: ImportError('attempted relative import beyond top-level package')
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .bot import bot
+  File "/app/telegrambot/bot.py", line 8, in <module>
+    from .keyboards import start_keyboard, get_keyboard
+  File "/app/telegrambot/keyboards.py", line 8, in <module>
+    from ..scheduler.models import Faculty, Group, Teacher
+ImportError: attempted relative import beyond top-level package
+ERROR 2024-06-24 01:22:43,598 signal 1 140613265980200 Signal handler <promise@0x7fe3109a4870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7fe311498230>>> raised: ImportError('attempted relative import beyond top-level package')
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/telegrambot/tasks.py", line 2, in <module>
+    from .keyboards import update_group_keyboard_cache, update_teacher_keyboard_cache
+  File "/app/telegrambot/keyboards.py", line 8, in <module>
+    from ..scheduler.models import Faculty, Group, Teacher
+ImportError: attempted relative import beyond top-level package
+INFO 2024-06-24 01:27:45,613 command 1 140557391235880 Visit me at http://0.0.0.0:5555
+INFO 2024-06-24 01:27:45,626 command 1 140557391235880 Broker: redis://redis:6379/0
+INFO 2024-06-24 01:27:45,635 command 1 140557391235880 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records',
+ 'telegrambot.tasks.update_keyboard_cache']
+INFO 2024-06-24 01:27:45,643 mixins 1 140557294476088 Connected to redis://redis:6379/0
+INFO 2024-06-24 01:30:40,544 command 1 140557391235880 15 detected, shutting down
+INFO 2024-06-24 01:30:52,702 command 1 140598408788776 Visit me at http://0.0.0.0:5555
+INFO 2024-06-24 01:30:52,709 command 1 140598408788776 Broker: redis://redis:6379/0
+INFO 2024-06-24 01:30:52,721 command 1 140598408788776 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records',
+ 'telegrambot.tasks.update_keyboard_cache']
+INFO 2024-06-24 01:30:52,730 mixins 1 140598310247224 Connected to redis://redis:6379/0
+WARNING 2024-06-24 01:30:53,779 inspector 1 140598304860984 Inspect method active failed
+WARNING 2024-06-24 01:30:53,780 inspector 1 140598308092728 Inspect method active_queues failed
+WARNING 2024-06-24 01:30:53,785 inspector 1 140598309169976 Inspect method stats failed
+WARNING 2024-06-24 01:30:53,785 inspector 1 140598305938232 Inspect method scheduled failed
+WARNING 2024-06-24 01:30:53,785 inspector 1 140598303783736 Inspect method reserved failed
+WARNING 2024-06-24 01:30:53,787 inspector 1 140598302706488 Inspect method revoked failed
+WARNING 2024-06-24 01:30:53,790 inspector 1 140598301629240 Inspect method conf failed
+WARNING 2024-06-24 01:30:53,790 inspector 1 140598307015480 Inspect method registered failed
+INFO 2024-06-24 01:32:07,331 command 1 140598408788776 15 detected, shutting down
+INFO 2024-06-24 01:32:17,325 command 1 140171895532328 Visit me at http://0.0.0.0:5555
+INFO 2024-06-24 01:32:17,332 command 1 140171895532328 Broker: redis://redis:6379/0
+INFO 2024-06-24 01:32:17,342 command 1 140171895532328 Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'scheduler.tasks.group_parser.deactivate_all_groups',
+ 'scheduler.tasks.group_parser.update_groups',
+ 'scheduler.tasks.schedule_parser.parse_group_data',
+ 'scheduler.tasks.schedule_parser.process_data_final',
+ 'scheduler.tasks.schedule_parser.send_group_notification',
+ 'scheduler.tasks.schedule_parser.send_notifications',
+ 'scheduler.tasks.schedule_parser.update_schedule',
+ 'scheduler.tasks.timetable_manager.fill_lesson_times',
+ 'scheduler.tasks.update_last_active.delete_inactive_records',
+ 'scheduler.tasks.update_last_active.update_last_active_records',
+ 'telegrambot.tasks.update_keyboard_cache']
+INFO 2024-06-24 01:32:17,356 mixins 1 140171797011256 Connected to redis://redis:6379/0
+WARNING 2024-06-24 01:32:18,407 inspector 1 140171790494520 Inspect method reserved failed
+WARNING 2024-06-24 01:32:18,408 inspector 1 140171789433656 Inspect method revoked failed
+WARNING 2024-06-24 01:32:18,409 inspector 1 140171793779512 Inspect method registered failed
+WARNING 2024-06-24 01:32:18,412 inspector 1 140171795934008 Inspect method stats failed
+WARNING 2024-06-24 01:32:18,413 inspector 1 140171791555384 Inspect method active failed
+WARNING 2024-06-24 01:32:18,415 inspector 1 140171792702264 Inspect method scheduled failed
+WARNING 2024-06-24 01:32:18,415 inspector 1 140171788372792 Inspect method conf failed
+WARNING 2024-06-24 01:32:18,415 inspector 1 140171794856760 Inspect method active_queues failed

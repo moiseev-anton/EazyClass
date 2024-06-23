@@ -10,7 +10,7 @@ from ..models import LessonTime, LessonTimeTemplate
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(queue='periodic_tasks')
 def fill_lesson_times():
     """
     Заполняет расписание уроков на текущий и следующий месяц, начиная с сегодняшней даты

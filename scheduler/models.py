@@ -1,5 +1,18 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+
+
+class Subscribable(models.Model):
+    def get_display_name(self):
+        raise NotImplementedError("Subclasses must implement get_display_name method")
+
+    def get_filter_params(self, subscription_id):
+        raise NotImplementedError("Subclasses must implement get_filter_params method")
+
+    class Meta:
+        abstract = True
 
 
 class Faculty(models.Model):
@@ -27,9 +40,11 @@ class Faculty(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['is_active']),
+            models.Index(fields=['short_title']),  # для сортировки
         ]
 
-class Group(models.Model):
+
+class Group(Subscribable):
     title = models.CharField(max_length=255)
     link = models.URLField()
     faculty = models.ForeignKey(Faculty, related_name='groups', on_delete=models.CASCADE, null=True)
@@ -40,13 +55,20 @@ class Group(models.Model):
     def __str__(self):
         return f"{self.title}"
 
+    def get_display_name(self):
+        return self.title
+
+    def get_filter_params(self):
+        return {'group_id': self.id}
+
     class Meta:
         indexes = [
             models.Index(fields=['is_active']),
+            models.Index(fields=['grade', 'title']),  # для сортировки
         ]
 
 
-class Teacher(models.Model):
+class Teacher(Subscribable):
     full_name = models.CharField(max_length=64, unique=True)
     short_name = models.CharField(max_length=30)
     is_active = models.BooleanField(default=True)
@@ -75,6 +97,12 @@ class Teacher(models.Model):
             short_name += f"{names[2][0]}."
 
         return short_name
+
+    def get_display_name(self):
+        return self.short_name
+
+    def get_filter_params(self):
+        return {'teacher_id': self.id}
 
 
 class Subject(models.Model):
@@ -166,13 +194,39 @@ class User(models.Model):
     first_name = models.CharField(max_length=32)
     last_name = models.CharField(max_length=32)
     phone_number = models.CharField(max_length=15)
-    subgroup = models.CharField(max_length=1)
-    group = models.ForeignKey(Group, related_name='users', on_delete=models.CASCADE, default=None)
+    subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
     registration_date = models.DateTimeField(auto_now_add=True)
+    # Поля для подписки на расписание группы или учителя
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    subscription = GenericForeignKey('content_type', 'object_id')
+    # Настройка уведомлений
+    notify_on_schedule_change = models.BooleanField(default=True)
+    notify_on_lesson_start = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user_name} ({self.first_name} {self.last_name}) [ID: {self.id}]"
+
+    def get_subscription_info(self):
+        """
+        Возвращает информацию о подписке пользователя, если она есть.
+
+        Returns:
+            dict or None: Словарь с информацией о подписке или None, если подписка отсутствует.
+        """
+        if self.subscription:
+            return {
+                'type': self.content_type.model,
+                'id': self.object_id,
+                'name': self.subscription.get_display_name()
+            }
+        return None
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['telegram_id', 'is_active']),
+        ]
 
 
 class LessonTimeTemplate(models.Model):

@@ -13,7 +13,7 @@ UPDATE_ACTIVE_PERIOD = timedelta(weeks=1)
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(queue='periodic_tasks')
 def update_last_active_records():
     """
     Обновляет поле `last_active` для учителей, кабинетов и предметов,

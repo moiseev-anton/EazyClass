@@ -1,95 +1,134 @@
-import json
+import logging
+from datetime import datetime, timedelta
 
 from django.core.cache import caches
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import User as TelegramUser
 
-from eazyclass.scheduler.models import Faculty, Group
-from django.db.models import Prefetch
-
-KEYBOARD_TIMEOUT = 86400  # 24 часа
-KEYBOARD_ROW_WIDTH = 4
+from ..scheduler.models import User
 
 cache = caches['telegrambot_cache']
+logger = logging.getLogger(__name__)
 
-emoji = {'0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
-         '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'}
-
-home_button = InlineKeyboardButton("🏠 На главную", callback_data="home")
+CACHE_TIMEOUT = 86400
 
 
-def cache_structure():
-    structure = {}
-    faculties = Faculty.objects.filter(is_active=True).prefetch_related(
-        Prefetch(
-            'groups',
-            queryset=Group.objects.filter(is_active=True).order_by('grade', 'title'),
-            to_attr='active_groups'
-        )
-    ).order_by('short_title')
+def sign_up_user(telegram_user: TelegramUser):
+    # Создаем или получаем пользователя в БД
+    user, created = User.objects.get_or_create(
+        telegram_id=str(telegram_user.id),
+        defaults={
+            'first_name': telegram_user.first_name,
+            'last_name': telegram_user.last_name or '',
+            'is_active': True
+        }
+    )
+    cache_user_data(user)
 
-    for faculty in faculties:
-        faculty_data = {}
-        for group in faculty.active_groups:
-            if group.grade not in faculty_data:
-                faculty_data[group.grade] = []
-            faculty_data[group.grade].append({
-                'title': group.title,
-                'id': group.id
-            })
-        structure[faculty.short_title] = faculty_data
-    cache.set('faculty_structure', json.dumps(structure), timeout=KEYBOARD_TIMEOUT)
+    return created
 
 
-def get_cached_structure():
-    structure = cache.get('faculty_structure')
-    if structure:
-        return json.loads(structure)
-    else:
-        cache_structure()
-        return json.loads(cache.get('faculty_structure'))
+def cache_user_data(user: User):
+    try:
+        cache_key = f"user_data_{user.telegram_id}"
+        subscription = user.get_subscription_info() if hasattr(user, 'get_subscription_info') else None
+
+        user_data = {
+            'id': user.telegram_id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_active': user.is_active,
+            'subscription': subscription  # Может быть None или словарь с данными подписки
+        }
+        cache.set(cache_key, user_data, timeout=CACHE_TIMEOUT)
+        return user_data
+    except Exception as e:
+        logger.warning(f'Ошибка кеширования данных пользователя: {str(e)}')
+        raise  # Нет пользователя в БД
 
 
-def generate_faculty_keyboard():
-    structure = get_cached_structure()
-    keyboard = InlineKeyboardMarkup()
-    button_list = []
-    for faculty_name in structure:
-        button = InlineKeyboardButton(text=faculty_name, callback_data=f'f:{faculty_name}')
-        button_list.append(button)
-    while button_list:
-        keyboard.row(*button_list[:4])
-        button_list = button_list[4:]
+def get_cached_user_data(telegram_id):
+    """
+    Кеширует данные пользователя, используя его telegram_id как ключ.
+    Если данные в кеше отсутствуют, загружает их из базы данных и затем кеширует.
 
-    keyboard.add(home_button)
-    return keyboard
+    Args:
+        telegram_id (str): Telegram ID пользователя.
 
+    Returns:
+        dict: Словарь с данными пользователя.
+    """
+    cache_key = f"user_data_{telegram_id}"
+    user_data = cache.get(cache_key)
 
-def generate_course_keyboard(faculty):
-    structure = get_cached_structure()
-    faculty_data = structure.get(faculty, {})
-    keyboard = InlineKeyboardMarkup()
-    for course in faculty_data:
-        button = InlineKeyboardButton(text=f"     {emoji[course]}     ", callback_data=f'c:{faculty}:{course}')
-        keyboard.add(button)
-
-    keyboard.add(home_button)
-    return keyboard
+    if not user_data:
+        try:
+            user = User.objects.get(telegram_id=telegram_id)
+            user_data = cache_user_data(user)
+        except User.DoesNotExist as e:
+            logger.warning(f'Ошибка получения пользователя из БД: {str(e)}')
+            raise
+    return user_data
 
 
-def generate_group_keyboard(faculty_name, course):
-    structure = get_cached_structure()
-    faculty_data = structure.get(faculty_name, {})
-    groups = faculty_data.get(course, [])
-    keyboard = InlineKeyboardMarkup()
-    button_list = []
-    for group in groups:
-        button = InlineKeyboardButton(text=group['title'], callback_data=f'group:{group["id"]}')
-        button_list.append(button)
-    while button_list:
-        keyboard.row(*button_list[:4])
-        button_list = button_list[4:]
+def get_date_range(request_type):
+    today = datetime.now().date()
+    if request_type == 'today':
+        return today, today
+    elif request_type == 'tomorrow':
+        tomorrow = today + timedelta(days=1)
+        return tomorrow, tomorrow
+    elif request_type == 'from_today':
+        end = today + timedelta(days=6)
+        return today, end
+    elif request_type == 'week':
+        start_week = today - timedelta(days=today.weekday())
+        end_week = start_week + timedelta(days=6)
+        return today, end_week
 
-    keyboard.add(home_button)
-    return keyboard
+
+def get_schedule_for_dates(start_date, end_date, group_id=None, teacher_id=None):
+    lessons = Lesson.objects.filter(
+        lesson_time__date__range=(start_date, end_date),
+        group_id=group_id,  # или teacher_id=teacher_id, если по учителю
+        is_active=True
+    ).select_related('subject', 'teacher', 'classroom').order_by('lesson_time__date', 'lesson_time__start_time')
+
+    schedule_info = []
+    for lesson in lessons:
+        day_info = f"{lesson.lesson_time.date.strftime('%Y-%m-%d')}: {lesson.subject.title} с {lesson.teacher.short_name} в {lesson.classroom.title}"
+        schedule_info.append(day_info)
+
+    return "\n".join(schedule_info) if schedule_info else "Расписания на выбранный период нет."
 
 
+# def cache_subscription(user):
+#     cache_key = f"user_subscription_{user.telegram_id}"
+#     if user.subscription:
+#         subscription_data = {
+#             'type': user.content_type.model,
+#             'id': user.object_id,
+#             'name': user.subscription.title if hasattr(user.subscription, 'title') else user.subscription.short_name
+#         }
+#         cache.set(cache_key, subscription_data, timeout=86400)  # Кешируем на 24 часа
+#     else:
+#         # Устанавливаем специальное значение, указывающее на отсутствие подписки
+#         subscription_data = "no_subscription"
+#         cache.set(cache_key, subscription_data, timeout=86400)
+#
+#     return subscription_data
+
+
+# def get_cached_subscription(telegram_id):
+#     cache_key = f"user_subscription_{telegram_id}"
+#     subscription_data = cache.get(cache_key)
+#
+#     if subscription_data is None:
+#         # Подписка не найдена в кэше, получаем её из БД
+#         user = User.objects.get(telegram_id=str(telegram_id))
+#         subscription_data = cache_subscription(user)  # Кешируем и получаем данные подписки
+#
+#     if subscription_data == "no_subscription":
+#         # Подтверждаем, что подписка действительно отсутствует
+#         subscription_data = None
+#
+#     return subscription_data

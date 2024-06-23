@@ -1,84 +1,35 @@
+import logging
 import os
 import time
-from functools import lru_cache
 
 import telebot
-from eazyclass.scheduler.models import Faculty, Group
 from django.core.cache import caches
-from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
-from .bot_utils import generate_faculty_keyboard, generate_group_keyboard, generate_course_keyboard
 
-KEYBOARD_ROW_LENGTH = 4
-
-
+from .keyboards import start_keyboard, get_keyboard
+from .bot_utils import get_cached_user_data, sign_up_user
+from .interface_messages import generate_home_answer
 
 API_TOKEN = os.getenv('TELEGRAM_TOKEN')
 
-cache = caches['telegrambot_cache']
 bot = telebot.TeleBot(API_TOKEN)
-
-# today = datetime.now().strftime('%d.%m.%Y')
-# tomorrow = (datetime.strptime(today, '%d.%m.%Y') + timedelta(days=1)).strftime('%d.%m.%Y')
-
-# # Кеш группы, выбранной по умолчанию (с инвалидацией)
-# user_group_cache = TTLCache(maxsize=100, ttl=3600)
-
-
-def get_default_group(telegram_id):
-    if telegram_id in user_group_cache.keys():
-        return user_group_cache[telegram_id]
-    else:
-        group = get_user_group(telegram_id)
-        if group:
-            user_group_cache[telegram_id] = group
-            return group
-
-
-
-# Клавиатура home
-button_home = InlineKeyboardButton(text='🏠 на главную', callback_data='actions')
-home_keyboard = InlineKeyboardMarkup()
-home_keyboard.add(button_home)
-
-# Клавиатура actions (старая)
-# button_faculty = InlineKeyboardButton(text='🎓 Выбрать группу', callback_data='faculty')
-# button_set_group = InlineKeyboardButton(text='🎓 Выбрать группу', callback_data='faculty')
-# actions_keyboard = InlineKeyboardMarkup()
-# actions_keyboard.add(button_faculty)
-
-# Клавиатура Выбрать группу
-button_choice_group = InlineKeyboardButton(text='🎓 Выбрать группу', callback_data='faculty')
-choice_keyboard = InlineKeyboardMarkup()
-choice_keyboard.add(button_choice_group)
-
-# Клавиатура actions
-button_today = InlineKeyboardButton(text=f' На сегодня ', callback_data='today')
-button_tomorrow = InlineKeyboardButton(text=f' На завтра ', callback_data='tomorrow')
-button_week = InlineKeyboardButton(text=f' На неделю ', callback_data='week')
-button_change_group = InlineKeyboardButton(text=f' Сменить группу', callback_data='faculty')
-
-actions_keyboard = InlineKeyboardMarkup()
-actions_keyboard.add(button_today)
-actions_keyboard.add(button_tomorrow)
-actions_keyboard.add(button_week)
-actions_keyboard.add(button_change_group)
-
-
-faculty_keyboard = generate_faculty_keyboard()
+cache = caches['telegrambot_cache']
+logger = logging.getLogger(__name__)
 
 
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    # Регистрация пользователя, запись в БД
-    sing_up_user(message.from_user)
-    def_group = get_default_group(message.chat.id)
-    if def_group:
-        bot.send_message(message.chat.id, f"Ваша группа: {def_group.title}",
-                         reply_markup=actions_keyboard)
-    else:
-        bot.send_message(message.chat.id, "Привет! Этот бот поможет тебе ориентироваться в расписании занятий.",
-                         reply_markup=choice_keyboard)
+    try:
+        if sign_up_user(message.from_user):
+            response_message = (f"Добро пожаловать!\n"
+                                f"Выберите своё расписание для удобного доступа и получения уведомлений")
+        else:
+            response_message = ("С возвращением!")
+        # Отправляем сообщение с клавиатурой
+        bot.send_message(message.chat.id, response_message, reply_markup=start_keyboard)
+    except Exception as e:
+        logger.error(f"Ошибка обработки команды start: {str(e)}")
+        bot.send_message(message.chat.id, "Что-то пошло не так.\nПожалуйста, попробуйте позже.")
 
 
 # Обработчик нажатий на кнопки
@@ -87,49 +38,62 @@ def handle_callback_query(call):
     try:
         chat_id = call.message.chat.id
         msg_id = call.message.message_id
-        if call.data == 'actions':
-            # tg_id = call.message.chat.id
-            def_group = get_default_group(chat_id)
-            if def_group:
-                bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
-                                      text=f" Ваша группа: {def_group.title} ", reply_markup=actions_keyboard)
-            else:
-                bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
-                                      text=f" Выберите группу ", reply_markup=choice_keyboard)
-
-        elif call.data == 'faculty':
+        telegram_id = call.from_user.id
+        user_data = get_cached_user_data(telegram_id)
+        if call.data == 'home':
+            message, keyboard = generate_home_answer(user_data)
             bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
-                                  text="Выберите специальность", reply_markup=faculty_keyboard)
-
-        elif call.data.startswith('f:'):
-            _, fac = call.data.split(':')
+                                  text=message, reply_markup=keyboard)
+        # Выбор группы
+        elif call.data == 'faculties':
             bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
-                                  text="Выберите курс", reply_markup=generate_course_keyboard(fac))
+                                  text="Выберите направление", reply_markup=get_keyboard(call.data))
 
-        elif call.data.startswith('c:'):
-            _, course, fac = call.data.split(':')
+        elif call.data.startswith('faculty:'):
+            _, faculty = call.data.split(':')
             bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
-                                  text="Выберите группу", reply_markup=generate_group_keyboard(fac, course))
+                                  text="Выберите курс", reply_markup=get_keyboard(call.data))
 
-        elif call.data.startswith('g:'):
+        elif call.data.startswith('grade:'):
+            _, faculty, course = call.data.split(':')
+            bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
+                                  text="Выберите группу", reply_markup=get_keyboard(call.data))
+
+        elif call.data.startswith('group:'):
             _, group_id = call.data.split(':')
-            set_default_group(chat_id, group_id)
-            user_group_cache.pop(chat_id, None)
-            def_group = get_default_group(chat_id)
-            bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text=f" Ваша группа: {def_group.title}",
-                                  parse_mode='HTML', reply_markup=actions_keyboard)
+            # set_default_group(chat_id, group_id)
+            # user_group_cache.pop(chat_id, None)
+            # def_group = get_default_group(chat_id)
+            bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text=f"Тут должна быть замена группы")
+
+        # Выбор преподавателя
+        elif call.data == 'teachers':
+            bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
+                                  text="Выберите преподавателя", reply_markup=get_keyboard(call.data))
+
+        elif call.data.startswith('initial:'):
+            _, initial = call.data.split(':')
+            bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
+                                  text="Выберите преподавателя", reply_markup=get_keyboard(call.data))
+
+        elif call.data.startswith('teacher:'):
+            _, teacher_id = call.data.split(':')
+            # TODO сделать расписание препода и кнопки Закрепить и Домой
+            bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
+                                  text="Тут должна быть замена препода")
+
 
         # расписание новым сообщением
-        elif call.data.startswith('today'):
-            group = get_default_group(chat_id)
-            link = group.link
-            answer = get_schedule(link, today)
-            bot.send_message(call.message.chat.id, answer, parse_mode='HTML', reply_markup=home_keyboard)
-        elif call.data.startswith('tomorrow'):
-            group = get_default_group(chat_id)
-            link = group.link
-            answer = get_schedule(link, tomorrow)
-            bot.send_message(call.message.chat.id, answer, parse_mode='HTML', reply_markup=home_keyboard)
+        # elif call.data.startswith('today'):
+        #     group = get_default_group(chat_id)
+        #     link = group.link
+        #     answer = get_schedule(link, today)
+        #     bot.send_message(call.message.chat.id, answer, parse_mode='HTML', reply_markup=home_keyboard)
+        # elif call.data.startswith('tomorrow'):
+        #     group = get_default_group(chat_id)
+        #     link = group.link
+        #     answer = get_schedule(link, tomorrow)
+        #     bot.send_message(call.message.chat.id, answer, parse_mode='HTML', reply_markup=home_keyboard)
 
         # расписание с исправлением прошлого сообщения
         # elif call.data.startswith('today'):
@@ -140,7 +104,10 @@ def handle_callback_query(call):
         #                           text=answer, parse_mode='HTML', reply_markup=home_keyboard)
 
     except Exception as e:
-        bot.send_message(call.message.chat.id, str(e), reply_markup=actions_keyboard)
+        logger.error(f"Error processing callback_query : {str(e)}")
+        error_message = "Кажется что-то пошло не так. Попробуйте повторить позже"
+        bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
+                                  text=error_message, reply_markup=start_keyboard)
 
 
 if __name__ == '__main__':

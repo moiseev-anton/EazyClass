@@ -90,7 +90,7 @@ def deactivate_old_records(model: Model, delta: timedelta):
         raise
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue='periodic_tasks')
 def update_groups(self):
     try:
         with transaction.atomic():
@@ -112,7 +112,7 @@ def deactivate_all_records(model: Model):
         raise
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue='periodic_tasks')
 def deactivate_all_groups():
     with transaction.atomic():
         deactivate_all_records(Group)

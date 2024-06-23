@@ -116,7 +116,7 @@ def extract_lessons_data(group_id: int, soup: BeautifulSoup):
     return lessons_data
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue='periodic_tasks')
 def parse_group_data(self, group_id, link):
     url = f"{MAIN_URL}{link}"
     try:
@@ -150,7 +150,7 @@ def update_database(groups_ids: set, lessons_data: list[Lesson]):
         raise
 
 
-@shared_task
+@shared_task(queue='periodic_tasks')
 def process_data_final(results):
     # Обработка собранных данных
     lessons_data = []
@@ -170,7 +170,7 @@ def process_data_final(results):
     # Обрабатываем успешные результаты
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue='periodic_tasks')
 def update_schedule(self):
     try:
         fetch_response_from_url(MAIN_URL)
@@ -193,7 +193,7 @@ def update_schedule(self):
         raise self.retry(exc=e)
 
 
-@shared_task
+@shared_task(queue='periodic_tasks')
 def send_notifications(group_date_map):
     tasks = []
     logger.info(f"Отправка уведолений")
@@ -204,7 +204,7 @@ def send_notifications(group_date_map):
     group(tasks).apply_async()
 
 
-@shared_task
+@shared_task(queue='bot_tasks')
 def send_group_notification(group_id, dates):
     # Потом реализуем логику отправки уведомления группе
     logger.info(f"Отправлено уведоление группе {group_id} for dates: {', '.join(map(str, dates))}")

@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
-from rangefilter.filters import DateRangeFilter
 from django.urls import path
+from rangefilter.filters import DateRangeFilter
 
 from .activities import *
 from .models import *
@@ -69,13 +69,29 @@ class LessonAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = (
-        'user_name', 'first_name', 'last_name', 'telegram_id', 'phone_number', 'subgroup', 'group', 'is_active',
-        'registration_date')
+    list_display = ('user_name', 'first_name', 'last_name', 'telegram_id', 'is_active', 'registration_date', 'subscription_info')
+    list_filter = ('is_active', 'registration_date', 'content_type')
     search_fields = ('user_name', 'first_name', 'last_name', 'telegram_id')
-    list_filter = ('is_active', 'group', 'subgroup')
-    ordering = ('user_name',)
-    actions = [make_active, make_inactive, toggle_active]
+    readonly_fields = ('registration_date', 'get_subscription_info')
+
+    fieldsets = (
+        (None, {
+            'fields': ('user_name', 'first_name', 'last_name', 'telegram_id', 'phone_number', 'subgroup', 'is_active', 'registration_date')
+        }),
+        ('Notification Settings', {
+            'fields': ('notify_on_schedule_change', 'notify_on_lesson_start'),
+        }),
+        ('Subscription', {
+            'fields': ('content_type', 'object_id', 'get_subscription_info'),
+        }),
+    )
+
+    def subscription_info(self, obj):
+        info = obj.get_subscription_info()
+        return f"{info['type']} ({info['id']}): {info['name']}" if info else "No subscription"
+
+    # Make the subscription info field readable and not editable
+    subscription_info.short_description = 'Subscription Info'
 
 
 @admin.register(LessonTimeTemplate)
