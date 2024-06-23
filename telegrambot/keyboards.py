@@ -94,16 +94,6 @@ def update_teacher_keyboard_cache():
     keyboard_cache[f'teachers'] = initial_keyboard
 
 
-def get_faculties():
-    return Faculty.objects.filter(is_active=True).prefetch_related(
-        Prefetch(
-            'groups',
-            queryset=Group.objects.filter(is_active=True).order_by('grade', 'title'),
-            to_attr='active_groups'
-        )
-    ).order_by('short_title')
-
-
 def build_keyboard(buttons: list[InlineKeyboardButton], row_width: int = KEYBOARD_ROW_WIDTH) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup()
 
@@ -112,35 +102,6 @@ def build_keyboard(buttons: list[InlineKeyboardButton], row_width: int = KEYBOAR
 
     keyboard.add(home_button)
     return keyboard
-
-
-def update_group_keyboard_cache():
-    faculties = get_faculties()
-    faculty_buttons = []
-
-    for faculty in faculties:
-        if not faculty.active_groups:
-            continue
-        faculty_title = faculty.short_title
-        faculty_button = InlineKeyboardButton(text=faculty_title, callback_data=f'faculty:{faculty_title}')
-        faculty_buttons.append(faculty_button)
-        group_buttons_by_grade = defaultdict(list)
-        for group in faculty.active_groups:
-            group_button = InlineKeyboardButton(text=group.title, callback_data=f'group:{group.id}')
-            group_buttons_by_grade[group.grade].append(group_button)
-        grade_buttons = []
-        for grade, group_buttons in group_buttons_by_grade.items():
-            grade_button = InlineKeyboardButton(text=f"\t{emoji[grade]}\t",
-                                                callback_data=f'grade:{faculty_title}:{grade}')
-            grade_buttons.append(grade_button)
-            group_keyboard = build_keyboard(group_buttons)
-            keyboard_cache[f'grade:{faculty_title}:{grade}'] = group_keyboard
-
-        grade_keyboard = build_keyboard(grade_buttons)
-        keyboard_cache[f'faculty:{faculty_title}'] = grade_keyboard
-
-    faculties_keyboard = build_keyboard(faculty_buttons)
-    keyboard_cache['faculties'] = faculties_keyboard
 
 
 def get_active_groups() -> QuerySet:
@@ -165,14 +126,7 @@ def get_active_groups() -> QuerySet:
         raise
 
 
-# def organize_structure_data():
-#     groups = get_active_groups()
-#     structure = defaultdict(lambda: defaultdict(list))
-#     for group_id, title, grade, faculty_title in groups:
-#         structure[faculty_title][grade].append((group_id, title))
-
-
-def update_group_keyboard_cache2():
+def update_group_keyboard_cache():
     groups = get_active_groups()
     button_sets = defaultdict(list)
     for group_id, title, grade, faculty_title in groups:

@@ -2136,3 +2136,4 @@ WARNING 2024-06-24 01:32:18,413 inspector 1 140171791555384 Inspect method activ
 WARNING 2024-06-24 01:32:18,415 inspector 1 140171792702264 Inspect method scheduled failed
 WARNING 2024-06-24 01:32:18,415 inspector 1 140171788372792 Inspect method conf failed
 WARNING 2024-06-24 01:32:18,415 inspector 1 140171794856760 Inspect method active_queues failed
+INFO 2024-06-24 01:48:58,857 command 1 140171895532328 15 detected, shutting down

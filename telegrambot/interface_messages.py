@@ -1,4 +1,4 @@
-from .bot_keyboards import home_teacher_keyboard, home_group_keyboard, short_home_keyboard
+from .keyboards import home_teacher_keyboard, home_group_keyboard, short_home_keyboard
 
 
 def generate_home_answer(user_data: dict):
