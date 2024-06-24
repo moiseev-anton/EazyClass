@@ -1,8 +1,7 @@
-import json
 from collections import defaultdict
 
 from django.core.cache import caches
-from django.db.models import Prefetch, QuerySet
+from django.db.models import QuerySet
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from scheduler.models import Faculty, Group, Teacher
@@ -139,7 +138,7 @@ def update_group_keyboard_cache():
             button_sets['faculties'].append(faculty_button)
 
         if grade_key not in button_sets:
-            grade_button = InlineKeyboardButton(text=grade, callback_data=grade_key)
+            grade_button = InlineKeyboardButton(text=f'\t{emoji[grade]}\t', callback_data=grade_key)
             button_sets[faculty_key].append(grade_button)
 
         group_button = InlineKeyboardButton(text=title, callback_data=group_key)
