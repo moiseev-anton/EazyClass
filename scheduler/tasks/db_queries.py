@@ -9,7 +9,10 @@ logger = logging.getLogger(__name__)
 
 def synchronize_lessons(group_ids):
     today = datetime.now().date()
-    affected_groups_dates = defaultdict(set)
+    affected_entities = {
+        'groups': defaultdict(set),
+        'teachers': defaultdict(set)
+    }
     try:
         with connection.cursor() as cursor:
             if not LessonBuffer.objects.exists():
@@ -33,13 +36,13 @@ def synchronize_lessons(group_ids):
                            l.teacher_id != lb.teacher_id)
                     RETURNING l.group_id, l.lesson_time_id
                 )
-                SELECT u.group_id, lt.date
+                SELECT u.telegram_id, lt.date
                 FROM updated u
-                JOIN scheduler_lessontime lt ON u.lesson_time_id = lt.id;
                 """)
                 rows = cursor.fetchall()
-                for row in rows:
-                    affected_groups_dates[row[0]].add(row[1])
+                for group_id, teacher_id, date in rows:
+                    affected_entities['groups'][group_id].add(date)
+                    affected_entities['teachers'][teacher_id].add(date)
                 logger.info(f"Обновление измененных уроков завершено успешно: {len(rows)} шт")
 
                 # Вставка новых уроков из буфера
@@ -52,13 +55,14 @@ def synchronize_lessons(group_ids):
                     WHERE l.group_id IS NULL AND l.lesson_time_id IS NULL
                     RETURNING group_id, lesson_time_id
                 )
-                SELECT i.group_id, lt.date
+                SELECT i.group_id, i.teacher_id, lt.date
                 FROM inserted i
                 JOIN scheduler_lessontime lt ON i.lesson_time_id = lt.id;
                 """)
                 rows = cursor.fetchall()
-                for row in rows:
-                    affected_groups_dates[row[0]].add(row[1])
+                for group_id, teacher_id, date in rows:
+                    affected_entities['groups'][group_id].add(date)
+                    affected_entities['teachers'][teacher_id].add(date)
                 logger.info(f"Вставка новых уроков завершена успешно: {len(rows)} шт")
 
             # Деактивация отмененных уроков
@@ -78,17 +82,18 @@ def synchronize_lessons(group_ids):
                     AND l.is_active = true
                 RETURNING l.group_id, l.lesson_time_id
             )
-            SELECT d.group_id, lt.date
+            SELECT d.group_id, d.teacher_id, lt.date
             FROM deactivated d
             JOIN scheduler_lessontime lt ON d.lesson_time_id = lt.id;
             """, [tuple(group_ids), today])
             rows = cursor.fetchall()
-            for row in rows:
-                affected_groups_dates[row[0]].add(row[1])
+            for group_id, teacher_id, date in rows:
+                affected_entities['groups'][group_id].add(date)
+                affected_entities['teachers'][teacher_id].add(date)
             logger.info(f"Деактивация уроков завершена успешно: {len(rows)} шт")
 
     except Exception as e:
         logger.error(f"Ошибка при синхронизации буфера уроков: {e}")
         raise
 
-    return affected_groups_dates
+    return affected_entities

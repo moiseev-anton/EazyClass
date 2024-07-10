@@ -1,17 +1,18 @@
+import hashlib
+import json
 from collections import defaultdict
 
 from django.core.cache import caches
-from django.db.models import QuerySet
+from scheduler.models import Group, Teacher
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from scheduler.models import Faculty, Group, Teacher
-from cachetools import LRUCache
+from .services import CacheService
 
 CACHE_TIMEOUT = 86400  # 24 часа
 KEYBOARD_ROW_WIDTH = 4
+TEACHER_KEYBOARD_ROW_WIDTH = 2
 
 cache = caches['telegrambot_cache']
-keyboard_cache = LRUCache(maxsize=100)
 
 emoji = {'0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
          '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'}
@@ -20,6 +21,9 @@ emoji = {'0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4
 # Группы 🎓
 # 📌📖 📅 🕜 📚 🔔🔕
 
+keyboards = {}
+static_keyboards = {}
+context_data_store = {}
 
 # Кнопки
 home_button = InlineKeyboardButton("🏠 На главную", callback_data="home")
@@ -29,109 +33,107 @@ from_today_button = InlineKeyboardButton("Актуальное", callback_data="
 week_button = InlineKeyboardButton("На неделю", callback_data="week_schedule")
 subgroup_button = InlineKeyboardButton("Подгруппа", callback_data="choose_subgroup")
 groups_button = InlineKeyboardButton("🎓Группы", callback_data="faculties")
-teacher_button = InlineKeyboardButton("👨‍🏫👩‍🏫Преподаватели", callback_data="teachers")
+teachers_button = InlineKeyboardButton("👨‍🏫👩‍🏫Преподаватели", callback_data="teachers")
 notifications_button = InlineKeyboardButton("🔔Уведомления", callback_data="notifications")
-site_button = InlineKeyboardButton("🌍Сайт", callback_data="visit_site")
+site_button = InlineKeyboardButton("🌍Сайт", url='https://bincol.ru/rasp/')
 
-subscribe_teacher_button = InlineKeyboardButton("Подписаться", callback_data="subscribe_teacher")
+context_schedule_button = InlineKeyboardButton("Расписание", callback_data="schedule_context")
+subscribe_button = InlineKeyboardButton("Подписаться", callback_data="subscribe")
 
 # Статические клавиатуры
-home_teacher_keyboard = InlineKeyboardMarkup()
-home_teacher_keyboard.add(today_button, tomorrow_button)
-home_teacher_keyboard.add(from_today_button, week_button)
-home_teacher_keyboard.add(groups_button)
-home_teacher_keyboard.add(teacher_button)
-home_teacher_keyboard.add(notifications_button)
-home_teacher_keyboard.add(site_button)
+home_base_keyboard = InlineKeyboardMarkup()
+home_base_keyboard.add(today_button, tomorrow_button)
+home_base_keyboard.add(from_today_button, week_button)
+home_base_keyboard.add(groups_button)
+home_base_keyboard.add(teachers_button)
+home_base_keyboard.add(notifications_button)
+home_base_keyboard.add(site_button)
+static_keyboards['home_base'] = home_base_keyboard
 
 home_group_keyboard = InlineKeyboardMarkup()
 home_group_keyboard.add(today_button, tomorrow_button)
 home_group_keyboard.add(from_today_button, week_button)
 home_group_keyboard.add(subgroup_button)
 home_group_keyboard.add(groups_button)
-home_group_keyboard.add(teacher_button)
+home_group_keyboard.add(teachers_button)
 home_group_keyboard.add(notifications_button)
 home_group_keyboard.add(site_button)
+static_keyboards['home_group'] = home_group_keyboard
 
-short_home_keyboard = InlineKeyboardMarkup()
-short_home_keyboard.add(groups_button)
-short_home_keyboard.add(teacher_button)
-short_home_keyboard.add(notifications_button)
-short_home_keyboard.add(site_button)
+home_short_keyboard = InlineKeyboardMarkup()
+home_short_keyboard.add(groups_button)
+home_short_keyboard.add(teachers_button)
+home_short_keyboard.add(notifications_button)
+home_short_keyboard.add(site_button)
+static_keyboards['home_short'] = home_short_keyboard
 
 # Клавиатура start
 start_keyboard = InlineKeyboardMarkup()
 start_keyboard.row(home_button, site_button)
+static_keyboards['start'] = start_keyboard
+
+subscribe_keyboard = InlineKeyboardMarkup()
+subscribe_keyboard.add(context_schedule_button)
+subscribe_keyboard.add(subscribe_button)
+subscribe_keyboard.add(home_button)
+static_keyboards['subscribe'] = subscribe_keyboard
 
 
 # Динамические клавиатуры
 def get_keyboard(key: str):
-    keyboard = keyboard_cache.get(key)
+    keyboard = keyboards.get(key)
     if not keyboard:
-        pass
-        # TODO: Надо подумать нужна ли эта проверка. У нас может не быть активных факультетов (летом либо из-за ошибки)
-        # вдругих же случаях предполагаю что если мы получили некий ключ то значит и дальнейшие данные тоже должны были быть
+        update_dynamic_keyboards()
+        keyboard = keyboards[key]
     return keyboard
 
 
-def update_teacher_keyboard_cache():
-    teachers = Teacher.objects.filter(is_active=True).values_list('id', 'short_name')
-    teacher_buttons_by_initials = defaultdict(list)
+def get_teacher_keyboards():
+    new_keyboards = {}
+    new_context_data_store = {}
+    teachers = CacheService.get_cached_keyboard_data(Teacher, cache_key='active_teachers_data')
+    button_sets = defaultdict(list)
     for teacher_id, short_name in teachers:
-        teacher_button = InlineKeyboardButton(text=short_name, callback_data=f't:{teacher_id}')
         initial = short_name[0].upper()
-        teacher_buttons_by_initials[initial].append(teacher_button)
+        initial_key = f'initial:{initial}'
+        context_data = {'model': 'Teacher', 'id': teacher_id, 'title': short_name}
+        context_hash = generate_hash(context_data)
+        teacher_key = f'context:{context_hash}'
+        new_context_data_store[teacher_key] = context_data
+        if initial_key not in button_sets:
+            initial_button = InlineKeyboardButton(text=f"\t{initial}\t", callback_data=initial_key)
+            button_sets['teachers'].append(initial_button)
+        teacher_button = InlineKeyboardButton(text=short_name, callback_data=teacher_key)
+        button_sets[initial_key].append(teacher_button)
 
-    initial_buttons = []
-    for initial, teacher_buttons in teacher_buttons_by_initials.items():
-        initial_button = InlineKeyboardButton(text=f"\t{initial}\t", callback_data=f'initial:{initial}')
-        initial_buttons.append(initial_button)
-        teacher_keyboard = build_keyboard(teacher_buttons)
-        keyboard_cache[f'initial:{initial}'] = teacher_keyboard
+    new_keyboards['teachers'] = build_keyboard(button_sets.pop('teachers'))
 
-    initial_keyboard = build_keyboard(initial_buttons)
-    keyboard_cache[f'teachers'] = initial_keyboard
+    for key, button_set in button_sets.items():
+        new_keyboards[key] = build_keyboard(button_set, row_width=TEACHER_KEYBOARD_ROW_WIDTH)
+
+    return new_keyboards
 
 
 def build_keyboard(buttons: list[InlineKeyboardButton], row_width: int = KEYBOARD_ROW_WIDTH) -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup()
+    keyboard = InlineKeyboardMarkup(row_width=row_width)
 
-    for i in range(0, len(buttons), row_width):
-        keyboard.row(*buttons[i:i + row_width])
+    keyboard.add(*buttons)
 
-    keyboard.add(home_button)
+    keyboard.row(home_button)
     return keyboard
 
 
-def get_active_groups() -> QuerySet:
-    """
-    Получает список всех активных групп с основной информацией.
-
-    Выполняет запрос к базе данных, чтобы получить значения идентификаторов групп,
-    их названий, курса и краткого названия факультета для каждой активной группы,
-    упорядоченные по названию факультета и курсу.
-
-    Returns:
-        QuerySet: Список кортежей, где каждый кортеж содержит (id, title, grade, faculty__short_title).
-
-    """
-    try:
-        return Group.objects.filter(is_active=True).values_list(
-            'id', 'title', 'grade', 'faculty__short_title'
-        ).order_by('faculty__short_title', 'grade', 'title')
-    except Exception as e:
-        # Логирование ошибки, если запрос не удаётся выполнить
-        # logger.error(f"Ошибка при получении активных групп: {e}")
-        raise
-
-
-def update_group_keyboard_cache():
-    groups = get_active_groups()
+def get_group_keyboards():
+    new_keyboards = {}
+    groups = CacheService.get_cached_keyboard_data(Group, cache_key='active_groups_data')
     button_sets = defaultdict(list)
     for group_id, title, grade, faculty_title in groups:
         grade_key = f'grade:{faculty_title}:{grade}'
         faculty_key = f'faculty:{faculty_title}'
-        group_key = f'group:{group_id}'
+        context_data = {'model': 'Group', 'id': group_id, 'title': title}
+        context_hash = generate_hash(context_data)
+        group_key = f'context:{context_hash}'
+        context_data_store[group_key] = context_data
 
         if faculty_key not in button_sets:
             faculty_button = InlineKeyboardButton(text=faculty_title, callback_data=faculty_key)
@@ -145,4 +147,24 @@ def update_group_keyboard_cache():
         button_sets[grade_key].append(group_button)
 
     for key, button_set in button_sets.items():
-        keyboard_cache[key] = build_keyboard(button_set)
+        new_keyboards[key] = build_keyboard(button_set)
+
+    return new_keyboards
+
+
+def update_dynamic_keyboards():
+    global keyboards
+    global context_data_store
+    # Инициализация нового словаря контекста
+    context_data_store = {}
+
+    keyboards = get_group_keyboards()
+    keyboards.update(get_teacher_keyboards())
+    keyboards.update(static_keyboards)
+
+
+# Вспомогательная функция
+def generate_hash(data: dict) -> str:
+    """Генерирует хеш для данных контекста."""
+    data_string = json.dumps(data, sort_keys=True)
+    return hashlib.md5(data_string.encode()).hexdigest()

@@ -9,65 +9,57 @@ from ..scheduler.models import User
 cache = caches['telegrambot_cache']
 logger = logging.getLogger(__name__)
 
-CACHE_TIMEOUT = 86400
+CACHE_TIMEOUT = 86400  # 24 часа
 
 
-def sign_up_user(telegram_user: TelegramUser):
-    # Создаем или получаем пользователя в БД
-    user, created = User.objects.get_or_create(
-        telegram_id=str(telegram_user.id),
-        defaults={
-            'first_name': telegram_user.first_name,
-            'last_name': telegram_user.last_name or '',
-            'is_active': True
-        }
-    )
-    cache_user_data(user)
-
-    return created
-
-
-def cache_user_data(user: User):
-    try:
-        cache_key = f"user_data_{user.telegram_id}"
-        subscription = user.get_subscription_info() if hasattr(user, 'get_subscription_info') else None
-
-        user_data = {
-            'id': user.telegram_id,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'is_active': user.is_active,
-            'subscription': subscription  # Может быть None или словарь с данными подписки
-        }
-        cache.set(cache_key, user_data, timeout=CACHE_TIMEOUT)
-        return user_data
-    except Exception as e:
-        logger.warning(f'Ошибка кеширования данных пользователя: {str(e)}')
-        raise  # Нет пользователя в БД
+# def sign_up_user(telegram_user: TelegramUser):
+#     # Создаем или получаем пользователя в БД
+#     user, created = User.objects.get_or_create(
+#         telegram_id=str(telegram_user.id),
+#         defaults={
+#             'first_name': telegram_user.first_name,
+#             'last_name': telegram_user.last_name or '',
+#             'is_active': True
+#         }
+#     )
+#     cache_user_data(user)
+#
+#     return created
 
 
-def get_cached_user_data(telegram_id):
-    """
-    Кеширует данные пользователя, используя его telegram_id как ключ.
-    Если данные в кеше отсутствуют, загружает их из базы данных и затем кеширует.
+# def cache_user_data(telegram_id: int) -> dict:
+#     try:
+#         cache_key = f"user_data_{telegram_id}"
+#         user = User.objects.get(telegram_id=telegram_id)
+#         user_data = user.to_dict()
+#         cache.set(cache_key, user_data, timeout=CACHE_TIMEOUT)
+#         return user_data
+#     except Exception as e:
+#         logger.warning(f'Ошибка кеширования данных пользователя: {str(e)}')
+#         raise  # Нет пользователя в БД
 
-    Args:
-        telegram_id (str): Telegram ID пользователя.
 
-    Returns:
-        dict: Словарь с данными пользователя.
-    """
-    cache_key = f"user_data_{telegram_id}"
-    user_data = cache.get(cache_key)
-
-    if not user_data:
-        try:
-            user = User.objects.get(telegram_id=telegram_id)
-            user_data = cache_user_data(user)
-        except User.DoesNotExist as e:
-            logger.warning(f'Ошибка получения пользователя из БД: {str(e)}')
-            raise
-    return user_data
+# def get_cached_user_data(telegram_id: int) -> dict:
+#     """
+#     Кеширует данные пользователя, используя его telegram_id как ключ.
+#     Если данные в кеше отсутствуют, загружает их из базы данных и затем кеширует.
+#
+#     Args:
+#         telegram_id (str): Telegram ID пользователя.
+#
+#     Returns:
+#         dict: Словарь с данными пользователя.
+#     """
+#     cache_key = f"user_data_{telegram_id}"
+#     user_data = cache.get(cache_key)
+#
+#     if not user_data:
+#         try:
+            # user_data = cache_user_data(telegram_id)
+    #     except User.DoesNotExist as e:
+    #         logger.warning(f'Ошибка получения пользователя из БД: {str(e)}')
+    #         raise
+    # return user_data
 
 
 def get_date_range(request_type):
@@ -100,22 +92,21 @@ def get_schedule_for_dates(start_date, end_date, group_id=None, teacher_id=None)
 
     return "\n".join(schedule_info) if schedule_info else "Расписания на выбранный период нет."
 
+def cache_subscription(user):
+    cache_key = f"user_subscription_{user.telegram_id}"
+    if user.subscription:
+        subscription_data = {
+            'type': user.content_type.model,
+            'id': user.object_id,
+            'name': user.subscription.title if hasattr(user.subscription, 'title') else user.subscription.short_name
+        }
+        cache.set(cache_key, subscription_data, timeout=86400)  # Кешируем на 24 часа
+    else:
+        # Устанавливаем специальное значение, указывающее на отсутствие подписки
+        subscription_data = "no_subscription"
+        cache.set(cache_key, subscription_data, timeout=86400)
 
-# def cache_subscription(user):
-#     cache_key = f"user_subscription_{user.telegram_id}"
-#     if user.subscription:
-#         subscription_data = {
-#             'type': user.content_type.model,
-#             'id': user.object_id,
-#             'name': user.subscription.title if hasattr(user.subscription, 'title') else user.subscription.short_name
-#         }
-#         cache.set(cache_key, subscription_data, timeout=86400)  # Кешируем на 24 часа
-#     else:
-#         # Устанавливаем специальное значение, указывающее на отсутствие подписки
-#         subscription_data = "no_subscription"
-#         cache.set(cache_key, subscription_data, timeout=86400)
-#
-#     return subscription_data
+    return subscription_data
 
 
 # def get_cached_subscription(telegram_id):

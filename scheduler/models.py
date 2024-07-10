@@ -1,18 +1,20 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
+from polymorphic.models import PolymorphicModel
+
+from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
 
 
-class Subscribable(models.Model):
-    def get_display_name(self):
-        raise NotImplementedError("Subclasses must implement get_display_name method")
+class BaseSubscription(PolymorphicModel):
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='subscriptions')
 
-    def get_filter_params(self, subscription_id):
-        raise NotImplementedError("Subclasses must implement get_filter_params method")
+    objects = SubscriptionManager()
 
     class Meta:
         abstract = True
+
+    def get_subscription_details(self):
+        raise NotImplementedError("Этот метод должен быть реализован в наследуемых классах")
 
 
 class Faculty(models.Model):
@@ -20,6 +22,12 @@ class Faculty(models.Model):
     short_title = models.CharField(max_length=10, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_active']),
+            models.Index(fields=['short_title']),  # для сортировки
+        ]
 
     def calculate_short_title(self):
         if not self.groups.exists():
@@ -37,14 +45,8 @@ class Faculty(models.Model):
     def __str__(self):
         return f"{self.short_title}"
 
-    class Meta:
-        indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['short_title']),  # для сортировки
-        ]
 
-
-class Group(Subscribable):
+class Group(models.Model):
     title = models.CharField(max_length=255)
     link = models.URLField()
     faculty = models.ForeignKey(Faculty, related_name='groups', on_delete=models.CASCADE, null=True)
@@ -52,14 +54,7 @@ class Group(Subscribable):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 
-    def __str__(self):
-        return f"{self.title}"
-
-    def get_display_name(self):
-        return self.title
-
-    def get_filter_params(self):
-        return {'group_id': self.id}
+    objects = GroupManager()
 
     class Meta:
         indexes = [
@@ -67,11 +62,16 @@ class Group(Subscribable):
             models.Index(fields=['grade', 'title']),  # для сортировки
         ]
 
+    def __str__(self):
+        return f"{self.title}"
 
-class Teacher(Subscribable):
+
+class Teacher(models.Model):
     full_name = models.CharField(max_length=64, unique=True)
     short_name = models.CharField(max_length=30)
     is_active = models.BooleanField(default=True)
+
+    object = TeacherManager()
 
     def __str__(self):
         return f"{self.short_name}"
@@ -97,12 +97,6 @@ class Teacher(Subscribable):
             short_name += f"{names[2][0]}."
 
         return short_name
-
-    def get_display_name(self):
-        return self.short_name
-
-    def get_filter_params(self):
-        return {'teacher_id': self.id}
 
 
 class Subject(models.Model):
@@ -197,36 +191,76 @@ class User(models.Model):
     subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
     registration_date = models.DateTimeField(auto_now_add=True)
-    # Поля для подписки на расписание группы или учителя
-    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    subscription = GenericForeignKey('content_type', 'object_id')
     # Настройка уведомлений
     notify_on_schedule_change = models.BooleanField(default=True)
     notify_on_lesson_start = models.BooleanField(default=True)
 
-    def __str__(self):
-        return f"{self.user_name} ({self.first_name} {self.last_name}) [ID: {self.id}]"
-
-    def get_subscription_info(self):
-        """
-        Возвращает информацию о подписке пользователя, если она есть.
-
-        Returns:
-            dict or None: Словарь с информацией о подписке или None, если подписка отсутствует.
-        """
-        if self.subscription:
-            return {
-                'type': self.content_type.model,
-                'id': self.object_id,
-                'name': self.subscription.get_display_name()
-            }
-        return None
+    objects = UserManager
 
     class Meta:
         indexes = [
             models.Index(fields=['telegram_id', 'is_active']),
         ]
+
+    def __str__(self):
+        return f"{self.user_name} ({self.first_name} {self.last_name}) [ID: {self.id}]"
+
+    def get_subscriptions(self) -> list[dict]:
+        subscriptions = []
+        for subscription in self.subscriptions.all():
+            subscription_data = subscription.get_subscription_details()
+            subscriptions.append(subscription_data)
+        return subscriptions
+
+    def to_dict(self):
+        return {
+            'user_id': self.id,
+            'telegram_id': self.telegram_id,
+            'user_name': self.user_name,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'phone_number': self.phone_number,
+            'subgroup': self.subgroup,
+            'notify_on_schedule_change': self.notify_on_schedule_change,
+            'notify_on_lesson_start': self.notify_on_lesson_start,
+            'subscriptions': self.get_subscriptions()
+        }
+
+
+class GroupSubscription(BaseSubscription):
+    group = models.ForeignKey('Group', on_delete=models.CASCADE, related_name='subscriptions')
+
+    class Meta:
+        unique_together = ('user', 'group')
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['group']),
+        ]
+
+    def get_subscription_details(self):
+        return {
+            'model': 'Group',
+            'id': self.group.id,
+            'title': self.group.title
+        }
+
+
+class TeacherSubscription(BaseSubscription):
+    teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE, related_name='subscriptions')
+
+    class Meta:
+        unique_together = ('user', 'teacher')
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['teacher']),
+        ]
+
+    def get_subscription_details(self):
+        return {
+            'model': 'Teacher',
+            'id': self.teacher.id,
+            'title': self.teacher.short_name
+        }
 
 
 class LessonTimeTemplate(models.Model):

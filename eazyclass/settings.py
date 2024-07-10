@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'api',
     'telegrambot',
     'debug_toolbar',
+    'polymorphic',
 ]
 
 MIDDLEWARE = [
@@ -102,6 +103,8 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
+
+AUTH_USER_MODEL = 'scheduler.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {

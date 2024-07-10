@@ -3,6 +3,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path
 from rangefilter.filters import DateRangeFilter
+from django.contrib.auth.admin import UserAdmin
 
 from .activities import *
 from .models import *
@@ -70,9 +71,9 @@ class LessonAdmin(admin.ModelAdmin):
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ('user_name', 'first_name', 'last_name', 'telegram_id', 'is_active', 'registration_date', 'subscription_info')
-    list_filter = ('is_active', 'registration_date', 'content_type')
+    list_filter = ('is_active', 'registration_date')
     search_fields = ('user_name', 'first_name', 'last_name', 'telegram_id')
-    readonly_fields = ('registration_date', 'get_subscription_info')
+    readonly_fields = ('registration_date', 'subscription_info')
 
     fieldsets = (
         (None, {
@@ -82,13 +83,13 @@ class UserAdmin(admin.ModelAdmin):
             'fields': ('notify_on_schedule_change', 'notify_on_lesson_start'),
         }),
         ('Subscription', {
-            'fields': ('content_type', 'object_id', 'get_subscription_info'),
+            'fields': ('subscription_info',),
         }),
     )
 
     def subscription_info(self, obj):
         info = obj.get_subscription_info()
-        return f"{info['type']} ({info['id']}): {info['name']}" if info else "No subscription"
+        return f"{info['model']} ({info['id']}): {info['name']}" if info else "No subscription"
 
     # Make the subscription info field readable and not editable
     subscription_info.short_description = 'Subscription Info'

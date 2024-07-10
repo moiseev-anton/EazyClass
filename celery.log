@@ -2137,3 +2137,408 @@ WARNING 2024-06-24 01:32:18,415 inspector 1 140171792702264 Inspect method sched
 WARNING 2024-06-24 01:32:18,415 inspector 1 140171788372792 Inspect method conf failed
 WARNING 2024-06-24 01:32:18,415 inspector 1 140171794856760 Inspect method active_queues failed
 INFO 2024-06-24 01:48:58,857 command 1 140171895532328 15 detected, shutting down
+ERROR 2024-07-09 10:34:54,758 signal 1 139764558961448 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7f1d77fc8440>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 116, in populate
+    app_config.import_models()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 269, in import_models
+    self.models_module = import_module(models_module_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:34:55,002 signal 1 140680061733672 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7ff29ef9c770>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 116, in populate
+    app_config.import_models()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 269, in import_models
+    self.models_module = import_module(models_module_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:34:55,078 signal 1 139764558961448 Signal handler <promise@0x7f1d75ba0870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f1d75b80350>>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/tasks/__init__.py", line 1, in <module>
+    from .schedule_parser import update_schedule
+  File "/app/scheduler/tasks/schedule_parser.py", line 14, in <module>
+    from .db_queries import synchronize_lessons
+  File "/app/scheduler/tasks/db_queries.py", line 5, in <module>
+    from ..models import LessonBuffer
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:34:55,239 signal 1 140680061733672 Signal handler <promise@0x7ff29df18870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7ff29deec380>>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/tasks/__init__.py", line 1, in <module>
+    from .schedule_parser import update_schedule
+  File "/app/scheduler/tasks/schedule_parser.py", line 14, in <module>
+    from .db_queries import synchronize_lessons
+  File "/app/scheduler/tasks/db_queries.py", line 5, in <module>
+    from ..models import LessonBuffer
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:34:55,374 signal 1 140710923414312 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7ff9ce1908c0>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 116, in populate
+    app_config.import_models()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 269, in import_models
+    self.models_module = import_module(models_module_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:34:55,374 signal 1 139992772131624 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7f52992e0aa0>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 116, in populate
+    app_config.import_models()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 269, in import_models
+    self.models_module = import_module(models_module_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:34:55,608 signal 1 140710923414312 Signal handler <promise@0x7ff9cd708870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7ff9cd6e04a0>>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/tasks/__init__.py", line 1, in <module>
+    from .schedule_parser import update_schedule
+  File "/app/scheduler/tasks/schedule_parser.py", line 14, in <module>
+    from .db_queries import synchronize_lessons
+  File "/app/scheduler/tasks/db_queries.py", line 5, in <module>
+    from ..models import LessonBuffer
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:34:55,608 signal 1 139992772131624 Signal handler <promise@0x7f529844c870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7f5298458200>>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/tasks/__init__.py", line 1, in <module>
+    from .schedule_parser import update_schedule
+  File "/app/scheduler/tasks/schedule_parser.py", line 14, in <module>
+    from .db_queries import synchronize_lessons
+  File "/app/scheduler/tasks/db_queries.py", line 5, in <module>
+    from ..models import LessonBuffer
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:36:00,922 signal 1 140663937137448 Signal handler <bound method DjangoFixup.on_import_modules of <celery.fixups.django.DjangoFixup object at 0x7feedd0226c0>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 100, in on_import_modules
+    self.worker_fixup.validate_models()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 138, in validate_models
+    self.django_setup()
+  File "/usr/local/lib/python3.12/site-packages/celery/fixups/django.py", line 134, in django_setup
+    django.setup()
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 116, in populate
+    app_config.import_models()
+  File "/usr/local/lib/python3.12/site-packages/django/apps/config.py", line 269, in import_models
+    self.models_module = import_module(models_module_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)
+ERROR 2024-07-09 10:36:01,145 signal 1 140663937137448 Signal handler <promise@0x7feedcd94870 --> <bound method Celery._autodiscover_tasks of <Celery eazyclass at 0x7feedcd74260>>> raised: ImportError("cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)")
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 276, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 694, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_fixups(related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 703, in _autodiscover_tasks_from_fixups
+    return self._autodiscover_tasks_from_names([
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/app/base.py", line 698, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/celery/loaders/base.py", line 270, in find_related_module
+    return importlib.import_module(module_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/scheduler/tasks/__init__.py", line 1, in <module>
+    from .schedule_parser import update_schedule
+  File "/app/scheduler/tasks/schedule_parser.py", line 14, in <module>
+    from .db_queries import synchronize_lessons
+  File "/app/scheduler/tasks/db_queries.py", line 5, in <module>
+    from ..models import LessonBuffer
+  File "/app/scheduler/models.py", line 4, in <module>
+    from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
+  File "/app/scheduler/managers.py", line 3, in <module>
+    from .models import BaseSubscription
+ImportError: cannot import name 'BaseSubscription' from partially initialized module 'scheduler.models' (most likely due to a circular import) (/app/scheduler/models.py)

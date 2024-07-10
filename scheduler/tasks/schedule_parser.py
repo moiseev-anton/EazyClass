@@ -141,10 +141,10 @@ def update_database(groups_ids: set, lessons_data: list[Lesson]):
     try:
         with transaction.atomic():
             LessonBuffer.objects.bulk_create(new_lessons)
-            affected_groups_dates = synchronize_lessons(groups_ids)
+            affected_entities = synchronize_lessons(groups_ids)
             LessonBuffer.objects.all().delete()
         logger.info(f"Данные обновлены для {len(groups_ids)} групп")
-        return affected_groups_dates
+        return affected_entities
     except Exception as e:
         logger.error(f"Ошибка при обновлении данных в БД {groups_ids}: {str(e)}")
         raise
@@ -162,9 +162,10 @@ def process_data_final(results):
         else:
             lessons_data.extend(result['lessons_data'])
             successful_group_ids.add(result['group_id'])
-    update_database(successful_group_ids, lessons_data)
-    if failed_group_ids:
-        pass
+    affected_entities = update_database(successful_group_ids, lessons_data)
+    return affected_entities
+    # if failed_group_ids:
+    #     pass
         # Уведомляем администратора об ошибках (добавить потом)
         # notify_admins_of_failures(failed_updates)
     # Обрабатываем успешные результаты
@@ -194,14 +195,16 @@ def update_schedule(self):
 
 
 @shared_task(queue='periodic_tasks')
-def send_notifications(group_date_map):
-    tasks = []
+def send_notifications(affected_entities: dict):
     logger.info(f"Отправка уведолений")
-    for group_id, dates in group_date_map.items():
-        tasks.append(send_group_notification.s(group_id, dates))
+    for entity_type, entity_map in affected_entities.items():
+        send_notifications_for_entity(entity_type, entity_map)
 
-    # Создаем группу задач и выполняем их параллельно
-    group(tasks).apply_async()
+
+def send_notifications_for_entity(model: str, entity_map: dict):
+    pass
+
+
 
 
 @shared_task(queue='bot_tasks')
