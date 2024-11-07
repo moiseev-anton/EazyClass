@@ -1,21 +1,29 @@
 import logging
 from collections import defaultdict
 from datetime import datetime
-from django.db import connection, transaction
-from ..models import LessonBuffer
+
+from django.core.cache import caches
+from django.db import connection
+from telegrambot.services import ContentTypeService
 
 logger = logging.getLogger(__name__)
+cache = caches['telegrambot_cache']
+
+CACHE_TIMEOUT = 86400  # 24 часа
 
 
 def synchronize_lessons(group_ids):
     today = datetime.now().date()
-    affected_entities = {
-        'groups': defaultdict(set),
-        'teachers': defaultdict(set)
+    affected_entities_map = {
+        'Group': defaultdict(set),
+        'Teacher': defaultdict(set)
     }
+
     try:
         with connection.cursor() as cursor:
-            if not LessonBuffer.objects.exists():
+            # Проверка наличия данных в буфере
+            cursor.execute("SELECT COUNT(*) FROM scheduler_lessonbuffer")
+            if cursor.fetchone()[0] == 0:
                 logger.info("Буфер пуст. Пропуск вставки и обновления уроков.")
             else:
                 # Обновление измененных уроков
@@ -34,16 +42,16 @@ def synchronize_lessons(group_ids):
                           (l.subject_id != lb.subject_id OR
                            l.classroom_id != lb.classroom_id OR
                            l.teacher_id != lb.teacher_id)
-                    RETURNING l.group_id, l.lesson_time_id
+                    RETURNING l.group_id, l.teacher_id, lb.lesson_time_id
                 )
-                SELECT u.telegram_id, lt.date
+                SELECT u.group_id, u.teacher_id, lt.date
                 FROM updated u
+                JOIN scheduler_lessontime lt ON u.lesson_time_id = lt.id
                 """)
-                rows = cursor.fetchall()
-                for group_id, teacher_id, date in rows:
-                    affected_entities['groups'][group_id].add(date)
-                    affected_entities['teachers'][teacher_id].add(date)
-                logger.info(f"Обновление измененных уроков завершено успешно: {len(rows)} шт")
+                for group_id, teacher_id, date in cursor.fetchall():
+                    affected_entities_map['Group'][group_id].add(date)
+                    affected_entities_map['Teacher'][teacher_id].add(date)
+                logger.info(f"Обновление измененных уроков завершено успешно: {cursor.rowcount} шт.")
 
                 # Вставка новых уроков из буфера
                 cursor.execute("""
@@ -51,19 +59,20 @@ def synchronize_lessons(group_ids):
                     INSERT INTO scheduler_lesson (group_id, lesson_time_id, subject_id, classroom_id, teacher_id, subgroup, is_active)
                     SELECT lb.group_id, lb.lesson_time_id, lb.subject_id, lb.classroom_id, lb.teacher_id, lb.subgroup, true
                     FROM scheduler_lessonbuffer lb
-                    LEFT JOIN scheduler_lesson l ON lb.group_id = l.group_id AND lb.lesson_time_id = l.lesson_time_id
-                    WHERE l.group_id IS NULL AND l.lesson_time_id IS NULL
-                    RETURNING group_id, lesson_time_id
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM scheduler_lesson l
+                        WHERE l.group_id = lb.group_id AND l.lesson_time_id = lb.lesson_time_id
+                    )
+                    RETURNING group_id, teacher_id, lesson_time_id
                 )
                 SELECT i.group_id, i.teacher_id, lt.date
                 FROM inserted i
-                JOIN scheduler_lessontime lt ON i.lesson_time_id = lt.id;
+                JOIN scheduler_lessontime lt ON i.lesson_time_id = lt.id
                 """)
-                rows = cursor.fetchall()
-                for group_id, teacher_id, date in rows:
-                    affected_entities['groups'][group_id].add(date)
-                    affected_entities['teachers'][teacher_id].add(date)
-                logger.info(f"Вставка новых уроков завершена успешно: {len(rows)} шт")
+                for group_id, teacher_id, date in cursor.fetchall():
+                    affected_entities_map['Group'][group_id].add(date)
+                    affected_entities_map['Teacher'][teacher_id].add(date)
+                logger.info(f"Вставка новых уроков завершена успешно: {cursor.rowcount} шт.")
 
             # Деактивация отмененных уроков
             cursor.execute("""
@@ -76,24 +85,58 @@ def synchronize_lessons(group_ids):
                 WHERE l_sub.group_id = l.group_id
                     AND l_sub.lesson_time_id = l.lesson_time_id
                     AND l_sub.group_id IN %s
-                    AND lt.date >= %s AND
-                    lb.group_id IS NULL 
+                    AND lt.date >= %s
+                    AND lb.group_id IS NULL
                     AND lb.lesson_time_id IS NULL
                     AND l.is_active = true
-                RETURNING l.group_id, l.lesson_time_id
+                RETURNING l.group_id, l.teacher_id, lt.date
             )
-            SELECT d.group_id, d.teacher_id, lt.date
+            SELECT d.group_id, d.teacher_id, d.date
             FROM deactivated d
-            JOIN scheduler_lessontime lt ON d.lesson_time_id = lt.id;
             """, [tuple(group_ids), today])
-            rows = cursor.fetchall()
-            for group_id, teacher_id, date in rows:
-                affected_entities['groups'][group_id].add(date)
-                affected_entities['teachers'][teacher_id].add(date)
-            logger.info(f"Деактивация уроков завершена успешно: {len(rows)} шт")
+            for group_id, teacher_id, date in cursor.fetchall():
+                affected_entities_map['Group'][group_id].add(date)
+                affected_entities_map['Teacher'][teacher_id].add(date)
+            logger.info(f"Деактивация уроков завершена успешно: {cursor.rowcount} шт.")
 
     except Exception as e:
-        logger.error(f"Ошибка при синхронизации буфера уроков: {e}")
+        logger.error(f"Ошибка при синхронизации уроков: {e}")
         raise
 
-    return affected_entities
+    return affected_entities_map
+
+
+def fetch_subscribers_for_type(model_name: str, object_ids: list) -> dict:
+    content_type_id = ContentTypeService.get_content_type_id(app_label='scheduler', model_name=model_name)
+    subscribers = defaultdict(set)
+
+    try:
+        with connection.cursor() as cursor:
+            # Сбор пользователей, подписанных на затронутые объекты
+            if object_ids:
+                cursor.execute("""
+                    SELECT u.telegram_id, s.object_id
+                FROM scheduler_subscriptions s
+                JOIN scheduler_user u ON s.user_id = u.id
+                WHERE s.content_type_id = %s AND s.object_id IN %s
+                      AND u.notify_on_schedule_change = True
+                      AND u.is_active = True;
+                """, [content_type_id, tuple(object_ids)])
+                for user_id, object_id in cursor.fetchall():
+                    subscribers[object_id].add(user_id)
+
+        return subscribers
+
+    except Exception as e:
+        logger.error(f"Ошибка при получении данных подписчиков: {e}")
+        raise
+
+
+def fetch_all_subscribers(affected_entities_map):
+    subscribers_map = defaultdict(dict)
+    for model_name, model_map in affected_entities_map.items():
+        object_ids = model_map.keys()
+        type_subscribers = fetch_subscribers_for_type(model_name, object_ids)
+        subscribers_map[model_name] = type_subscribers
+
+    return subscribers_map

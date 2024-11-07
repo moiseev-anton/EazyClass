@@ -6,7 +6,7 @@ from django.core.cache import caches
 from scheduler.models import Group, Teacher
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from .services import CacheService
+from .services import KeyboardDataService
 
 CACHE_TIMEOUT = 86400  # 24 часа
 KEYBOARD_ROW_WIDTH = 4
@@ -27,6 +27,7 @@ context_data_store = {}
 
 # Кнопки
 home_button = InlineKeyboardButton("🏠 На главную", callback_data="home")
+phone_button = InlineKeyboardButton("Поделиться номером", request_contact=True)
 today_button = InlineKeyboardButton("На сегодня", callback_data="schedule_today")
 tomorrow_button = InlineKeyboardButton("На завтра", callback_data="schedule_tomorrow")
 from_today_button = InlineKeyboardButton("Актуальное", callback_data="from_today")
@@ -39,6 +40,7 @@ site_button = InlineKeyboardButton("🌍Сайт", url='https://bincol.ru/rasp/'
 
 context_schedule_button = InlineKeyboardButton("Расписание", callback_data="schedule_context")
 subscribe_button = InlineKeyboardButton("Подписаться", callback_data="subscribe")
+
 
 # Статические клавиатуры
 home_base_keyboard = InlineKeyboardMarkup()
@@ -69,8 +71,14 @@ static_keyboards['home_short'] = home_short_keyboard
 
 # Клавиатура start
 start_keyboard = InlineKeyboardMarkup()
-start_keyboard.row(home_button, site_button)
+start_keyboard.row(home_button)
 static_keyboards['start'] = start_keyboard
+
+
+phone_request_keyboard = InlineKeyboardMarkup()
+phone_request_keyboard.add(phone_button)
+phone_request_keyboard.add(home_button)
+static_keyboards['phone_request'] = phone_request_keyboard
 
 subscribe_keyboard = InlineKeyboardMarkup()
 subscribe_keyboard.add(context_schedule_button)
@@ -91,7 +99,7 @@ def get_keyboard(key: str):
 def get_teacher_keyboards():
     new_keyboards = {}
     new_context_data_store = {}
-    teachers = CacheService.get_cached_keyboard_data(Teacher, cache_key='active_teachers_data')
+    teachers = KeyboardDataService.get_data_for_dynamic_keyboard('Teacher')
     button_sets = defaultdict(list)
     for teacher_id, short_name in teachers:
         initial = short_name[0].upper()
@@ -125,7 +133,7 @@ def build_keyboard(buttons: list[InlineKeyboardButton], row_width: int = KEYBOAR
 
 def get_group_keyboards():
     new_keyboards = {}
-    groups = CacheService.get_cached_keyboard_data(Group, cache_key='active_groups_data')
+    groups = KeyboardDataService.get_data_for_dynamic_keyboard('Group')
     button_sets = defaultdict(list)
     for group_id, title, grade, faculty_title in groups:
         grade_key = f'grade:{faculty_title}:{grade}'

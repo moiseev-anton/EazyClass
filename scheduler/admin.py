@@ -3,7 +3,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path
 from rangefilter.filters import DateRangeFilter
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from .activities import *
 from .models import *
@@ -53,12 +53,14 @@ class ClassroomAdmin(admin.ModelAdmin):
     ordering = ('title',)
     actions = [make_active, make_inactive, toggle_active]
 
+
 @admin.register(LessonBuffer)
 class LessonBufferAdmin(admin.ModelAdmin):
     list_display = ('group', 'lesson_time', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
     search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
     list_filter = ('group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
     actions = [make_active, make_inactive, toggle_active]
+
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
@@ -69,15 +71,19 @@ class LessonAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ('user_name', 'first_name', 'last_name', 'telegram_id', 'is_active', 'registration_date', 'subscription_info')
-    list_filter = ('is_active', 'registration_date')
-    search_fields = ('user_name', 'first_name', 'last_name', 'telegram_id')
-    readonly_fields = ('registration_date', 'subscription_info')
+class UserAdmin(BaseUserAdmin):
+    list_display = (
+        'username', 'first_name', 'last_name', 'telegram_id', 'is_active', 'date_joined', 'subscription_info')
+    list_filter = ('is_active', 'date_joined')
+    search_fields = ('username', 'first_name', 'last_name', 'telegram_id')
+    readonly_fields = ('date_joined', 'subscription_info')
 
     fieldsets = (
         (None, {
-            'fields': ('user_name', 'first_name', 'last_name', 'telegram_id', 'phone_number', 'subgroup', 'is_active', 'registration_date')
+            'fields': ('username', 'first_name', 'last_name', 'telegram_id', 'phone_number', 'is_active', 'date_joined')
+        }),
+        ('Permissions', {
+            'fields': ('groups', 'user_permissions', 'is_staff', 'is_superuser'),
         }),
         ('Notification Settings', {
             'fields': ('notify_on_schedule_change', 'notify_on_lesson_start'),
@@ -86,12 +92,19 @@ class UserAdmin(admin.ModelAdmin):
             'fields': ('subscription_info',),
         }),
     )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'first_name', 'last_name', 'telegram_id', 'phone_number', 'password1', 'password2',
+                       'is_active'),
+        }),
+    )
 
     def subscription_info(self, obj):
-        info = obj.get_subscription_info()
-        return f"{info['model']} ({info['id']}): {info['name']}" if info else "No subscription"
+        # Этот метод должен быть обновлен для отображения всех подписок пользователя
+        subscriptions = Subscription.objects.filter(user=obj)
+        return ", ".join([f"{sub.content_object}" for sub in subscriptions]) if subscriptions else "No subscriptions"
 
-    # Make the subscription info field readable and not editable
     subscription_info.short_description = 'Subscription Info'
 
 

@@ -1,20 +1,11 @@
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from polymorphic.models import PolymorphicModel
 
-from .managers import GroupManager, TeacherManager, SubscriptionManager, UserManager
-
-
-class BaseSubscription(PolymorphicModel):
-    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='subscriptions')
-
-    objects = SubscriptionManager()
-
-    class Meta:
-        abstract = True
-
-    def get_subscription_details(self):
-        raise NotImplementedError("Этот метод должен быть реализован в наследуемых классах")
+from .managers import GroupManager, TeacherManager, UserManager
 
 
 class Faculty(models.Model):
@@ -65,6 +56,9 @@ class Group(models.Model):
     def __str__(self):
         return f"{self.title}"
 
+    def get_display_name(self):
+        return self.title
+
 
 class Teacher(models.Model):
     full_name = models.CharField(max_length=64, unique=True)
@@ -97,6 +91,9 @@ class Teacher(models.Model):
             short_name += f"{names[2][0]}."
 
         return short_name
+
+    def get_display_name(self):
+        return self.short_name
 
 
 class Subject(models.Model):
@@ -182,12 +179,11 @@ class LessonBuffer(models.Model):
         return f"{self.group.title}({self.subgroup})-{self.lesson_time}-{self.subject}"
 
 
-class User(models.Model):
-    telegram_id = models.BigIntegerField(unique=True)
-    user_name = models.CharField(max_length=32)
-    first_name = models.CharField(max_length=32)
-    last_name = models.CharField(max_length=32)
-    phone_number = models.CharField(max_length=15)
+class User(AbstractUser):
+    telegram_id = models.BigIntegerField(unique=True, null=True)
+    first_name = models.CharField(max_length=32, null=True)
+    last_name = models.CharField(max_length=32, null=True)
+    phone_number = models.CharField(max_length=15, null=True)
     subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
     registration_date = models.DateTimeField(auto_now_add=True)
@@ -203,7 +199,7 @@ class User(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.user_name} ({self.first_name} {self.last_name}) [ID: {self.id}]"
+        return f"{self.username} ({self.first_name} {self.last_name}) [ID: {self.id}]"
 
     def get_subscriptions(self) -> list[dict]:
         subscriptions = []
@@ -227,40 +223,28 @@ class User(models.Model):
         }
 
 
-class GroupSubscription(BaseSubscription):
-    group = models.ForeignKey('Group', on_delete=models.CASCADE, related_name='subscriptions')
+class Subscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscriptions')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
 
     class Meta:
-        unique_together = ('user', 'group')
+        unique_together = ('user', 'content_type', 'object_id')
         indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['group']),
+            models.Index(fields=['content_type', 'object_id']),
         ]
 
-    def get_subscription_details(self):
-        return {
-            'model': 'Group',
-            'id': self.group.id,
-            'title': self.group.title
-        }
-
-
-class TeacherSubscription(BaseSubscription):
-    teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE, related_name='subscriptions')
-
-    class Meta:
-        unique_together = ('user', 'teacher')
-        indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['teacher']),
-        ]
+    def __str__(self):
+        return f'{self.user} is subscribed to {self.content_object}'
 
     def get_subscription_details(self):
-        return {
-            'model': 'Teacher',
-            'id': self.teacher.id,
-            'title': self.teacher.short_name
+        details = {
+            'id': self.object_id,
+            'model': self.content_type.name,
+            'name': self.content_object.get_display_name() if hasattr(self.content_object, 'get_display_name') else 'N/A'
         }
+        return details
 
 
 class LessonTimeTemplate(models.Model):

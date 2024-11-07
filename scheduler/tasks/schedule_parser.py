@@ -3,6 +3,8 @@ import json
 import logging
 import re
 from datetime import datetime
+import asyncio
+import aiohttp
 
 import requests
 from bs4 import BeautifulSoup
@@ -11,8 +13,9 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Model
 
-from .db_queries import synchronize_lessons
+from .db_queries import synchronize_lessons, fetch_all_subscribers
 from ..models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
+from telegrambot.bot import bot
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 CACHE_TIMEOUT = 60 * 60 * 24 * 7
@@ -143,8 +146,10 @@ def update_database(groups_ids: set, lessons_data: list[Lesson]):
             LessonBuffer.objects.bulk_create(new_lessons)
             affected_entities = synchronize_lessons(groups_ids)
             LessonBuffer.objects.all().delete()
+
         logger.info(f"Данные обновлены для {len(groups_ids)} групп")
         return affected_entities
+
     except Exception as e:
         logger.error(f"Ошибка при обновлении данных в БД {groups_ids}: {str(e)}")
         raise
@@ -166,8 +171,8 @@ def process_data_final(results):
     return affected_entities
     # if failed_group_ids:
     #     pass
-        # Уведомляем администратора об ошибках (добавить потом)
-        # notify_admins_of_failures(failed_updates)
+    # Уведомляем администратора об ошибках (добавить потом)
+    # notify_admins_of_failures(failed_updates)
     # Обрабатываем успешные результаты
 
 
@@ -195,19 +200,42 @@ def update_schedule(self):
 
 
 @shared_task(queue='periodic_tasks')
-def send_notifications(affected_entities: dict):
-    logger.info(f"Отправка уведолений")
-    for entity_type, entity_map in affected_entities.items():
-        send_notifications_for_entity(entity_type, entity_map)
+def send_notifications(affected_entities_map: dict):
+    logger.debug(f"Начата отправка уведомлений")
+    subscribers_map = fetch_all_subscribers(affected_entities_map)
+    notification_type_tasks = []
+    for entity_type, entity_map in subscribers_map.items():
+        if entity_map:  # Убедимся, что есть подписчики перед созданием задачи
+            entity_info_map = affected_entities_map[entity_type]
+            notification_type_tasks.append(send_notifications_for_entity.s(entity_type, entity_map, entity_info_map))
+
+    task_group = group(notification_type_tasks)
+    task_group.apply_async()
+    logger.debug("Задачи по отправке уведомлений запланированы")
 
 
-def send_notifications_for_entity(model: str, entity_map: dict):
-    pass
+@shared_task(queue='periodic_tasks')
+def send_notifications_for_entity(entity_map: dict, entity_info_map: dict):
+    tasks = []
+    for entity_id, subscribers_set in entity_map.items():
+        dates = ", ".join(sorted(entity_info_map[entity_id]))
+        message = f"Ваше расписание на {dates} изменено. Ознакомтесь с новым расписанием."
+        tasks.append(send_notifications_for_subscribers(message, subscribers_set))
+    task_group = group(tasks)
+    task_group.apply_async()
+    logger.debug("Задачи по отправке уведомлений для группы подписчиков выполнены")
 
 
+@shared_task
+def send_notifications_for_subscribers(message: str, telegram_ids: set):
+    asyncio.run(async_send_notifications(message, telegram_ids))
 
 
-@shared_task(queue='bot_tasks')
-def send_group_notification(group_id, dates):
-    # Потом реализуем логику отправки уведомления группе
-    logger.info(f"Отправлено уведоление группе {group_id} for dates: {', '.join(map(str, dates))}")
+async def async_send_notifications(message, telegram_ids):
+    for telegram_id in telegram_ids:
+        try:
+            await bot.send_message(telegram_id, message)
+            logger.debug(f"Уведомление успешно отправлено пользователю {telegram_id}")
+        except Exception as e:
+            logger.error(f"Ошибка при отправке уведомления пользователю {telegram_id}: {e}")
+

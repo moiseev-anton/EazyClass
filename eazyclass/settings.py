@@ -49,11 +49,9 @@ INSTALLED_APPS = [
     'scheduler',
     'django_celery_beat',
     'rangefilter',
-    # 'rest_framework',
     'api',
     'telegrambot',
     'debug_toolbar',
-    'polymorphic',
 ]
 
 MIDDLEWARE = [
@@ -100,6 +98,7 @@ DATABASES = {
         'PORT': os.getenv('POSTGRES_PORT'),
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
