@@ -11,14 +11,14 @@ services:
 
   django:
     build:
-      context: ./eazyclass
+      context: .
       dockerfile: Dockerfile.django
     container_name: django
     command: >
       sh -c "dockerize -wait tcp://pgdb:5432 -wait tcp://redis:6379 -timeout 30s
       && python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./eazyclass:/app
+      - .:/app
     ports:
       - "8010:8000"
     env_file:
@@ -33,12 +33,12 @@ services:
 
   celery-worker-bot:
     build:
-      context: ./eazyclass
+      context: .
       dockerfile: Dockerfile.celery
     container_name: celery_worker_bot
     command: celery -A eazyclass worker -Q bot_tasks --loglevel=debug # заменить потом на info
     volumes:
-      - ./eazyclass:/app
+      - .:/app
     env_file:
       - ./.env
     depends_on:
@@ -47,12 +47,12 @@ services:
 
   celery-worker-periodic:
     build:
-      context: ./eazyclass
+      context: .
       dockerfile: Dockerfile.celery
     container_name: celery_worker_periodic
     command: celery -A eazyclass worker -Q periodic_tasks --loglevel=debug # заменить потом на info
     volumes:
-      - ./eazyclass:/app
+      - .:/app
     env_file:
       - ./.env
     depends_on:
@@ -61,12 +61,12 @@ services:
 
   celery-beat:
     build:
-      context: ./eazyclass
+      context: .
       dockerfile: Dockerfile.celery
     container_name: celery_beat
     command: celery -A eazyclass beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
-      - ./eazyclass:/app
+      - .:/app
     env_file:
       - ./.env
     depends_on:
@@ -75,12 +75,12 @@ services:
 
   flower:
     build:
-      context: ./eazyclass
+      context: .
       dockerfile: Dockerfile.celery
     container_name: celery_flower
     command: celery -A eazyclass flower --address=0.0.0.0 --port=5555
     volumes:
-      - ./eazyclass:/app
+      - .:/app
     ports:
       - "5555:5555"
     env_file:
@@ -89,16 +89,6 @@ services:
       - redis
       - pgdb
 
-#  telegram-bot:
-#    build:
-#      context: telegram_bot
-#      dockerfile: Dockerfile
-#    volumes:
-#      - ./telegram_bot:/app
-#    environment:
-#      - TELEGRAM_TOKEN=${TELEGRAM_BOT_TOKEN}
-#      - BOT_REDIS_URL=${TELEGRAM_BOT_REDIS}
-#    restart: always
 
 volumes:
   postgres_data:
