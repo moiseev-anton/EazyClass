@@ -8,8 +8,8 @@ from django.core.cache import caches
 from django.db import transaction
 from telebot.types import User as TelegramUser
 
-from scheduler.models import User, Subscription
-from scheduler.utils import cache_data
+from eazyclass.scheduler import User, Subscription
+from eazyclass.scheduler import cache_data
 
 CACHE_TIMEOUT = 86400  # 24 часа
 USER_DATA_CACHE_TIMEOUT = 3600  # 1 час

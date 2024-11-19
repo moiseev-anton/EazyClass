@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.core.cache import caches
 from django.db import connection
-from telegrambot.services import ContentTypeService
+from eazyclass.telegrambot import ContentTypeService
 
 logger = logging.getLogger(__name__)
 cache = caches['telegrambot_cache']

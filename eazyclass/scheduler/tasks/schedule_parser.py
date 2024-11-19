@@ -4,7 +4,6 @@ import logging
 import re
 from datetime import datetime
 import asyncio
-import aiohttp
 
 import requests
 from bs4 import BeautifulSoup
@@ -15,7 +14,7 @@ from django.db.models import Model
 
 from .db_queries import synchronize_lessons, fetch_all_subscribers
 from ..models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
-from telegrambot.bot import bot
+from eazyclass.telegrambot.bot import bot
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 CACHE_TIMEOUT = 60 * 60 * 24 * 7

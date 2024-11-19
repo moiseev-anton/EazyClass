@@ -3,7 +3,6 @@ import json
 from collections import defaultdict
 
 from django.core.cache import caches
-from scheduler.models import Group, Teacher
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from .services import KeyboardDataService

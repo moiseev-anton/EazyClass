@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
 
-from scheduler.tasks import update_schedule, process_group_lessons_data
+from eazyclass.scheduler.tasks import update_schedule
+
+
 # from scheduler.models import Group
 
 

@@ -12,7 +12,7 @@ services:
   django:
     build:
       context: .
-      dockerfile: Dockerfile.django
+      dockerfile: eazyclass/Dockerfile.django
     container_name: django
     command: >
       sh -c "dockerize -wait tcp://pgdb:5432 -wait tcp://redis:6379 -timeout 30s
@@ -34,7 +34,7 @@ services:
   celery-worker-bot:
     build:
       context: .
-      dockerfile: Dockerfile.celery
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_worker_bot
     command: celery -A eazyclass worker -Q bot_tasks --loglevel=debug # заменить потом на info
     volumes:
@@ -48,7 +48,7 @@ services:
   celery-worker-periodic:
     build:
       context: .
-      dockerfile: Dockerfile.celery
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_worker_periodic
     command: celery -A eazyclass worker -Q periodic_tasks --loglevel=debug # заменить потом на info
     volumes:
@@ -62,7 +62,7 @@ services:
   celery-beat:
     build:
       context: .
-      dockerfile: Dockerfile.celery
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_beat
     command: celery -A eazyclass beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
@@ -76,7 +76,7 @@ services:
   flower:
     build:
       context: .
-      dockerfile: Dockerfile.celery
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_flower
     command: celery -A eazyclass flower --address=0.0.0.0 --port=5555
     volumes:

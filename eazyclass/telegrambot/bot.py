@@ -7,7 +7,7 @@ from telebot.async_telebot import AsyncTeleBot
 from .keyboards import get_keyboard, context_data_store
 from .services import CacheService, UserService, SubscriptionService
 from .interface_messages import generate_home_answer
-from scheduler.models import User
+from eazyclass.scheduler import User
 
 API_TOKEN = os.getenv('TELEGRAM_TOKEN')
 
