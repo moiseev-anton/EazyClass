@@ -180,18 +180,18 @@ class LessonBuffer(models.Model):
 
 
 class User(AbstractUser):
-    telegram_id = models.BigIntegerField(unique=True, null=True)
-    first_name = models.CharField(max_length=32, null=True)
-    last_name = models.CharField(max_length=32, null=True)
-    phone_number = models.CharField(max_length=15, null=True)
+    telegram_id = models.BigIntegerField(unique=True, null=True, blank=True)
+    phone = models.CharField(max_length=15, unique=True, null=True, blank=True)
     subgroup = models.CharField(max_length=1, default='0')
-    is_active = models.BooleanField(default=True)
-    registration_date = models.DateTimeField(auto_now_add=True)
+
     # Настройка уведомлений
     notify_on_schedule_change = models.BooleanField(default=True)
     notify_on_lesson_start = models.BooleanField(default=True)
 
-    objects = UserManager
+    objects = UserManager()
+
+    # убираем лишнее от AbstractUser
+    email = None
 
     class Meta:
         indexes = [
@@ -212,10 +212,10 @@ class User(AbstractUser):
         return {
             'user_id': self.id,
             'telegram_id': self.telegram_id,
-            'user_name': self.user_name,
+            'user_name': self.username,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            'phone_number': self.phone_number,
+            'phone_number': self.phone,
             'subgroup': self.subgroup,
             'notify_on_schedule_change': self.notify_on_schedule_change,
             'notify_on_lesson_start': self.notify_on_lesson_start,

@@ -1,7 +1,7 @@
 from django.db import models
 from typing import Any, Dict
 from django.core.exceptions import ObjectDoesNotExist
-from .models import User
+from django.contrib.auth.models import BaseUserManager
 
 from .utils import cache_data, invalidate_cache
 import logging
@@ -34,8 +34,8 @@ class SubscriptionManager(models.Manager):
         self.filter(user_id=user_id).delete()
 
 
-class UserManager(models.Manager):
-    def get_or_create_by_telegram_user(self, telegram_user) -> (User, bool):
+class UserManager(BaseUserManager):
+    def get_or_create_by_telegram_user(self, telegram_user) -> ('User', bool):
         user, created = self.get_or_create(
             telegram_id=str(telegram_user.id),
             defaults={
@@ -57,7 +57,7 @@ class UserManager(models.Manager):
             raise
 
     @invalidate_cache('user_data_{0}', cache_name='telegrambot_cache')
-    def update_contact(self, telegram_id: str, contact) -> User:
+    def update_contact(self, telegram_id: str, contact) -> 'User':
         user, created = self.update_or_create(
             telegram_id=telegram_id,
             defaults={
