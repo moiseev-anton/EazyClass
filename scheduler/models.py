@@ -1,9 +1,12 @@
+import uuid
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.utils.timezone import now
+from datetime import timedelta
 
 from .managers import GroupManager, TeacherManager, UserManager
 
@@ -221,6 +224,25 @@ class User(AbstractUser):
             'notify_on_lesson_start': self.notify_on_lesson_start,
             'subscriptions': self.get_subscriptions()
         }
+
+
+class AuthToken(models.Model):
+    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="auth_tokens")
+    token = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def is_valid(self):
+        return now() < self.expires_at
+
+    @staticmethod
+    def generate_token(user):
+        token = f"auth_{uuid.uuid4().hex}"
+        return AuthToken.objects.create(
+            user=user,
+            token=token,
+            expires_at=now() + timedelta(minutes=10),  # Токен действует 10 минут
+        )
 
 
 class Subscription(models.Model):
