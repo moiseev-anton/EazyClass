@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.core.cache import caches
 from django.db import connection
-from eazyclass.telegrambot import ContentTypeService
+# from eazyclass.telegrambot import ContentTypeService
 
 logger = logging.getLogger(__name__)
 cache = caches['telegrambot_cache']
@@ -56,8 +56,10 @@ def synchronize_lessons(group_ids):
                 # Вставка новых уроков из буфера
                 cursor.execute("""
                 WITH inserted AS (
-                    INSERT INTO scheduler_lesson (group_id, lesson_time_id, subject_id, classroom_id, teacher_id, subgroup, is_active)
-                    SELECT lb.group_id, lb.lesson_time_id, lb.subject_id, lb.classroom_id, lb.teacher_id, lb.subgroup, true
+                    INSERT INTO scheduler_lesson (group_id, lesson_time_id, subject_id, classroom_id, teacher_id,
+                        subgroup, is_active)
+                    SELECT lb.group_id, lb.lesson_time_id, lb.subject_id, lb.classroom_id, 
+                        lb.teacher_id, lb.subgroup, true
                     FROM scheduler_lessonbuffer lb
                     WHERE NOT EXISTS (
                         SELECT 1 FROM scheduler_lesson l
@@ -81,7 +83,8 @@ def synchronize_lessons(group_ids):
                 SET is_active = false
                 FROM scheduler_lesson l_sub
                 JOIN scheduler_lessontime lt ON l_sub.lesson_time_id = lt.id
-                LEFT JOIN scheduler_lessonbuffer lb ON l_sub.group_id = lb.group_id AND l_sub.lesson_time_id = lb.lesson_time_id
+                LEFT JOIN scheduler_lessonbuffer lb ON l_sub.group_id = lb.group_id 
+                    AND l_sub.lesson_time_id = lb.lesson_time_id
                 WHERE l_sub.group_id = l.group_id
                     AND l_sub.lesson_time_id = l.lesson_time_id
                     AND l_sub.group_id IN %s
@@ -106,37 +109,37 @@ def synchronize_lessons(group_ids):
     return affected_entities_map
 
 
-def fetch_subscribers_for_type(model_name: str, object_ids: list) -> dict:
-    content_type_id = ContentTypeService.get_content_type_id(app_label='scheduler', model_name=model_name)
-    subscribers = defaultdict(set)
-
-    try:
-        with connection.cursor() as cursor:
-            # Сбор пользователей, подписанных на затронутые объекты
-            if object_ids:
-                cursor.execute("""
-                    SELECT u.telegram_id, s.object_id
-                FROM scheduler_subscriptions s
-                JOIN scheduler_user u ON s.user_id = u.id
-                WHERE s.content_type_id = %s AND s.object_id IN %s
-                      AND u.notify_on_schedule_change = True
-                      AND u.is_active = True;
-                """, [content_type_id, tuple(object_ids)])
-                for user_id, object_id in cursor.fetchall():
-                    subscribers[object_id].add(user_id)
-
-        return subscribers
-
-    except Exception as e:
-        logger.error(f"Ошибка при получении данных подписчиков: {e}")
-        raise
-
-
-def fetch_all_subscribers(affected_entities_map):
-    subscribers_map = defaultdict(dict)
-    for model_name, model_map in affected_entities_map.items():
-        object_ids = model_map.keys()
-        type_subscribers = fetch_subscribers_for_type(model_name, object_ids)
-        subscribers_map[model_name] = type_subscribers
-
-    return subscribers_map
+# def fetch_subscribers_for_type(model_name: str, object_ids: list) -> dict:
+#     content_type_id = ContentTypeService.get_content_type_id(app_label='scheduler', model_name=model_name)
+#     subscribers = defaultdict(set)
+#
+#     try:
+#         with connection.cursor() as cursor:
+#             # Сбор пользователей, подписанных на затронутые объекты
+#             if object_ids:
+#                 cursor.execute("""
+#                     SELECT u.telegram_id, s.object_id
+#                 FROM scheduler_subscriptions s
+#                 JOIN scheduler_user u ON s.user_id = u.id
+#                 WHERE s.content_type_id = %s AND s.object_id IN %s
+#                       AND u.notify_on_schedule_change = True
+#                       AND u.is_active = True;
+#                 """, [content_type_id, tuple(object_ids)])
+#                 for user_id, object_id in cursor.fetchall():
+#                     subscribers[object_id].add(user_id)
+#
+#         return subscribers
+#
+#     except Exception as e:
+#         logger.error(f"Ошибка при получении данных подписчиков: {e}")
+#         raise
+#
+#
+# def fetch_all_subscribers(affected_entities_map):
+#     subscribers_map = defaultdict(dict)
+#     for model_name, model_map in affected_entities_map.items():
+#         object_ids = model_map.keys()
+#         type_subscribers = fetch_subscribers_for_type(model_name, object_ids)
+#         subscribers_map[model_name] = type_subscribers
+#
+#     return subscribers_map

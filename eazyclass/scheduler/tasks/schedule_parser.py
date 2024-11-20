@@ -12,9 +12,9 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Model
 
-from .db_queries import synchronize_lessons, fetch_all_subscribers
+from .db_queries import synchronize_lessons
 from ..models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
-from eazyclass.telegrambot.bot import bot
+# from eazyclass.telegrambot.bot import bot
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 CACHE_TIMEOUT = 60 * 60 * 24 * 7
@@ -201,16 +201,16 @@ def update_schedule(self):
 @shared_task(queue='periodic_tasks')
 def send_notifications(affected_entities_map: dict):
     logger.debug(f"Начата отправка уведомлений")
-    subscribers_map = fetch_all_subscribers(affected_entities_map)
-    notification_type_tasks = []
-    for entity_type, entity_map in subscribers_map.items():
-        if entity_map:  # Убедимся, что есть подписчики перед созданием задачи
-            entity_info_map = affected_entities_map[entity_type]
-            notification_type_tasks.append(send_notifications_for_entity.s(entity_type, entity_map, entity_info_map))
-
-    task_group = group(notification_type_tasks)
-    task_group.apply_async()
-    logger.debug("Задачи по отправке уведомлений запланированы")
+    # # subscribers_map = fetch_all_subscribers(affected_entities_map)
+    # notification_type_tasks = []
+    # for entity_type, entity_map in subscribers_map.items():
+    #     if entity_map:  # Убедимся, что есть подписчики перед созданием задачи
+    #         entity_info_map = affected_entities_map[entity_type]
+    #         notification_type_tasks.append(send_notifications_for_entity.s(entity_type, entity_map, entity_info_map))
+    #
+    # task_group = group(notification_type_tasks)
+    # task_group.apply_async()
+    # logger.debug("Задачи по отправке уведомлений запланированы")
 
 
 @shared_task(queue='periodic_tasks')
@@ -231,10 +231,11 @@ def send_notifications_for_subscribers(message: str, telegram_ids: set):
 
 
 async def async_send_notifications(message, telegram_ids):
-    for telegram_id in telegram_ids:
-        try:
-            await bot.send_message(telegram_id, message)
-            logger.debug(f"Уведомление успешно отправлено пользователю {telegram_id}")
-        except Exception as e:
-            logger.error(f"Ошибка при отправке уведомления пользователю {telegram_id}: {e}")
+    pass
+    # for telegram_id in telegram_ids:
+    #     try:
+    #         await bot.send_message(telegram_id, message)
+    #         logger.debug(f"Уведомление успешно отправлено пользователю {telegram_id}")
+    #     except Exception as e:
+    #         logger.error(f"Ошибка при отправке уведомления пользователю {telegram_id}: {e}")
 

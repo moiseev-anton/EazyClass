@@ -11,14 +11,14 @@ services:
 
   django:
     build:
-      context: ./eazyclass
-      dockerfile: Dockerfile.django
+      context: .
+      dockerfile: eazyclass/Dockerfile.django
     container_name: django
     command: >
       sh -c "dockerize -wait tcp://pgdb:5432 -wait tcp://redis:6379 -timeout 30s
       && python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./eazyclass:/app
+      - ./eazyclass:/app:delegated
     ports:
       - "8010:8000"
     env_file:
@@ -33,12 +33,12 @@ services:
 
   celery-worker-bot:
     build:
-      context: ./eazyclass
-      dockerfile: Dockerfile.celery
+      context: .
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_worker_bot
     command: celery -A eazyclass worker -Q bot_tasks --loglevel=debug # заменить потом на info
     volumes:
-      - ./eazyclass:/app
+      - ./eazyclass:/app:delegated
     env_file:
       - ./.env
     depends_on:
@@ -47,12 +47,12 @@ services:
 
   celery-worker-periodic:
     build:
-      context: ./eazyclass
-      dockerfile: Dockerfile.celery
+      context: .
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_worker_periodic
     command: celery -A eazyclass worker -Q periodic_tasks --loglevel=debug # заменить потом на info
     volumes:
-      - ./eazyclass:/app
+      - ./eazyclass:/app:delegated
     env_file:
       - ./.env
     depends_on:
@@ -61,12 +61,12 @@ services:
 
   celery-beat:
     build:
-      context: ./eazyclass
-      dockerfile: Dockerfile.celery
+      context: .
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_beat
     command: celery -A eazyclass beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
-      - ./eazyclass:/app
+      - ./eazyclass:/app:delegated
     env_file:
       - ./.env
     depends_on:
@@ -75,12 +75,12 @@ services:
 
   flower:
     build:
-      context: ./eazyclass
-      dockerfile: Dockerfile.celery
+      context: .
+      dockerfile: eazyclass/Dockerfile.celery
     container_name: celery_flower
     command: celery -A eazyclass flower --address=0.0.0.0 --port=5555
     volumes:
-      - ./eazyclass:/app
+      - ./eazyclass:/app:delegated
     ports:
       - "5555:5555"
     env_file:
@@ -102,3 +102,4 @@ services:
 
 volumes:
   postgres_data:
+    external: true

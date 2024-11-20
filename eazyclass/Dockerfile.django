@@ -1,4 +1,5 @@
 FROM python:3.12-alpine
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
@@ -11,6 +12,10 @@ RUN apk add --no-cache openssl \
     && apk del wget openssl
 
 WORKDIR /app
-COPY requirements.txt ./
+
+#Установка зависимостей
+COPY ../requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-#COPY . . # У нас подключен bind mount том. При деплое его надо отключить и вернуть эту строку
+
+# У нас подключен bind mount том. При деплое его надо отключить и вернуть эту строку!!!
+#COPY . .
