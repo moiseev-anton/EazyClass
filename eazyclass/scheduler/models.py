@@ -186,6 +186,7 @@ class User(AbstractUser):
     telegram_id = models.BigIntegerField(unique=True, null=True, blank=True)
     phone = models.CharField(max_length=15, unique=True, null=True, blank=True)
     subgroup = models.CharField(max_length=1, default='0')
+    email = models.EmailField(unique=True, blank=True, null=True)
 
     # Настройка уведомлений
     notify_on_schedule_change = models.BooleanField(default=True)
@@ -193,8 +194,7 @@ class User(AbstractUser):
 
     objects = UserManager()
 
-    # убираем лишнее от AbstractUser
-    email = None
+    REQUIRED_FIELDS = []
 
     class Meta:
         indexes = [
