@@ -1,20 +1,52 @@
-from django.db import models
+import logging
 from typing import Dict, Optional, Tuple, Any
-from django.core.exceptions import ObjectDoesNotExist
+
 from django.contrib.auth.models import BaseUserManager
+from django.db import models
 
 from .utils import cache_data, invalidate_cache
-import logging
 
 CACHE_TIMEOUT = 86400  # 24 часа
 USER_DATA_CACHE_TIMEOUT = 3600  # 1 час
 KEYBOARD_DATA_CACHE_TIMEOUT = 82800  # 23 часа
+GROUP_DATA_CACHE_TIMEOUT = 82800  # 23 часа
 
 logger = logging.getLogger(__name__)
 
 
+class SingleFieldManagerMixin:
+    """ Миксин для сущностей с одним уникальным полем"""
+
+    def get_objects_map(self, values_set, field_name):
+        """
+        Получить маппинг значений из БД: {значение поля -> id}.
+        """
+        existing_objects = self.filter(**{f"{field_name}__in": values_set}).values_list(field_name, 'id')
+        return dict(existing_objects)
+
+    def get_or_create_objects_map(self, unique_values_set, field_name):
+        """
+        Получить маппинг существующих объектов и создать недостающие.
+        """
+        objects_map = self.get_objects_map(unique_values_set, field_name)
+
+        # Определяем недостающие значения
+        missing_values = unique_values_set - set(objects_map.keys())
+        if missing_values:
+            logger.info(f"Создано {len(missing_values)} новых записей '{self.model.__name__}'")
+            self.bulk_create([self.model(**{field_name: value}) for value in missing_values])
+
+            # Обновляем маппинг
+            objects_map.update(self.get_objects_map(missing_values, field_name))
+
+        return objects_map
+
+
 class BaseManager(models.Manager):
     def active_keyboard_data(self):
+        raise NotImplementedError("Subclasses must implement fetch_active_data method")
+
+    def get_or_create_cached_id(self):
         raise NotImplementedError("Subclasses must implement fetch_active_data method")
 
 
@@ -23,10 +55,89 @@ class GroupManager(BaseManager):
         return (self.filter(is_active=True).values('id', 'title', 'grade', 'faculty__short_title')
                 .order_by('faculty__short_title', 'grade', 'title'))
 
+    @cache_data('group_links', GROUP_DATA_CACHE_TIMEOUT, 'default')
+    def groups_links(self):
+        return self.filter(is_active=True).values('id', 'link')
 
-class TeacherManager(BaseManager):
+
+class TeacherManager(BaseManager, SingleFieldManagerMixin):
     def active_keyboard_data(self):
         return self.filter(is_active=True).values('id', 'short_name').order_by('short_name')
+
+    @cache_data("teacher:{full_name}", timeout=CACHE_TIMEOUT)
+    def get_or_create_cached_id(self, full_name: str) -> int:
+        obj, created = self.get_or_create(full_name=full_name)
+        return obj.id
+
+
+    # TODO: НАверно этот метод должен называться одинаково с подобными в остальных сущностях чтобы обеспечить LSP!!!
+    def get_or_create_teacher_map(self, unique_teachers_set):
+        return self.get_or_create_objects_map(unique_teachers_set, 'full_name')
+
+
+class ClassroomManager(BaseManager, SingleFieldManagerMixin):
+    @cache_data("classroom:{title}", timeout=CACHE_TIMEOUT)
+    def get_or_create_cached_id(self, title: str) -> int:
+        obj, created = self.get_or_create(title=title)
+        return obj.id
+
+    def get_or_create_classroom_map(self, unique_classroom_set):
+        return self.get_or_create_objects_map(unique_classroom_set, 'title')
+
+
+class SubjectManager(BaseManager):
+    @cache_data("subject:{title}", timeout=CACHE_TIMEOUT)
+    def get_or_create_cached_id(self, title: str) -> int:
+        obj, created = self.get_or_create(title=title)
+        return obj.id
+
+    def get_or_create_subject_map(self, unique_subject_set):
+        return self.get_or_create_objects_map(unique_subject_set, 'title')
+
+
+class LessonTimeManager(BaseManager):
+    @staticmethod
+    @cache_data("lesson_time:{date_str}{lesson_number}", timeout=CACHE_TIMEOUT)
+    def get_or_create_cached_id(self, date, lesson_number: str) -> int:
+        obj, created = self.get_or_create(date=date, lesson_number=lesson_number)
+        return obj.id
+
+    def get_lesson_times_map(self, lesson_times_set):
+        """
+        Возвращает словарь {(date, lesson_number): id} для существующих записей.
+        Принимает множество кортежей вида {(date_str, lesson_number)}.
+        """
+        # Выполняем запрос в БД на получение кортежей (date, lesson_number, id)
+        # Создаем список условий для фильтрации
+        filters = models.Q()
+        for date, lesson_number in lesson_times_set:
+            filters |= models.Q(date=date, lesson_number=lesson_number)
+
+        # Применяем фильтры
+        existing_lesson_times = self.filter(filters).values_list("date", "lesson_number", "id")
+        return {(date, lesson_number): lesson_time_id for date, lesson_number, lesson_time_id in existing_lesson_times}
+
+    def get_or_create_lesson_times_map(self, unique_lesson_times):
+        """
+        Возвращает словарь {(date, lesson_number): id}, создавая недостающие записи.
+        Принимает множество кортежей вида {(date_str, lesson_number)}.
+        """
+        # Получаем существующие записи
+        lesson_times_map = self.get_lesson_times_map(unique_lesson_times)
+
+        # Определяем недостающие элементы
+        missing_lesson_times = unique_lesson_times - set(lesson_times_map.keys())
+        if missing_lesson_times:
+            logger.info(f"Создано {len(missing_lesson_times)} новых записей Lesson_times")
+            self.bulk_create([
+                self.model(date=date, lesson_number=lesson_number)
+                for date, lesson_number in missing_lesson_times
+            ])
+
+            # Обновляем словарь с добавленными объектами
+            lesson_times_map.update(self.get_lesson_times_map(missing_lesson_times))
+
+        return lesson_times_map
 
 
 class SubscriptionManager(models.Manager):
@@ -35,7 +146,7 @@ class SubscriptionManager(models.Manager):
 
 
 class UserManager(BaseUserManager):
-    @cache_data('user_data_{0}', timeout=USER_DATA_CACHE_TIMEOUT, cache_name='telegrambot_cache')
+    @cache_data('user_data_{telegram_id}', timeout=USER_DATA_CACHE_TIMEOUT, cache_name='telegrambot_cache')
     def get_user_data_by_telegram_id(self, telegram_id: int) -> Optional[Dict[str, Any]]:
         user = self.filter(telegram_id=telegram_id).first()
         if user is None:

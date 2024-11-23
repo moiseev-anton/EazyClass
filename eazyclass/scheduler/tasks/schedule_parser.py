@@ -1,70 +1,154 @@
-import hashlib
-import json
+import asyncio
 import logging
 import re
 from datetime import datetime
-import asyncio
+from typing import List, Dict, Any
 
-import requests
+import bs4
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup
-from celery import shared_task, chord, group, chain
-from django.core.cache import cache
+from celery import shared_task
 from django.db import transaction
-from django.db.models import Model
 
 from .db_queries import synchronize_lessons
 from ..models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
-# from eazyclass.telegrambot.bot import bot
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 CACHE_TIMEOUT = 60 * 60 * 24 * 7
 logger = logging.getLogger(__name__)
 
 
-def fetch_response_from_url(url: str) -> requests.Response:
-    """Отправляет HTTP-запрос GET к указанному URL и возвращает ответ."""
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        return response
-    except requests.RequestException as e:
-        logger.error(f"Ошибка получения ответа от {url}: {e}")
-        raise
+class ScheduleParser:
+    lesson_number_pattern = re.compile(r'^[1-9]$')
+    date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
+
+    def __init__(self, groups: List[Dict], session: ClientSession):
+        self.groups = groups  # Список словарей с id и link групп
+        self.session = session  # Сессия aiohttp
+        self.lessons = []  # Список объектов Lesson
+        self.fetch_failed_ids = set()  # ID групп, для которых не удалось получить данные
+        self.parse_failed_ids = set()  # ID групп, для которых не удалось распарсить данные
+        self.success_ids = set()  # ID групп, для которых всё прошло успешно
+        self.unique_teachers = set()
+        self.unique_classrooms = set()
+        self.unique_subjects = set()
+        self.unique_lesson_times = set()
+
+    async def fetch_group_data(self, group_id, link):
+        try:
+            url = f"{MAIN_URL}{link}"
+            async with self.session.get(url) as response:
+                if response.status == 200:
+                    return await response.text()
+                else:
+                    logging.warning(f"Failed to fetch data for group {group_id}: {response.status}")
+                    self.fetch_failed_ids.add(group_id)
+        except Exception as e:
+            logging.error(f"Error fetching data for group {group_id}: {e}")
+            self.fetch_failed_ids.add(group_id)
+
+    def extract_lessons_data(self, group_id, html):
+        try:
+            soup = BeautifulSoup(html, 'lxml')
+            # Парсинг данных и добавление их в self.lessons
+            lessons_data = []
+            current_date = None
+
+            # Проходим по всем строкам таблицы (tr тегам)
+            for row in soup.find_all('tr', class_='shadow'):
+                # Получаем ячейки строки (td теги)
+                cells = row.find_all('td')
+                if len(cells) == 1:
+                    current_date = self.parse_date_cell(cells[0])
+                elif len(cells) == 5 and current_date:
+                    lesson_dict = self.parse_lesson_cells(cells)
+                    lesson_dict.update({'date': current_date, 'group': group_id})
+                    lessons_data.append(lesson_dict)
+                else:
+                    raise ValueError(f"Некорректная структура таблицы для группы {group_id}")
+
+            logger.debug(f"Выполнен парсинг для группы c ID {group_id}: получено {len(lessons_data)} уроков.")
+            self.success_ids.add(group_id)
+            return lessons_data
+        except Exception as e:
+            logger.error(f"Ошибка при парсинге группы {group_id}: {e}")
+            self.parse_failed_ids.add(group_id)
+
+    @staticmethod
+    def parse_date_cell(cell: bs4.Tag) -> datetime.date:
+        date_str = cell.text.strip().split(' - ')[0]
+        return datetime.strptime(date_str, '%d.%m.%Y').date()
+
+    @staticmethod
+    def parse_lesson_cells(cells: list):
+        lesson_number = cells[0].text.strip()
+        # Проверяем что номер урока 1-9
+        if not ScheduleParser.lesson_number_pattern.match(lesson_number):
+            raise ValueError(f"Некорректный номер урока '{lesson_number}'")
+        return {
+            'lesson_number': int(lesson_number),
+            'subject_title': cells[1].text.strip() or 'не указано',
+            'classroom_title': cells[2].text.strip() or '(дист)',
+            'teacher_name': cells[3].text.strip() or 'не указано',
+            'subgroup': cells[4].text.strip() or '0'
+        }
+
+    async def process_group(self, group):
+        html = await self.fetch_group_data(group['id'], group['link'])
+        if html:
+            lessons_data = self.extract_lessons_data(group['id'], html)
+            self.lessons.extend(lessons_data)
+
+    def collect_unique_elements(self, lesson_dict: dict):
+        self.unique_teachers.add(lesson_dict['teacher_name'])
+        self.unique_classrooms.add(lesson_dict['classroom_title'])
+        self.unique_subjects.add(lesson_dict['subject_title'])
+        self.unique_lesson_times.add((lesson_dict['date'], lesson_dict['lesson_number']))
+
+    def prepare_unique_sets(self):
+        for lesson in self.lessons:
+            self.collect_unique_elements(lesson)
+
+    async def run(self):
+        async with ClientSession() as session:
+            self.session = session
+            tasks = [self.process_group(group) for group in self.groups]
+            await asyncio.gather(*tasks)
+
+    def get_or_create_related_objects(self):
+        existing_teachers = Teacher.objects.filter(full_name__in=self.unique_teachers)
+        teacher_map = {teacher.full_name: teacher.id for teacher in existing_teachers}
+
+        existing_classrooms = Classroom.objects.filter(title__in=self.unique_classrooms)
+        classroom_map = {classroom.title: classroom.id for classroom in existing_classrooms}
+
+        existing_subjects = Subject.objects.filter(title__in=self.unique_subjects)
+        subject_map = {subject.title: subject.id for subject in existing_subjects}
+
+        existing_lesson_times = LessonTime.objects.filter(
+            date__in={date for date, _ in self.unique_lesson_times},
+            lesson_number__in={lesson_number for _, lesson_number in self.unique_lesson_times}
+        )
+        lesson_time_map = {
+            (lesson_time.date, lesson_time.lesson_number): lesson_time.id
+            for lesson_time in existing_lesson_times
+        }
 
 
-def generate_cache_key(model_class: Model, params: dict) -> str:
-    """Генерирует уникальный ключ кэша для заданной модели и параметров."""
-    if params.get('date'):
-        params['date'] = params['date'].isoformat()
-    params_string = json.dumps(params, sort_keys=True)
-    key = model_class.__name__ + params_string
-    hash_digest = hashlib.md5(key.encode()).hexdigest()
-    return hash_digest
+async def main():
+    groups = Group.objects.groups_links()
+    async with ClientSession() as session:
+        parser = ScheduleParser(groups, session)
+        await parser.run()
+        # parser.save_to_db()
 
 
-def get_or_create_cached_id(model_class: Model, lookup: dict, timeout: int = CACHE_TIMEOUT) -> int:
-    """
-    Получает объект из кэша или базы данных, создает объект при необходимости.
-    """
-    cache_key = generate_cache_key(model_class, lookup)
-    obj_id = cache.get(cache_key)
-    if obj_id:
-        # logger.debug(f"Для {model_class.__name__} с параметрами {lookup} получен ID {obj_id} из кэша.")
-        return obj_id
-
-    obj, created = model_class.objects.get_or_create(**lookup)
-    cache.set(cache_key, obj.id, timeout=timeout)
-    # logger.debug(f"Для {model_class.__name__} с параметрами {lookup} получен ID {obj.id} из БД и кэширован.")
-    return obj.id
-
-
-def get_lesson_obj_from_data(data: dict, timeout=CACHE_TIMEOUT) -> Lesson:
-    date = datetime.strptime(data['date'], '%d.%m.%Y').date()
+def build_lesson_obj_from_data(data: dict, timeout=CACHE_TIMEOUT) -> Lesson:
     teacher_id = get_or_create_cached_id(Teacher, {'full_name': data['teacher_name']}, timeout)
     classroom_id = get_or_create_cached_id(Classroom, {'title': data['classroom_title']}, timeout)
     subject_id = get_or_create_cached_id(Subject, {'title': data['subject_title']}, timeout)
     lesson_time_id = get_or_create_cached_id(
-        LessonTime, {'date': date, 'lesson_number': data['lesson_number']}, timeout
+        LessonTime, {'date': data['date'], 'lesson_number': data['lesson_number']}, timeout
     )
 
     lesson = Lesson(
@@ -83,7 +167,7 @@ def extract_lessons_data(group_id: int, soup: BeautifulSoup):
     """Парсит данные расписания из объекта BeautifulSoup для определённой группы."""
     lessons_data = []
     current_date = None
-    lesson_number_pattern = re.compile(r'^[1-6]$')
+    lesson_number_pattern = re.compile(r'^[1-9]$')
     date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
 
     for row in soup.find_all('tr', class_='shadow'):
@@ -136,7 +220,7 @@ def parse_group_data(self, group_id, link):
 def update_database(groups_ids: set, lessons_data: list[Lesson]):
     new_lessons = []
     for lesson_data in lessons_data:
-        lesson_obj = get_lesson_obj_from_data(lesson_data)
+        lesson_obj = build_lesson_obj_from_data(lesson_data)
         if lesson_obj:
             new_lessons.append(lesson_obj)
 
@@ -175,67 +259,46 @@ def process_data_final(results):
     # Обрабатываем успешные результаты
 
 
+async def fetch_group_data(session: aiohttp.ClientSession, group_id: int, link: str) -> Dict[str, Any]:
+    url = f"{MAIN_URL}{link}"
+    response_text = await fetch_response_from_url(session, url)
+
+    if not response_text:
+        return {'group_id': group_id, 'error': 'fetch_failed'}
+
+    try:
+        soup = BeautifulSoup(response_text, 'lxml')
+        lessons_data = extract_lessons_data(group_id, soup)
+        return {'group_id': group_id, 'lessons_data': lessons_data}
+    except Exception as e:
+        logger.error(f"Ошибка при парсинге данных для группы {group_id}: {e}")
+        return {'group_id': group_id, 'error': 'parse_failed'}
+
+
+# Асинхронная функция для сбора данных для всех групп с ограничением на количество одновременных запросов
+async def gather_group_data(groups: List[Dict[str, Any]], max_concurrent_requests: int = 10) -> List[Dict[str, Any]]:
+    semaphore = asyncio.Semaphore(max_concurrent_requests)  # Ограничиваем количество одновременных запросов
+
+    async def bounded_fetch(session, group):
+        async with semaphore:
+            return await fetch_group_data(session, group['id'], group['link'])
+
+    async with aiohttp.ClientSession() as session:
+        tasks = [bounded_fetch(session, group) for group in groups]
+        return await asyncio.gather(*tasks)
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, queue='periodic_tasks')
 def update_schedule(self):
     try:
-        fetch_response_from_url(MAIN_URL)
-        logger.info('Сайт доступен. Начинается обновление расписания.')
+        groups = Group.objects.groups_links()
 
-        groups = cache.get('all_groups_ids_and_links')
-        if not groups:
-            groups = Group.objects.filter(is_active=True).values('id', 'link')
-            cache.set('all_groups_ids_and_links', list(groups), timeout=CACHE_TIMEOUT)
+        loop = asyncio.get_event_loop()
+        results = loop.run_until_complete(gather_group_data(groups))
 
-        tasks = [parse_group_data.s(group_['id'], group_['link']) for group_ in groups]
-        callback = process_data_final.s()
-        notification_task = send_notifications.s()
+        process_data_final.delay(results)
 
-        workflow = chain(chord(tasks)(callback), notification_task.s())
-        workflow.apply_async()
         logger.info(f"Обновление расписания завершено.")
     except Exception as e:
         logger.error(f"Ошибка обновления расписания: {e}")
         raise self.retry(exc=e)
-
-
-@shared_task(queue='periodic_tasks')
-def send_notifications(affected_entities_map: dict):
-    logger.debug(f"Начата отправка уведомлений")
-    # # subscribers_map = fetch_all_subscribers(affected_entities_map)
-    # notification_type_tasks = []
-    # for entity_type, entity_map in subscribers_map.items():
-    #     if entity_map:  # Убедимся, что есть подписчики перед созданием задачи
-    #         entity_info_map = affected_entities_map[entity_type]
-    #         notification_type_tasks.append(send_notifications_for_entity.s(entity_type, entity_map, entity_info_map))
-    #
-    # task_group = group(notification_type_tasks)
-    # task_group.apply_async()
-    # logger.debug("Задачи по отправке уведомлений запланированы")
-
-
-@shared_task(queue='periodic_tasks')
-def send_notifications_for_entity(entity_map: dict, entity_info_map: dict):
-    tasks = []
-    for entity_id, subscribers_set in entity_map.items():
-        dates = ", ".join(sorted(entity_info_map[entity_id]))
-        message = f"Ваше расписание на {dates} изменено. Ознакомтесь с новым расписанием."
-        tasks.append(send_notifications_for_subscribers(message, subscribers_set))
-    task_group = group(tasks)
-    task_group.apply_async()
-    logger.debug("Задачи по отправке уведомлений для группы подписчиков выполнены")
-
-
-@shared_task
-def send_notifications_for_subscribers(message: str, telegram_ids: set):
-    asyncio.run(async_send_notifications(message, telegram_ids))
-
-
-async def async_send_notifications(message, telegram_ids):
-    pass
-    # for telegram_id in telegram_ids:
-    #     try:
-    #         await bot.send_message(telegram_id, message)
-    #         logger.debug(f"Уведомление успешно отправлено пользователю {telegram_id}")
-    #     except Exception as e:
-    #         logger.error(f"Ошибка при отправке уведомления пользователю {telegram_id}: {e}")
-

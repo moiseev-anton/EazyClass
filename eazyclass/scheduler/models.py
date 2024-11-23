@@ -1,14 +1,13 @@
 import uuid
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
 from django.utils.timezone import now
-from datetime import timedelta
 
-from .managers import GroupManager, TeacherManager, UserManager
+from managers import *
 
 
 class Faculty(models.Model):
@@ -70,6 +69,11 @@ class Teacher(models.Model):
 
     object = TeacherManager()
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['full_name']),
+        ]
+
     def __str__(self):
         return f"{self.short_name}"
 
@@ -103,6 +107,13 @@ class Subject(models.Model):
     title = models.CharField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)
 
+    object = SubjectManager()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['title']),
+        ]
+
     def __str__(self):
         return f"{self.title}"
 
@@ -111,20 +122,30 @@ class Classroom(models.Model):
     title = models.CharField(max_length=10, unique=True)
     is_active = models.BooleanField(default=True)
 
+    object = ClassroomManager()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['title']),
+        ]
+
     def __str__(self):
         return f"{self.title}"
 
 
 class LessonTime(models.Model):
     date = models.DateField()
-    lesson_number = models.CharField(max_length=1)
+    lesson_number = models.IntegerField()
     start_time = models.TimeField(null=True)
     end_time = models.TimeField(null=True)
+
+    object = LessonTimeManager()
 
     class Meta:
         unique_together = ('date', 'lesson_number')
         indexes = [
             models.Index(fields=['date', 'lesson_number']),
+            #TODO: Проверить нужен ли этот индекс
             models.Index(fields=['date']),
         ]
 
@@ -264,7 +285,8 @@ class Subscription(models.Model):
         details = {
             'id': self.object_id,
             'model': self.content_type.name,
-            'name': self.content_object.get_display_name() if hasattr(self.content_object, 'get_display_name') else 'N/A'
+            'name': self.content_object.get_display_name() if hasattr(self.content_object,
+                                                                      'get_display_name') else 'N/A'
         }
         return details
 

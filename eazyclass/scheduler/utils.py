@@ -2,9 +2,12 @@
 # from .models import Lesson
 # from django.core.exceptions import ObjectDoesNotExist
 
-from django.core.cache import caches
+import hashlib
+import json
 from functools import wraps
 from typing import Callable
+
+from django.core.cache import caches
 
 DEFAULT_CACHE_TIMEOUT = 3600  # 1 час
 
@@ -15,11 +18,16 @@ def cache_data(key_template: str, timeout: int = DEFAULT_CACHE_TIMEOUT, cache_na
         def wrapper(*args, **kwargs):
             cache = caches[cache_name]  # Получаем нужный кеш
             key = key_template.format(*args, **kwargs)  # Формируем ключ кеша
+            if len(key) > 200:
+                key = hashlib.md5(key.encode('utf-8')).hexdigest() # Хешируем ключ если он слишком длинный
+
             cached_data = cache.get(key)
             if cached_data is not None:
-                return cached_data
+                # Десериализуем данные из JSON
+                return json.loads(cached_data)
             result = func(*args, **kwargs)
-            cache.set(key, result, timeout=timeout)
+            # Сериализуем данные в JSON перед сохранением в кэш
+            cache.set(key, json.dumps(result), timeout=timeout)
             return result
 
         return wrapper
