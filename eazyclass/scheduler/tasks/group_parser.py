@@ -1,11 +1,11 @@
 import logging
 from datetime import timedelta
 
+import requests
 from bs4 import BeautifulSoup
 from celery import shared_task
 from django.db import transaction, DatabaseError
 from django.db.models import Model, Max
-from .schedule_parser import fetch_response_from_url
 from django.utils import timezone
 
 from ..models import Faculty, Group
@@ -15,6 +15,17 @@ GROUPS_PAGE_LINK = 'grupp.php'
 DEACTIVATE_PERIOD = timedelta(days=1)
 
 logger = logging.getLogger(__name__)
+
+
+def fetch_response_from_url(url: str) -> requests.Response:
+    """Отправляет HTTP-запрос GET к указанному URL и возвращает ответ."""
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response
+    except requests.RequestException as e:
+        logger.error(f"Ошибка получения ответа от {url}: {e}")
+        raise
 
 
 def save_or_update_group(grop_data: dict):

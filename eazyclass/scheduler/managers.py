@@ -57,7 +57,7 @@ class GroupManager(BaseManager):
 
     @cache_data('group_links', GROUP_DATA_CACHE_TIMEOUT, 'default')
     def groups_links(self):
-        return self.filter(is_active=True).values('id', 'link')
+        return list(self.filter(is_active=True).values('id', 'link'))
 
 
 class TeacherManager(BaseManager, SingleFieldManagerMixin):
@@ -69,10 +69,8 @@ class TeacherManager(BaseManager, SingleFieldManagerMixin):
         obj, created = self.get_or_create(full_name=full_name)
         return obj.id
 
-
-    # TODO: НАверно этот метод должен называться одинаково с подобными в остальных сущностях чтобы обеспечить LSP!!!
-    def get_or_create_teacher_map(self, unique_teachers_set):
-        return self.get_or_create_objects_map(unique_teachers_set, 'full_name')
+    def get_or_create_map(self, unique_teachers_set):
+        return super().get_or_create_objects_map(unique_teachers_set, 'full_name')
 
 
 class ClassroomManager(BaseManager, SingleFieldManagerMixin):
@@ -81,8 +79,8 @@ class ClassroomManager(BaseManager, SingleFieldManagerMixin):
         obj, created = self.get_or_create(title=title)
         return obj.id
 
-    def get_or_create_classroom_map(self, unique_classroom_set):
-        return self.get_or_create_objects_map(unique_classroom_set, 'title')
+    def get_or_create_map(self, unique_classroom_set):
+        return super().get_or_create_objects_map(unique_classroom_set, 'title')
 
 
 class SubjectManager(BaseManager):
@@ -91,18 +89,17 @@ class SubjectManager(BaseManager):
         obj, created = self.get_or_create(title=title)
         return obj.id
 
-    def get_or_create_subject_map(self, unique_subject_set):
-        return self.get_or_create_objects_map(unique_subject_set, 'title')
+    def get_or_create_map(self, unique_subject_set):
+        return super().get_or_create_objects_map(unique_subject_set, 'title')
 
 
 class LessonTimeManager(BaseManager):
-    @staticmethod
     @cache_data("lesson_time:{date_str}{lesson_number}", timeout=CACHE_TIMEOUT)
     def get_or_create_cached_id(self, date, lesson_number: str) -> int:
         obj, created = self.get_or_create(date=date, lesson_number=lesson_number)
         return obj.id
 
-    def get_lesson_times_map(self, lesson_times_set):
+    def get_map(self, lesson_times_set):
         """
         Возвращает словарь {(date, lesson_number): id} для существующих записей.
         Принимает множество кортежей вида {(date_str, lesson_number)}.
@@ -117,13 +114,13 @@ class LessonTimeManager(BaseManager):
         existing_lesson_times = self.filter(filters).values_list("date", "lesson_number", "id")
         return {(date, lesson_number): lesson_time_id for date, lesson_number, lesson_time_id in existing_lesson_times}
 
-    def get_or_create_lesson_times_map(self, unique_lesson_times):
+    def get_or_create_map(self, unique_lesson_times):
         """
         Возвращает словарь {(date, lesson_number): id}, создавая недостающие записи.
         Принимает множество кортежей вида {(date_str, lesson_number)}.
         """
         # Получаем существующие записи
-        lesson_times_map = self.get_lesson_times_map(unique_lesson_times)
+        lesson_times_map = self.get_map(unique_lesson_times)
 
         # Определяем недостающие элементы
         missing_lesson_times = unique_lesson_times - set(lesson_times_map.keys())
@@ -135,7 +132,7 @@ class LessonTimeManager(BaseManager):
             ])
 
             # Обновляем словарь с добавленными объектами
-            lesson_times_map.update(self.get_lesson_times_map(missing_lesson_times))
+            lesson_times_map.update(self.get_map(missing_lesson_times))
 
         return lesson_times_map
 
@@ -154,19 +151,6 @@ class UserManager(BaseUserManager):
             return None
         logger.info(f'Получены данные пользователя с telegram_id {telegram_id} из БД.')
         return user.to_dict()
-
-    @invalidate_cache('user_data_{0}', cache_name='telegrambot_cache')
-    def update_contact(self, telegram_id: str, contact) -> 'User':
-        user, created = self.update_or_create(
-            telegram_id=telegram_id,
-            defaults={
-                'phone_number': contact.phone_number,
-                'first_name': contact.first_name,
-                'last_name': contact.last_name,
-            }
-        )
-
-        return user
 
     def reset_subgroup(self, user_id: int):
         self.filter(id=user_id).update(subgroup='0')

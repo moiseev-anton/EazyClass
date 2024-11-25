@@ -5,9 +5,10 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.timezone import now
 
-from managers import *
+from .managers import *
 
 
 class Faculty(models.Model):
@@ -67,7 +68,7 @@ class Teacher(models.Model):
     short_name = models.CharField(max_length=30)
     is_active = models.BooleanField(default=True)
 
-    object = TeacherManager()
+    objects = TeacherManager()
 
     class Meta:
         indexes = [
@@ -107,7 +108,7 @@ class Subject(models.Model):
     title = models.CharField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)
 
-    object = SubjectManager()
+    objects = SubjectManager()
 
     class Meta:
         indexes = [
@@ -122,7 +123,7 @@ class Classroom(models.Model):
     title = models.CharField(max_length=10, unique=True)
     is_active = models.BooleanField(default=True)
 
-    object = ClassroomManager()
+    objects = ClassroomManager()
 
     class Meta:
         indexes = [
@@ -139,7 +140,7 @@ class LessonTime(models.Model):
     start_time = models.TimeField(null=True)
     end_time = models.TimeField(null=True)
 
-    object = LessonTimeManager()
+    objects = LessonTimeManager()
 
     class Meta:
         unique_together = ('date', 'lesson_number')
