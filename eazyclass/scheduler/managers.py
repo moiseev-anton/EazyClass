@@ -83,7 +83,7 @@ class ClassroomManager(BaseManager, SingleFieldManagerMixin):
         return super().get_or_create_objects_map(unique_classroom_set, 'title')
 
 
-class SubjectManager(BaseManager):
+class SubjectManager(BaseManager, SingleFieldManagerMixin):
     @cache_data("subject:{title}", timeout=CACHE_TIMEOUT)
     def get_or_create_cached_id(self, title: str) -> int:
         obj, created = self.get_or_create(title=title)
