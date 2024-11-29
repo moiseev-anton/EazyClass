@@ -125,6 +125,32 @@ class LessonDict:
         return value
 
 
+class RelatedObjectsMap(dict):
+    def __init__(self, model: models.Model):
+        super().__init__()
+        self.model = model
+        self.unmapped_keys = set()
+
+    def add(self, key):
+        if key not in self:
+            self.unmapped_keys.add(key)
+
+    def add_many(self, keys):
+        for key in keys:
+            self.add(key)
+
+    def map(self):
+        if self.unmapped_keys:
+            new_mappings = self.model.objects.get_or_create_objects_map(self.unmapped_keys)
+            self.update(new_mappings)
+            self.unmapped_keys.clear()
+
+    def get(self, key, default=None):
+        if key in self.unmapped_keys:
+            self.map()
+        return super().get(key, default)
+
+
 class SchedulePageParser:
     DATE_ROW_LENGTH = 1
     LESSON_ROW_LENGTH = 5
