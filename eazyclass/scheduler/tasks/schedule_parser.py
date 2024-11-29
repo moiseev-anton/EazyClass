@@ -12,7 +12,7 @@ import bs4
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from celery import shared_task
-from django.db import transaction
+from django.db import transaction, models
 
 from .db_queries import synchronize_lessons
 from ..models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
@@ -22,9 +22,13 @@ logger = logging.getLogger(__name__)
 
 class LessonDict:
     __slots__ = (
-        '_date', 'group', '_lesson_number', 'subject_title',
-        'classroom_title', 'teacher_fullname', '_subgroup'
+        '_date', 'group', '_lesson_number', '_subject_title',
+        '_classroom_title', '_teacher_fullname', '_subgroup'
     )
+
+    MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field('title').max_length
+    MAX_CLASSROOM_TITLE_LENGTH = Teacher._meta.get_field('title').max_length
+    MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
 
     def __init__(self, lesson_number: str | int, subject_title: str,
                  classroom_title: str, teacher_fullname: str, subgroup: str | int,
@@ -84,6 +88,41 @@ class LessonDict:
                 raise ValueError(f"Некорректный формат даты: '{value}'. Ожидается формат 'ДД.ММ.ГГГГ'")
         else:
             raise TypeError(f"Дата должна быть типа date, строкой или None, получено: {type(value)}")
+
+    @property
+    def subject_title(self) -> str:
+        return self._subject_title
+
+    @subject_title.setter
+    def subject_title(self, value: str):
+        self._subject_title = self.validate_string_value(value, self.MAX_SUBJECT_TITLE_LENGTH)
+
+    @property
+    def classroom_title(self) -> str:
+        return self._classroom_title
+
+    @classroom_title.setter
+    def classroom_title(self, value: str):
+        self._classroom_title = self.validate_string_value(value, self.MAX_CLASSROOM_TITLE_LENGTH)
+
+    @property
+    def teacher_fullname(self) -> str:
+        return self._teacher_fullname
+
+    @teacher_fullname.setter
+    def teacher_fullname(self, value: str):
+        self._teacher_fullname = self.validate_string_value(value, self.MAX_TEACHER_FULLNAME_LENGTH)
+
+    @staticmethod
+    def validate_string_value(value: str, max_length: int) -> str:
+        """
+        Проверяет, что строка соответствует ограничениям длины из модели БД.
+        """
+        if not isinstance(value, str):
+            raise TypeError(f"Значение должно быть строкой, получено: {type(value)}")
+        if len(value) > max_length:
+            value = value[:max_length]
+        return value
 
 
 class SchedulePageParser:
@@ -193,6 +232,7 @@ class ScheduleSyncManager:
     #     reraise=True  # Исключение будет выброшено после всех неудачных попыток
     # )
     async def fetch_page_content(self, url: str) -> str:
+        logger.debug(f'Отправка запроса к {url}')
         async with self.session.get(url) as response:
             if response.status != 200:
                 logger.warning(f"Ошибка получения html со страницы: {response.status}")
@@ -230,14 +270,10 @@ class ScheduleSyncManager:
 
     def map_related_objects(self):
         self.related_mappings['teachers'] = Teacher.objects.get_or_create_map(self.unique_elements['teachers'])
-        logger.debug(f'Произведен маппинг для {len(self.related_mappings['teachers'])} учителей')
         self.related_mappings['classrooms'] = Classroom.objects.get_or_create_map(self.unique_elements['classrooms'])
-        logger.debug(f'Произведен маппинг для {len(self.related_mappings['classrooms'])} кабинетов')
         self.related_mappings['subjects'] = Subject.objects.get_or_create_map(self.unique_elements['subjects'])
-        logger.debug(f'Произведен маппинг для {len(self.related_mappings['subjects'])} предметов')
         self.related_mappings['lesson_times'] = LessonTime.objects.get_or_create_map(
             self.unique_elements['lesson_times'])
-        logger.debug(f'Произведен маппинг для {len(self.related_mappings['lesson_times'])} звонков')
 
     def create_lesson_objects(self):
         lesson_objects = []
