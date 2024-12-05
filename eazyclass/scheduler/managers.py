@@ -4,7 +4,7 @@ from typing import Dict, Optional, Tuple, Any
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
 
-from .utils import cache_data, invalidate_cache
+from scheduler.utils import cache_data, invalidate_cache
 
 CACHE_TIMEOUT = 86400  # 24 часа
 USER_DATA_CACHE_TIMEOUT = 3600  # 1 час

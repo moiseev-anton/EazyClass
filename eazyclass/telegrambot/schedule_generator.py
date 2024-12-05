@@ -1,5 +1,5 @@
 import datetime
-from ..scheduler.models import Lesson
+from scheduler.models import Lesson
 
 
 def get_schedule_for_today(group_id):

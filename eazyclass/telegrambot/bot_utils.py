@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from django.core.cache import caches
 from telebot.types import User as TelegramUser
 
-from ..scheduler.models import User
+from scheduler.models import User
 
 cache = caches['telegrambot_cache']
 logger = logging.getLogger(__name__)

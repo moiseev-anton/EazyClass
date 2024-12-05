@@ -8,7 +8,7 @@ from django.db import transaction, DatabaseError
 from django.db.models import Model, Max
 from django.utils import timezone
 
-from ..models import Faculty, Group
+from scheduler.models import Faculty, Group
 
 MAIN_URL = 'https://bincol.ru/rasp/'
 GROUPS_PAGE_LINK = 'grupp.php'

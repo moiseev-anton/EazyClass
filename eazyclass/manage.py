@@ -6,7 +6,10 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    # Добавляем папку, где находится manage.py, в sys.path
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eazyclass.settings')
+
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

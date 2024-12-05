@@ -5,7 +5,7 @@ from celery import shared_task
 from django.utils import timezone
 from django.db import transaction
 
-from ..models import Teacher, Classroom, Subject, Lesson
+from scheduler.models import Teacher, Classroom, Subject, Lesson
 
 DELETE_INACTIVE_PERIOD = timedelta(days=365)
 UPDATE_ACTIVE_PERIOD = timedelta(weeks=1)

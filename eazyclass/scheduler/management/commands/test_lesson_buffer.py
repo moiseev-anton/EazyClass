@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from ...tasks import synchronize_lessons
+from scheduler.tasks import synchronize_lessons
 
 
 class Command(BaseCommand):

@@ -5,8 +5,8 @@ from django.urls import path
 from rangefilter.filters import DateRangeFilter
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .activities import *
-from .models import *
+from scheduler.activities import *
+from scheduler.models import *
 
 
 @admin.register(Faculty)

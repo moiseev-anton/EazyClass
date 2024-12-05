@@ -1,52 +1,76 @@
 import asyncio
 import logging
-import random
-from collections import defaultdict
-from datetime import datetime, date
-
-import aiohttp
+from datetime import date, datetime
 # from tenacity import retry, stop_after_attempt, wait_exponential
 from typing import List, Dict, Optional, Union
 
+import aiohttp
 import bs4
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from celery import shared_task
-from django.db import transaction, models
+from django.db import transaction
+from django.db.models import Model
 
-from .db_queries import synchronize_lessons
-from ..models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
+from scheduler.tasks.db_queries import synchronize_lessons
+from scheduler.models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
 
 logger = logging.getLogger(__name__)
 
 
+class MaxLengthDescriptor:
+    def __init__(self, max_length: int):
+        self.max_length = max_length
+
+    def __set_name__(self, owner, name):
+        """Автоматически вызывается при привязке атрибута к классу."""
+        self.private_name = f"_{name}"  # Приватное имя атрибута
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return getattr(instance, self.private_name, None)  # Получаем значение из instance
+
+    def __set__(self, instance, value):
+        if not isinstance(value, str):
+            raise TypeError(f"Значение должно быть строкой, получено: {type(value)}")
+        if len(value) > self.max_length:
+            value = value[:self.max_length]
+        setattr(instance, self.private_name, value)
+
+
 class LessonDict:
     __slots__ = (
-        '_date', 'group', '_lesson_number', '_subject_title',
+        '_date', 'group_id', '_lesson_number', '_subject_title',
         '_classroom_title', '_teacher_fullname', '_subgroup'
     )
 
+    # Использование правильных импортых для моделей
     MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field('title').max_length
-    MAX_CLASSROOM_TITLE_LENGTH = Teacher._meta.get_field('title').max_length
+    MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field('title').max_length
     MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
 
-    def __init__(self, lesson_number: str | int, subject_title: str,
-                 classroom_title: str, teacher_fullname: str, subgroup: str | int,
-                 _date: Optional[date | str] = None, group: Optional[int] = None):
-        self.date = _date
-        self.group = group
+    subject_title = MaxLengthDescriptor(max_length=MAX_SUBJECT_TITLE_LENGTH)
+    classroom_title = MaxLengthDescriptor(max_length=MAX_CLASSROOM_TITLE_LENGTH)
+    teacher_fullname = MaxLengthDescriptor(max_length=MAX_TEACHER_FULLNAME_LENGTH)
+
+    def __init__(self, lesson_number: Union[str, int], subject_title: str,
+                 classroom_title: str, teacher_fullname: str, subgroup: Union[str, int],
+                 _date: Optional[Union[date, str]] = None, group_id: Optional[int] = None):
         self.lesson_number = lesson_number
         self.subject_title = subject_title
         self.classroom_title = classroom_title
         self.teacher_fullname = teacher_fullname
         self.subgroup = subgroup
+        self.date = _date
+        self.group_id = group_id
 
     @property
     def lesson_number(self):
         return self._lesson_number
 
     @lesson_number.setter
-    def lesson_number(self, value: str | int):
+    def lesson_number(self, value: Union[str, int]):
         self._lesson_number = self.parse_numeric_value(value, min_value=1)
 
     @property
@@ -54,15 +78,11 @@ class LessonDict:
         return self._subgroup
 
     @subgroup.setter
-    def subgroup(self, value: str | int):
-        # Наиболее часто ожидается 0
+    def subgroup(self, value: Union[str, int]):
         self._subgroup = value if value == 0 else self.parse_numeric_value(value, default=0)
 
     @staticmethod
-    def parse_numeric_value(value: str | int, min_value: int = 0, max_value: int = 9, default=None) -> int:
-        """
-        Преобразует текст в int и проверяет на принадлежность диапазону.
-        """
+    def parse_numeric_value(value: Union[str, int], min_value: int = 0, max_value: int = 9, default=None) -> int:
         try:
             value = int(value)
             if not (min_value <= value <= max_value):
@@ -89,66 +109,41 @@ class LessonDict:
         else:
             raise TypeError(f"Дата должна быть типа date, строкой или None, получено: {type(value)}")
 
-    @property
-    def subject_title(self) -> str:
-        return self._subject_title
 
-    @subject_title.setter
-    def subject_title(self, value: str):
-        self._subject_title = self.validate_string_value(value, self.MAX_SUBJECT_TITLE_LENGTH)
+class RelatedObjectsMap:
+    __slots__ = ('model', 'mapping', 'unmapped_keys')
+    """
+    Класс для управления маппингом значений на связанные объекты из базы данных.
+    """
 
-    @property
-    def classroom_title(self) -> str:
-        return self._classroom_title
-
-    @classroom_title.setter
-    def classroom_title(self, value: str):
-        self._classroom_title = self.validate_string_value(value, self.MAX_CLASSROOM_TITLE_LENGTH)
-
-    @property
-    def teacher_fullname(self) -> str:
-        return self._teacher_fullname
-
-    @teacher_fullname.setter
-    def teacher_fullname(self, value: str):
-        self._teacher_fullname = self.validate_string_value(value, self.MAX_TEACHER_FULLNAME_LENGTH)
-
-    @staticmethod
-    def validate_string_value(value: str, max_length: int) -> str:
-        """
-        Проверяет, что строка соответствует ограничениям длины из модели БД.
-        """
-        if not isinstance(value, str):
-            raise TypeError(f"Значение должно быть строкой, получено: {type(value)}")
-        if len(value) > max_length:
-            value = value[:max_length]
-        return value
-
-
-class RelatedObjectsMap(dict):
-    def __init__(self, model: models.Model):
-        super().__init__()
+    def __init__(self, model: Model, enforce_check=True):
         self.model = model
+        self.mapping = {}
         self.unmapped_keys = set()
 
-    def add(self, key):
-        if key not in self:
+        # Опциональная проверка содержит ли модель метод маппинга ID. По умолчанию ВКЛ
+        if enforce_check and not hasattr(self.model.objects, "get_or_create_objects_map"):
+            raise AttributeError(
+                f"Менеджер модели '{self.model.__name__}' не реализует 'get_or_create_objects_map'"
+            )
+
+    def add(self, key: str | tuple):
+        if key not in self.mapping:
             self.unmapped_keys.add(key)
 
-    def add_many(self, keys):
-        for key in keys:
-            self.add(key)
+    def add_set(self, keys: set[str | tuple]):
+        self.unmapped_keys.update(keys)
 
     def map(self):
         if self.unmapped_keys:
             new_mappings = self.model.objects.get_or_create_objects_map(self.unmapped_keys)
-            self.update(new_mappings)
+            self.mapping.update(new_mappings)
             self.unmapped_keys.clear()
 
-    def get(self, key, default=None):
+    def get_mapped(self, key: str | tuple, default=None):
         if key in self.unmapped_keys:
             self.map()
-        return super().get(key, default)
+        return self.mapping.get(key, default)
 
 
 class SchedulePageParser:
@@ -190,7 +185,7 @@ class SchedulePageParser:
         if self.validate_order:
             self._validate_lesson_order(lesson_data.lesson_number)
         lesson_data.date = self.current_date
-        lesson_data.group = self.group_id
+        lesson_data.group_id = self.group_id
         self.lessons_data.append(lesson_data)
 
     def _parse_date(self, cells: List[bs4.Tag]) -> datetime.date:
@@ -244,19 +239,17 @@ class ScheduleSyncManager:
 
     def __init__(self, group_configs: List[Dict]):
         self.group_configs = group_configs  # Список словарей с id и link групп
+        self.semaphore = asyncio.Semaphore(self.MAX_CONCURRENT_REQUESTS)
         self.session = None  # Сессия aiohttp
-        self.parsed_lessons = []  # Список объектов Lesson
         self.failed_group_ids = set()  # ID групп, для которых не удалось распарсить данные
         self.successful_group_ids = set()  # ID групп, для которых всё прошло успешно
-        self.unique_elements = defaultdict(set)
-        self.related_mappings = {}
-        self.semaphore = asyncio.Semaphore(self.MAX_CONCURRENT_REQUESTS)
+        self.teachers = RelatedObjectsMap(Teacher)
+        self.classrooms = RelatedObjectsMap(Classroom)
+        self.subjects = RelatedObjectsMap(Subject)
+        self.lesson_times = RelatedObjectsMap(LessonTime)
+        self.parsed_lessondict_objects = []  # Список объектов Lesson
+        self.lesson_model_objects = []
 
-    # @retry(
-    #     stop=stop_after_attempt(3),  # Максимум 3 попытки
-    #     wait=wait_exponential(multiplier=1, min=1, max=4),  # Экспоненциальная задержка
-    #     reraise=True  # Исключение будет выброшено после всех неудачных попыток
-    # )
     async def fetch_page_content(self, url: str) -> str:
         logger.debug(f'Отправка запроса к {url}')
         async with self.session.get(url) as response:
@@ -273,59 +266,42 @@ class ScheduleSyncManager:
         async with self.semaphore:
             try:
                 content = await self.fetch_group_page_content(group_dict['link'])
-                logger.debug(f'Получили html для группы {group_dict['link']}')
                 lessons_data = SchedulePageParser(group_id=group_dict['id'], html=content).parse()
-                logger.debug(f'Распарсили уроки для гуппы {group_dict['link']}')
-                self.parsed_lessons.extend(lessons_data)
+                self.parsed_lessondict_objects.extend(lessons_data)
                 self.successful_group_ids.add(group_dict['id'])
             except Exception as e:
                 logger.error(f"Ошибка при обработке данных группы {group_dict['id']}: {e}")
                 self.failed_group_ids.add(group_dict['id'])
 
     def gather_unique_elements(self):
-        # TODO: возможно можно на этом этапе использовать кеш
-        for lesson_dict in self.parsed_lessons:
-            self.unique_elements['teachers'].add(lesson_dict.teacher_fullname)
-            self.unique_elements['classrooms'].add(lesson_dict.classroom_title)
-            self.unique_elements['subjects'].add(lesson_dict.subject_title)
-            self.unique_elements['lesson_times'].add((lesson_dict.date, lesson_dict.lesson_number))
-        logger.debug(f'Собрано множество из {len(self.unique_elements['teachers'])} учителей')
-        logger.debug(f'Собрано множество из {len(self.unique_elements['classrooms'])} кабинетов')
-        logger.debug(f'Собрано множество из {len(self.unique_elements['subjects'])} предметов')
-        logger.debug(f'Собрано множество из {len(self.unique_elements['lesson_times'])} звонков')
+        for lesson_dict in self.parsed_lessondict_objects:
+            self.teachers.add(lesson_dict.teacher_fullname)
+            self.classrooms.add(lesson_dict.classroom_title)
+            self.subjects.add(lesson_dict.subject_title)
+            self.lesson_times.add((lesson_dict.date, lesson_dict.lesson_number))
 
-    def map_related_objects(self):
-        self.related_mappings['teachers'] = Teacher.objects.get_or_create_map(self.unique_elements['teachers'])
-        self.related_mappings['classrooms'] = Classroom.objects.get_or_create_map(self.unique_elements['classrooms'])
-        self.related_mappings['subjects'] = Subject.objects.get_or_create_map(self.unique_elements['subjects'])
-        self.related_mappings['lesson_times'] = LessonTime.objects.get_or_create_map(
-            self.unique_elements['lesson_times'])
-
-    def create_lesson_objects(self):
-        lesson_objects = []
-        for lesson_dict in self.parsed_lessons:
-            # TODO: рассмотреть применение get() для словарей на всякий случай
+    def create_lesson_model_objects(self):
+        for lesson_dict in self.parsed_lessondict_objects:
             lesson_obj = Lesson(
-                group_id=lesson_dict.group,
+                group_id=lesson_dict.group_id,
                 subgroup=lesson_dict.subgroup,
-                lesson_time_id=self.related_mappings['lesson_times'][(lesson_dict.date, lesson_dict.lesson_number)],
-                teacher_id=self.related_mappings['teachers'][lesson_dict.teacher_fullname],
-                classroom_id=self.related_mappings['classrooms'][lesson_dict.classroom_title],
-                subject_id=self.related_mappings['subjects'][lesson_dict.subject_title]
+                lesson_time_id=self.lesson_times.get_mapped((lesson_dict.date, lesson_dict.lesson_number)),
+                teacher_id=self.teachers.get_mapped(lesson_dict.teacher_fullname),
+                classroom_id=self.classrooms.get_mapped(lesson_dict.classroom_title),
+                subject_id=self.subjects.get_mapped(lesson_dict.subject_title)
             )
-            lesson_objects.append(lesson_obj)
-        self.parsed_lessons = lesson_objects
-        logger.debug(f'Собрали {len(self.parsed_lessons)} объектов уроков')
+            self.lesson_model_objects.append(lesson_obj)
+        logger.debug(f'Собрали {len(self.lesson_model_objects)} объектов уроков')
 
     def push_lessons_to_db(self):
         try:
             with transaction.atomic():
-                LessonBuffer.objects.bulk_create(self.parsed_lessons)
-                affected_entities = synchronize_lessons(self.successful_group_ids)
+                LessonBuffer.objects.bulk_create(self.parsed_lessondict_objects)
+                # affected_entities = synchronize_lessons(self.successful_group_ids)
                 LessonBuffer.objects.all().delete()
 
             logger.info(f"Данные обновлены для {len(self.successful_group_ids)} групп")
-            return affected_entities
+            # return affected_entities
 
         except Exception as e:
             logger.error(f"Ошибка при обновлении данных в БД: {str(e)}")
@@ -345,26 +321,36 @@ class ScheduleSyncManager:
         logger.debug('Начинается обработка полученных данных')
         if self.successful_group_ids:
             self.gather_unique_elements()
-            self.map_related_objects()
             self.create_lesson_objects()
             self.push_lessons_to_db()
 
-    def update_schedule(self):
+    async def update_schedule(self):
         # Используем asyncio.run для запуска асинхронного кода
-        asyncio.run(self.run_parsing())
-        logger.debug(f'Парсинг всех страницы закончен. Получили данные для {len(self.parsed_lessons)}')
+        await self.run_parsing()
+        logger.debug(f'Парсинг всех страницы закончен. Получили данные для {len(self.parsed_lessondict_objects)}')
         self.process_parsed_data()
 
 
 @shared_task(bind=True, max_retries=0, default_retry_delay=60, queue='periodic_tasks')
-def update_schedule(self):
+async def update_schedule(self):
     try:
         groups = Group.objects.groups_links()
         logger.debug(f'Получены данные для {len(groups)} из БД')
         if groups:
             updater = ScheduleSyncManager(groups)
-            updater.update_schedule()
+            await updater.update_schedule()
         logger.info(f"Обновление расписания завершено.")
     except Exception as e:
         logger.error(f"Ошибка обновления расписания: {e}")
         raise self.retry(exc=e)
+
+if __name__ == '__main__':
+    import os
+
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eazyclass.settings')
+
+    import django
+
+    django.setup()
+    lesson = LessonDict(1, 'asdf', 'asdf', 'asdfasdf dfsadf dsfa', 1, '24.09.1994')
+    print(lesson.lesson_number)

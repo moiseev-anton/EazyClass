@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from ...tasks import fill_lesson_times
-from ...activities import fill_default_lesson_time_template
+from scheduler.tasks import fill_lesson_times
+from scheduler.activities import fill_default_lesson_time_template
 
 
 class Command(BaseCommand):

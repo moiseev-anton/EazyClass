@@ -4,10 +4,10 @@ import time
 
 from telebot.async_telebot import AsyncTeleBot
 
-from .keyboards import get_keyboard, context_data_store
-from .services import CacheService, UserService, SubscriptionService
-from .interface_messages import generate_home_answer
-from eazyclass.scheduler import User
+from scheduler.models import User
+from telegrambot.interface_messages import generate_home_answer
+from telegrambot.keyboards import get_keyboard, context_data_store
+from telegrambot.services import CacheService, UserService, SubscriptionService
 
 API_TOKEN = os.getenv('TELEGRAM_TOKEN')
 
@@ -52,7 +52,8 @@ async def handle_contact(message):
             contact=contact
         )
 
-        await bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text="Номер сохранен", reply_markup=get_keyboard('start'))
+        await bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text="Номер сохранен",
+                                    reply_markup=get_keyboard('start'))
 
     except Exception as e:
         logger.error(f"Ошибка в обработке contact сообщения: {str(e)}")

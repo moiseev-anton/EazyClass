@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from ...tasks import start_telegram_bot
+from telegrambot.tasks import start_telegram_bot
 
 
 class Command(BaseCommand):

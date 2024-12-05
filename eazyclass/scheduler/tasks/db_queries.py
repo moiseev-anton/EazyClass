@@ -4,10 +4,10 @@ from datetime import datetime
 
 from django.core.cache import caches
 from django.db import connection
-# from eazyclass.telegrambot import ContentTypeService
+# from telegrambot import ContentTypeService
 
 logger = logging.getLogger(__name__)
-cache = caches['telegrambot_cache']
+# cache = caches['telegrambot_cache']
 
 CACHE_TIMEOUT = 86400  # 24 часа
 

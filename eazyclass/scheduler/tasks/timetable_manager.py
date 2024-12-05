@@ -5,7 +5,7 @@ from celery import shared_task
 from django.db.models import Max
 from django.utils import timezone
 
-from ..models import LessonTime, LessonTimeTemplate
+from scheduler.models import LessonTime, LessonTimeTemplate
 
 logger = logging.getLogger(__name__)
 

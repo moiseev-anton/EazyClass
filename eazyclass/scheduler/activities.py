@@ -5,7 +5,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from .models import LessonTime, LessonTimeTemplate
+from scheduler.models import LessonTime, LessonTimeTemplate
 
 
 def make_active(modeladmin, request, queryset):
