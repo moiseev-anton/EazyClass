@@ -1,7 +1,7 @@
 import pytest
 from bs4 import Tag
 
-from scheduler.parsers.shedule_page_data_extractor import SchedulePageExtractor
+from scheduler.parsers.extractor import SchedulePageExtractor
 from scheduler.tests.html_test_cases import html_test_cases, invalid_html_test_cases
 
 

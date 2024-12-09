@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from celery import shared_task
 from django.db import transaction
 from django.db.models import Model
+from scheduler.schemas import LessonParser
 
 from scheduler.tasks.db_queries import synchronize_lessons
 from scheduler.models import Group, Subject, Lesson, LessonBuffer, Classroom, Teacher, LessonTime
@@ -216,6 +217,7 @@ class SchedulePageParser:
         except Exception as e:
             raise ValueError(f"Ошибка при обработке строки занятия: {e}")
 
+
     def _validate_lesson_order(self, lesson_number: int) -> None:
         """
         Проверяет порядок уроков и смену дат, предотвращая пропуски дат.
@@ -225,6 +227,24 @@ class SchedulePageParser:
                 raise ValueError("Обнаружен пропуск строки даты перед уроком")
         self.prev_lesson_number = lesson_number
         self.prev_lesson_date = self.current_date
+
+    # @staticmethod
+    # def _extract_lesson_data(cells: List[bs4.Tag]) -> LessonParser:
+    #     """
+    #     Парсит ячейки с данными урока и возвращает словарь с информацией об уроке.
+    #     """
+    #     try:
+    #         return LessonParser(
+    #             lesson_number=cells[0].text,
+    #             subject=cells[1].text,
+    #             classroom=cells[2].text,
+    #             teacher=cells[3].text,
+    #             subgroup=cells[4].text
+    #         )
+    #     except Exception as e:
+    #         raise ValueError(f"Ошибка при обработке строки занятия: {e}")
+
+
 
 
 class ScheduleSyncManager:
@@ -297,7 +317,7 @@ class ScheduleSyncManager:
         try:
             with transaction.atomic():
                 LessonBuffer.objects.bulk_create(self.parsed_lessondict_objects)
-                # affected_entities = synchronize_lessons(self.successful_group_ids)
+                affected_entities = synchronize_lessons(self.successful_group_ids)
                 LessonBuffer.objects.all().delete()
 
             logger.info(f"Данные обновлены для {len(self.successful_group_ids)} групп")
@@ -344,13 +364,11 @@ async def update_schedule(self):
         logger.error(f"Ошибка обновления расписания: {e}")
         raise self.retry(exc=e)
 
+
 if __name__ == '__main__':
     import os
-
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eazyclass.settings')
-
     import django
-
     django.setup()
     lesson = LessonDict(1, 'asdf', 'asdf', 'asdfasdf dfsadf dsfa', 1, '24.09.1994')
     print(lesson.lesson_number)
