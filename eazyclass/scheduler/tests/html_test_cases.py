@@ -1,4 +1,10 @@
-valid_html = """
+from contextlib import nullcontext as does_not_raise
+
+import pytest
+
+# ================ ВАЛИДНЫЕ ЗНАЧЕНИЯ ==========================
+
+valid_schedule = """
 <body>
 <table>
     <tbody>
@@ -105,7 +111,7 @@ expected_valid_result = [
      'teacher_fullname': ''}
 ]
 
-#-----------------------------------
+# -----------------------------------
 
 empty_shedule = """
 <body>
@@ -127,13 +133,9 @@ empty_shedule = """
 </body>
 """
 
-html_test_cases = [
-    (valid_html, expected_valid_result),
-    (empty_shedule, []),
-    ('', []),
-]
 
-#==========================================
+
+# ================ НЕВАЛИДНЫЕ ЗНАЧЕНИЯ ==========================
 
 html_missed_first_date_row = """
 <body>
@@ -249,12 +251,20 @@ not_numeric_lesson_number = """
 </body>
 """
 
-invalid_html_test_cases = [
-    html_missed_first_date_row,
-    equal_lesson_numbers_for_one_date,
-    invalid_lesson_order,
-    missed_cell_in_date_row,
-    missed_cells_in_lesson_row,
-    invalid_date,
-    not_numeric_lesson_number,
+
+html_test_cases = [
+    # Валидные значения
+    (valid_schedule, expected_valid_result, does_not_raise()),
+    (empty_shedule, [], does_not_raise()),
+    ('', [], does_not_raise()),
+
+    # Невалидные значения
+    (html_missed_first_date_row, None, pytest.raises(ValueError)),
+    (equal_lesson_numbers_for_one_date, None, pytest.raises(ValueError)),
+    (invalid_lesson_order, None, pytest.raises(ValueError)),
+    (missed_cell_in_date_row, None, pytest.raises(ValueError)),
+    (missed_cells_in_lesson_row, None, pytest.raises(ValueError)),
+    (invalid_date, None, pytest.raises(ValueError)),
+    (not_numeric_lesson_number, None, pytest.raises(ValueError)),
+
 ]
