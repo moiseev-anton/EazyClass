@@ -56,8 +56,8 @@ class GroupManager(BaseManager):
                 .order_by('faculty__short_title', 'grade', 'title'))
 
     @cache_data('group_links', GROUP_DATA_CACHE_TIMEOUT, 'default')
-    def groups_links(self):
-        return list(self.filter(is_active=True).values('id', 'link'))
+    def link_map(self):
+        return list(self.filter(is_active=True).values_list('id', 'link'))
 
 
 class TeacherManager(BaseManager, SingleFieldManagerMixin):

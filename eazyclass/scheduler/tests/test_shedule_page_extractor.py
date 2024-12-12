@@ -1,9 +1,9 @@
 from contextlib import nullcontext as does_not_raise
 
-import pytest
 import bs4
+import pytest
 
-from scheduler.parsers.extractor import SchedulePageExtractor
+from scheduler.scapper.extractor import SchedulePageExtractor
 from scheduler.tests.html_test_cases import html_test_cases
 
 
