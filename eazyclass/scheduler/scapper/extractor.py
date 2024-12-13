@@ -20,7 +20,7 @@ class SchedulePageExtractor:
             cells = row.find_all('td')
             if len(cells) == self.DATE_ROW_LENGTH:
                 date_string = self._extract_date_row(cells)
-                self.current_date = self._clean_date_sting(date_string)
+                self.current_date = self._clean_date_string(date_string)
             elif len(cells) == self.LESSON_ROW_LENGTH and self.current_date is not None:
                 lesson_info = self._extract_lesson_row(cells)
                 self._check_lessons_order(int(lesson_info['lesson_number']))
@@ -36,7 +36,7 @@ class SchedulePageExtractor:
         return cells[0].text
 
     @classmethod
-    def _clean_date_sting(cls, raw_date_string: str) -> str:
+    def _clean_date_string(cls, raw_date_string: str) -> str:
         match = cls.DATE_PATTERN.search(raw_date_string)
         if match:
             return match.group()  # Возвращаем найденную строку даты

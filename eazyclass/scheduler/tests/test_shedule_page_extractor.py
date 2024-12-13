@@ -41,7 +41,7 @@ class TestSchedulePageExtractor:
     ])
     def test_clean_date_sting_valid(self, case, expectation):
         with expectation:
-            result = self.extractor._clean_date_sting(case)
+            result = self.extractor._clean_date_string(case)
             assert result == '07.12.2024'
 
     @pytest.mark.parametrize(

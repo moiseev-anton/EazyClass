@@ -1,12 +1,11 @@
-# Define here the models for your scraped items
-#
-# See documentation in:
-# https://docs.scrapy.org/en/latest/topics/items.html
-
 import scrapy
 
 
-class EazyScrapyItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class ScheduleItem(scrapy.Item):
+    group_id = scrapy.Field()
+    lesson_number = scrapy.Field()
+    subject_title = scrapy.Field()
+    classroom_title = scrapy.Field()
+    teacher_fullname = scrapy.Field()
+    subgroup = scrapy.Field()
+    date = scrapy.Field()
