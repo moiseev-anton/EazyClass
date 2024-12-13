@@ -1,7 +1,7 @@
 import scrapy
 
 
-class ScheduleItem(scrapy.Item):
+class LessonItem(scrapy.Item):
     group_id = scrapy.Field()
     lesson_number = scrapy.Field()
     subject_title = scrapy.Field()
