@@ -1,10 +1,10 @@
-import re
-from datetime import date, datetime
+from datetime import date
 from functools import partial
 from typing import Any
 
+from cachetools import LRUCache
 from dateparser.date import DateDataParser
-from itemloaders.processors import MapCompose, TakeFirst
+from itemloaders.processors import MapCompose, TakeFirst, Identity
 from scrapy.loader import ItemLoader
 from w3lib.html import remove_tags
 
@@ -19,6 +19,12 @@ MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field('title').max_length
 MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
 
 ddp = DateDataParser(
+# MAX_SUBJECT_TITLE_LENGTH = 255
+# MAX_CLASSROOM_TITLE_LENGTH = 10
+# MAX_TEACHER_FULLNAME_LENGTH = 64
+
+date_cache = LRUCache(maxsize=30)
+date_parser = DateDataParser(
     languages=['ru'],
     settings={
         "PREFER_LOCALE_DATE_ORDER": True,
@@ -29,7 +35,9 @@ ddp = DateDataParser(
 
 def parse_date(value: str) -> date:
     if isinstance(value, str):
-        return ddp.get_date_data(value)['date_obj'].date()
+        if value not in date_cache:
+            date_cache[value] = date_parser.get_date_data(value)['date_obj'].date()
+        return date_cache[value]
 
     if isinstance(value, date):
         return value

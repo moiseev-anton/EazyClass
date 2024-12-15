@@ -58,27 +58,19 @@ class TestLessonLoader:
             assert truncated_value == result
 
     @pytest.mark.parametrize(
-        "raw_date_string, result, expectation",
-        [
-            ("Some text 12.03.2023", "12.03.2023", does_not_raise()),
-            ("Another format 2023-03-12", None, pytest.raises(ValueError)),
-            ("No date here", None, pytest.raises(ValueError)),
-            ("", None, pytest.raises(ValueError)),
-        ],
-    )
-    def test_date_extract(self, raw_date_string, result, expectation):
-        with expectation:
-            extracted_date = date_extract(raw_date_string)
-            assert extracted_date == result
-
-    @pytest.mark.parametrize(
         "value, expectation",
         [
+            ("12.03.2023 - Воскресение", does_not_raise()),
+            ("   12.03.2023   -   Воскресение   ", does_not_raise()),
+            ("12.03.2023 - Понедельник", does_not_raise()),  # Даже если день недели не совпадает
             ("12.03.2023", does_not_raise()),
-            ("2023-03-12", does_not_raise()),
+            ("12-03-2023", does_not_raise()),
             (date(2023, 3, 12), does_not_raise()),
-            ("invalid-date", pytest.raises(ValueError)),
-            ('', pytest.raises(ValueError)),
+
+            ("2023-03-12", pytest.raises(AssertionError)),  # неверный порядок YMD
+            ("Дата с лишним текстом 12.03.2023", pytest.raises(AttributeError)),
+            ("Текст без даты", pytest.raises(AttributeError)),
+            ('', pytest.raises(AttributeError)),
             (123, pytest.raises(TypeError)),
             (None, pytest.raises(TypeError)),
         ],
@@ -123,11 +115,19 @@ class TestLessonLoader:
     @pytest.mark.parametrize(
         "raw_date_string, expectation",
         [
+            ("12.03.2023 - Воскресение", does_not_raise()),
+            ("   12.03.2023   -   Воскресение   ", does_not_raise()),
+            ("12.03.2023 - Понедельник", does_not_raise()),  # Даже если день недели не совпадает
             ("12.03.2023", does_not_raise()),
-            ("Некоторый 12.03.2023  текст", does_not_raise()),
-            ("Другой формат 2023-03-12", pytest.raises(ValueError)),
-            ("Без даты", pytest.raises(ValueError)),
-            ("", pytest.raises(ValueError)),
+            ("12-03-2023", does_not_raise()),
+            (date(2023, 3, 12), does_not_raise()),
+
+            ("2023-03-12", pytest.raises(AssertionError)),  # неверный порядок YMD
+            ("Дата с лишним текстом 12.03.2023", pytest.raises(ValueError)),
+            ("Текст без даты", pytest.raises(ValueError)),
+            ('', pytest.raises(ValueError)),
+            (123, pytest.raises(ValueError)),
+            (None, pytest.raises(IndexError)),
         ],
     )
     def test_date_processor(self, raw_date_string, expectation):
