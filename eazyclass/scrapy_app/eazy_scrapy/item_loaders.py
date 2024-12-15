@@ -31,56 +31,51 @@ def parse_date(value: str) -> date:
     if isinstance(value, str):
         return ddp.get_date_data(value)['date_obj'].date()
 
+    if isinstance(value, date):
+        return value
+    raise TypeError(f"Ожидалось строковое представление даты или объект date, получено: {type(value)}")
+
+
+def validate_integer(value: int, min_value: int = float('-inf'), max_value: int = float('inf')) -> int:
+    if min_value > max_value:
+        raise ValueError(f'Недопустимое значение: min_value ({min_value}) > max_value({max_value})')
+
+    value = int(value)
+    if min_value <= value <= max_value:
+        return value
+    raise ValueError(f"Значение '{value}' вне допустимого диапазона [{min_value}, {max_value}].")
+
+
+def replace_empty_string(value: str, default: Any = '') -> str:
+    if value.strip() == '':
+        return default
+    return value
+
+
+def truncate_string(value: str, max_length: int) -> str:
+    if max_length <= 0:
+        raise ValueError(f'Недопустимое значение max_length: {max_length}')
+    if len(value) > max_length:
+        return value[:max_length]
+    return value
+
+
+def build_integer_processor(default: int = 0, min_value=float('-inf'), max_value=float('inf')) -> MapCompose:
+    replace_empty = partial(replace_empty_string, default=default)
+    range_validate = partial(validate_integer, min_value=min_value, max_value=max_value)
+    return MapCompose(remove_tags, replace_empty, int, range_validate)
+
+
+def build_string_processor(default: str, max_length: int) -> MapCompose:
+    replace_empty = partial(replace_empty_string, default=default)
+    truncate = partial(truncate_string, max_length=max_length)
+    return MapCompose(remove_tags, str.strip, replace_empty, truncate)
+
+
 class LessonLoader(ItemLoader):
-    @staticmethod
-    def validate_integer(value: int, min_value: int = float('-inf'), max_value: int = float('inf')) -> int:
-        value = int(value)
-        if min_value <= value <= max_value:
-            return value
-        raise ValueError(f"Значение '{value}' вне допустимого диапазона [{min_value}, {max_value}].")
-
-    @staticmethod
-    def replace_empty_string(value: str, default='') -> str:
-        if value.strip() == '':
-            return default
-        return value
-
-    @staticmethod
-    def truncate_string(value: str, max_length: int) -> str:
-        if len(value) > max_length:
-            return value[:max_length]
-        return value
-
-    @staticmethod
-    def build_integer_processor(default: int = '', min_value=float('-inf'), max_value=float('inf')) -> MapCompose:
-        range_validate = partial(LessonLoader.validate_integer, min_value=min_value, max_value=max_value)
-        replace_empty = partial(LessonLoader.replace_empty_string, default=default)
-        return MapCompose(remove_tags, replace_empty, int, range_validate)
-
-    @staticmethod
-    def build_string_processor(default: str, max_length: int) -> MapCompose:
-        replace_empty = partial(LessonLoader.replace_empty_string, default=default)
-        truncate = partial(LessonLoader.truncate_string, max_length=max_length)
-        return MapCompose(remove_tags, str.strip, replace_empty, truncate)
-
-
-    @staticmethod
-    def parse_date(value: Any) -> date:
-        if isinstance(value, str):
-            for fmt in DATE_FORMATS:
-                try:
-                    return datetime.strptime(value.strip(), fmt).date()
-                except ValueError:
-                    continue
-            raise ValueError(f"Некорректный формат даты: '{value}'. Ожидается один из форматов: {DATE_FORMATS}")
-        if isinstance(value, date):
-            return value
-        raise TypeError(f"Ожидалось строковое представление даты или объект date, получено: {type(value)}")
-
     default_output_processor = TakeFirst()
     # Настройка процессоров
-    group_id_in = build_integer_processor(min_value=0)
-    date_in = MapCompose(remove_tags, date_extract, parse_date)
+    group_id_in = MapCompose(int, lambda x: validate_integer(x, min_value=0))
     date_in = MapCompose(remove_tags, parse_date)
     subject_title_in = build_string_processor(SUBJECT_DEFAULT_VALUE, MAX_SUBJECT_TITLE_LENGTH)
     classroom_title_in = build_string_processor(CLASSROOM_DEFAULT_VALUE, MAX_CLASSROOM_TITLE_LENGTH)
