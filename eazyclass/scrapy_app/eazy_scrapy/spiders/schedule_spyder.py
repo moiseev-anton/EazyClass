@@ -1,15 +1,14 @@
 import scrapy
-import re
 from urllib.parse import urljoin
 
 from scheduler.models import Group  # Импорт модели Group
-from scrapy_app.eazy_scrapy.items import ScheduleItem
+from scrapy_app.eazy_scrapy.item_loaders import LessonLoader
+from scrapy_app.eazy_scrapy.items import LessonItem
 
 
 class ScheduleSpider(scrapy.Spider):
     name = 'schedule_spider'
     base_url = 'https://bincol.ru/rasp/'
-    DATE_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}')
 
     def start_requests(self):
         # Получаем список групп и ссылок из БД
@@ -21,28 +20,28 @@ class ScheduleSpider(scrapy.Spider):
             yield scrapy.Request(url=url, callback=self.parse_schedule, meta={'group_id': group_id})
 
     def parse_schedule(self, response):
-        group_id = response.meta['group_id']
+        try:
+            group_id = response.meta['group_id']
+            current_date = None
+            for row in response.css('tr.shadow'):
+                cells = row.css('td')
+                if len(cells) == 1:
+                    current_date = cells[0].css('::text').get().strip()
+                elif len(cells) == 5:
+                    loader = LessonLoader(item=LessonItem(), selector=row)
+                    loader.add_value('group_id', group_id)
+                    loader.add_value('date', current_date)
+                    loader.add_value('lesson_number', cells[0])
+                    loader.add_value('subject_title', cells[1])
+                    loader.add_value('classroom_title', cells[2])
+                    loader.add_value('teacher_fullname', cells[3])
+                    loader.add_value('subgroup', cells[4])
 
-        current_date = None  # переменная для хранения текущей даты
+                    yield loader.load_item()
 
-        # Ищем все строки таблицы с классом 'shadow' (уроки и даты)
-        for row in response.css('tr.shadow'):
-            # Извлекаем количество ячеек в строке
-            cells = row.css('td')
-            # Если в строке 1 ячейка, то это строка с датой
-            if len(cells) == 1:
-                current_date = cells[0].get().strip()  # извлекаем дату
-            # Если в строке 5 ячеек, то это строка с уроком
-            elif len(cells) == 5:
-                # Создаем Item для урока
-                item = ScheduleItem(
-                    group_id=group_id,
-                    lesson_number=cells[0].css('td::text').get().strip(),
-                    subject_title=cells[1].css('td::text').get().strip() or 'Не указано',
-                    classroom_title=cells[2].css('td::text').get().strip() or '(дист)',
-                    teacher_fullname=cells[3].css('td::text').get().strip() or 'Не указано',
-                    subgroup=cells[4].css('td::text').get().strip() or 0,
-                    date=current_date
-                )
+                else:
+                    raise ValueError(f"Некорректная структура таблицы. В строке {len(cells)} ячеек")
 
-                yield item
+        except Exception as e:
+            self.logger.error(f"Ошибка обработки страницы: {e}")
+
