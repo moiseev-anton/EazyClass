@@ -3,6 +3,7 @@ from datetime import date, datetime
 from functools import partial
 from typing import Any
 
+from dateparser.date import DateDataParser
 from itemloaders.processors import MapCompose, TakeFirst
 from scrapy.loader import ItemLoader
 from w3lib.html import remove_tags
@@ -17,9 +18,18 @@ MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field('title').max_length
 MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field('title').max_length
 MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
 
-DATE_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}')
-DATE_FORMATS = ['%d.%m.%Y', '%Y-%m-%d']
+ddp = DateDataParser(
+    languages=['ru'],
+    settings={
+        "PREFER_LOCALE_DATE_ORDER": True,
+        "RETURN_AS_TIMEZONE_AWARE": False,
+    }
+)
 
+
+def parse_date(value: str) -> date:
+    if isinstance(value, str):
+        return ddp.get_date_data(value)['date_obj'].date()
 
 class LessonLoader(ItemLoader):
     @staticmethod
@@ -53,12 +63,6 @@ class LessonLoader(ItemLoader):
         truncate = partial(LessonLoader.truncate_string, max_length=max_length)
         return MapCompose(remove_tags, str.strip, replace_empty, truncate)
 
-    @staticmethod
-    def date_extract(raw_date_string: str) -> str:
-        match = DATE_PATTERN.search(raw_date_string)
-        if match:
-            return match.group()
-        raise ValueError(f"Не удалось извлечь дату из строки: {raw_date_string}")
 
     @staticmethod
     def parse_date(value: Any) -> date:
@@ -77,6 +81,7 @@ class LessonLoader(ItemLoader):
     # Настройка процессоров
     group_id_in = build_integer_processor(min_value=0)
     date_in = MapCompose(remove_tags, date_extract, parse_date)
+    date_in = MapCompose(remove_tags, parse_date)
     subject_title_in = build_string_processor(SUBJECT_DEFAULT_VALUE, MAX_SUBJECT_TITLE_LENGTH)
     classroom_title_in = build_string_processor(CLASSROOM_DEFAULT_VALUE, MAX_CLASSROOM_TITLE_LENGTH)
     teacher_fullname_in = build_string_processor(TEACHER_DEFAULT_VALUE, MAX_TEACHER_FULLNAME_LENGTH)
