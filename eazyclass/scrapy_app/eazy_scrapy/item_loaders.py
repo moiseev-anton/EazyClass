@@ -18,7 +18,6 @@ MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field('title').max_length
 MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field('title').max_length
 MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
 
-ddp = DateDataParser(
 # MAX_SUBJECT_TITLE_LENGTH = 255
 # MAX_CLASSROOM_TITLE_LENGTH = 10
 # MAX_TEACHER_FULLNAME_LENGTH = 64
@@ -82,9 +81,9 @@ def build_string_processor(default: str, max_length: int) -> MapCompose:
 
 class LessonLoader(ItemLoader):
     default_output_processor = TakeFirst()
-    # Настройка процессоров
-    group_id_in = MapCompose(int, lambda x: validate_integer(x, min_value=0))
-    date_in = MapCompose(remove_tags, parse_date)
+
+    group_id_in = Identity()
+    date_in = MapCompose(parse_date)
     subject_title_in = build_string_processor(SUBJECT_DEFAULT_VALUE, MAX_SUBJECT_TITLE_LENGTH)
     classroom_title_in = build_string_processor(CLASSROOM_DEFAULT_VALUE, MAX_CLASSROOM_TITLE_LENGTH)
     teacher_fullname_in = build_string_processor(TEACHER_DEFAULT_VALUE, MAX_TEACHER_FULLNAME_LENGTH)
