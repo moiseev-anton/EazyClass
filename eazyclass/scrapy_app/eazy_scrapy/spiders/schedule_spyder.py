@@ -1,14 +1,24 @@
-import scrapy
+import json
 from urllib.parse import urljoin
+
+import scrapy
 
 from scheduler.models import Group  # Импорт модели Group
 from scrapy_app.eazy_scrapy.item_loaders import LessonLoader
 from scrapy_app.eazy_scrapy.items import LessonItem
+from utils.redis_clients import get_scrapy_redis_client
 
 
 class ScheduleSpider(scrapy.Spider):
     name = 'schedule_spider'
     base_url = 'https://bincol.ru/rasp/'
+    allowed_domains = ['https://bincol.ru']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.redis_client = get_scrapy_redis_client()
+        self.lessons = []
+        self.scraped_group_ids = set()
 
     def start_requests(self):
         # Получаем список групп и ссылок из БД
@@ -20,9 +30,9 @@ class ScheduleSpider(scrapy.Spider):
             yield scrapy.Request(url=url, callback=self.parse_schedule, meta={'group_id': group_id})
 
     def parse_schedule(self, response):
+        group_id = response.meta['group_id']
+        current_date = None
         try:
-            group_id = response.meta['group_id']
-            current_date = None
             for row in response.css('tr.shadow'):
                 cells = row.css('td')
                 if len(cells) == 1:
@@ -37,11 +47,25 @@ class ScheduleSpider(scrapy.Spider):
                     loader.add_value('teacher_fullname', cells[3])
                     loader.add_value('subgroup', cells[4])
 
-                    yield loader.load_item()
+                    lesson = loader.load_item()
+                    self.lessons.append(lesson)
 
                 else:
                     raise ValueError(f"Некорректная структура таблицы. В строке {len(cells)} ячеек")
 
         except Exception as e:
             self.logger.error(f"Ошибка обработки страницы: {e}")
+            self.scraped_group_ids.discard(group_id)
 
+    def closed(self, reason):
+        # Этот метод вызывается при завершении работы паука
+        if self.scraped_group_ids:
+            # Преобразуем список уроков в JSON
+            lessons_json = json.dumps(self.lessons)
+            group_ids_json = json.dumps(self.scraped_group_ids)
+
+            # Помещаем данные в Redis
+            self.redis_client.set("lesson_scraped_data", lessons_json)
+            self.redis_client.set("scraped_group_ids", group_ids_json)
+
+        self.logger.info("Паук завершен. Данные сохранены в Redis.")
