@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'scheduler',
+    'scrapy_app',
     'django_celery_beat',
     'rangefilter',
     'api',
@@ -197,19 +198,21 @@ LOGGING = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'redis://redis:{os.getenv('REDIS_PORT')}/1',
+        'LOCATION': f'{os.getenv('REDIS_DEFAULT')}',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     },
     'telegrambot_cache': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'redis://redis:{os.getenv('REDIS_PORT')}/2',
+        'LOCATION': f'{os.getenv('REDIS_TELEGRAM_BOT')}',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
 }
+
+REDIS_SCRAPY_URL = os.getenv('REDIS_SCRAPY')
 
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_BACKEND')
