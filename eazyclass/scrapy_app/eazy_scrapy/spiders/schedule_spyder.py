@@ -2,23 +2,22 @@ import json
 from urllib.parse import urljoin
 
 import scrapy
+from django.conf import settings
 
 from scheduler.models import Group  # Импорт модели Group
-from scrapy_app.eazy_scrapy.item_loaders import LessonLoader
-from scrapy_app.eazy_scrapy.items import LessonItem
+from scrapy_app.eazy_scrapy.schedule_page_parser import SchedulePageParser
 from utils.redis_clients import get_scrapy_redis_client
 
 
 class ScheduleSpider(scrapy.Spider):
     name = 'schedule_spider'
-    base_url = 'https://bincol.ru/rasp/'
-    allowed_domains = ['https://bincol.ru']
+    base_url = settings.BASE_SCRAPING_URL
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.redis_client = get_scrapy_redis_client()
         self.lessons = []
-        self.scraped_group_ids = set()
+        self.scraped_groups = dict()
 
     def start_requests(self):
         # Получаем список групп и ссылок из БД
@@ -27,11 +26,9 @@ class ScheduleSpider(scrapy.Spider):
         # Проходим по всем ссылкам и отправляем запросы
         for group_id, link in group_links:
             url = urljoin(self.base_url, link)
-            yield scrapy.Request(url=url, callback=self.parse_schedule, meta={'group_id': group_id})
+            yield scrapy.Request(url=url, callback=self.process_page, meta={'group_id': group_id})
 
-    def parse_schedule(self, response):
-        group_id = response.meta['group_id']
-        current_date = None
+    def process_page(self, response):
         try:
             for row in response.css('tr.shadow'):
                 cells = row.css('td')
@@ -53,19 +50,23 @@ class ScheduleSpider(scrapy.Spider):
                 else:
                     raise ValueError(f"Некорректная структура таблицы. В строке {len(cells)} ячеек")
 
+            group_id = response.meta['group_id']
+            parser = SchedulePageParser(response)
+            lessons = parser.parse()
+            self.lessons.extend(lessons)
+            self.scraped_groups[group_id] = current_content_hash
         except Exception as e:
             self.logger.error(f"Ошибка обработки страницы: {e}")
-            self.scraped_group_ids.discard(group_id)
 
     def closed(self, reason):
         # Этот метод вызывается при завершении работы паука
-        if self.scraped_group_ids:
+        if self.scraped_groups:
             # Преобразуем список уроков в JSON
             lessons_json = json.dumps(self.lessons)
-            group_ids_json = json.dumps(self.scraped_group_ids)
+            group_ids_json = json.dumps(self.scraped_groups)
 
             # Помещаем данные в Redis
-            self.redis_client.set("lesson_scraped_data", lessons_json)
-            self.redis_client.set("scraped_group_ids", group_ids_json)
+            self.redis_client.set(SCRAPED_LESSONS_KEY, lessons_json)
+            self.redis_client.set(SCRAPED_GROUPS_KEY, group_ids_json)
 
         self.logger.info("Паук завершен. Данные сохранены в Redis.")
