@@ -57,15 +57,15 @@ def invalidate_cache(key_template: str, cache_name: str = 'default') -> Callable
 #     try:
 #         lessons_query = subscription_model.objects.prefetch_related(
 #             Prefetch('lessons', queryset=Lesson.objects.filter(
-#                 lesson_time__date__in=dates,
-#                 is_active=True).select_related('subject', 'classroom', 'lesson_time', 'teacher'))
+#                 period__date__in=dates,
+#                 is_active=True).select_related('subject', 'classroom', 'period', 'teacher'))
 #         ).get(id=subscription_id)
 #     except ObjectDoesNotExist:
 #         return []
 #
 #     return [{
-#         'date': lesson.lesson_time.date,
-#         'time': lesson.lesson_time.start_time.strftime('%H:%M'),
+#         'date': lesson.period.date,
+#         'time': lesson.period.start_time.strftime('%H:%M'),
 #         'subject': lesson.subject.title,
 #         'classroom': lesson.classroom.title,
 #         'teacher': lesson.teacher.short_name if lesson.teacher else "Не указан"

@@ -56,7 +56,7 @@ class ClassroomAdmin(admin.ModelAdmin):
 
 @admin.register(LessonBuffer)
 class LessonBufferAdmin(admin.ModelAdmin):
-    list_display = ('group', 'lesson_time', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+    list_display = ('group', 'period', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
     search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
     list_filter = ('group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
     actions = [make_active, make_inactive, toggle_active]
@@ -64,7 +64,7 @@ class LessonBufferAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
-    list_display = ('group', 'lesson_time', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+    list_display = ('group', 'period', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
     search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
     list_filter = ('group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
     actions = [make_active, make_inactive, toggle_active]
@@ -108,12 +108,12 @@ class UserAdmin(BaseUserAdmin):
     subscription_info.short_description = 'Subscription Info'
 
 
-@admin.register(LessonTimeTemplate)
-class LessonTimeTemplateAdmin(admin.ModelAdmin):
+@admin.register(PeriodTemplate)
+class PeriodTemplateAdmin(admin.ModelAdmin):
     list_display = ('day_of_week', 'lesson_number', 'start_time', 'end_time')
     list_filter = ('day_of_week', 'lesson_number')
     actions = [reset_timetable]
-    change_list_template = "admin/scheduler/lessontimetemplate/change_list.html"
+    change_list_template = "admin/scheduler/period_template/change_list.html"
 
     def get_urls(self):
         urls = super().get_urls()
@@ -143,7 +143,7 @@ class LessonTimeTemplateAdmin(admin.ModelAdmin):
         return TemplateResponse(request, "admin/apply_template_changes.html", context)
 
 
-@admin.register(LessonTime)
-class LessonTimeAdmin(admin.ModelAdmin):
+@admin.register(Period)
+class PeriodAdmin(admin.ModelAdmin):
     list_display = ('date', 'lesson_number', 'start_time', 'end_time')
     list_filter = ('date', ('date', DateRangeFilter), 'lesson_number')

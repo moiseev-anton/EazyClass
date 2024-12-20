@@ -33,11 +33,11 @@ def fetch_schedule_data(group_id, start_date, end_date=None):
 
     # Формируем запрос к БД для получения занятий
     lessons = Lesson.objects.select_related(
-        'lesson_time', 'subject', 'teacher', 'classroom'
+        'period', 'subject', 'teacher', 'classroom'
     ).filter(
         group_id=group_id,
-        lesson_time__date__range=(start_date, end_date),
+        period__date__range=(start_date, end_date),
         is_active=True
-    ).order_by('lesson_time__date', 'lesson_time__lesson_number')
+    ).order_by('period__date', 'period__lesson_number')
 
     return lessons

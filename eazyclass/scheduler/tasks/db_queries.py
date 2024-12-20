@@ -37,16 +37,16 @@ def synchronize_lessons(group_ids):
                         is_active = true
                     FROM scheduler_lessonbuffer lb
                     WHERE l.group_id = lb.group_id AND
-                          l.lesson_time_id = lb.lesson_time_id AND
+                          l.period_id = lb.period_id AND
                           l.subgroup = lb.subgroup AND
                           (l.subject_id != lb.subject_id OR
                            l.classroom_id != lb.classroom_id OR
                            l.teacher_id != lb.teacher_id)
-                    RETURNING l.group_id, l.teacher_id, lb.lesson_time_id
+                    RETURNING l.group_id, l.teacher_id, lb.period_id
                 )
                 SELECT u.group_id, u.teacher_id, lt.date
                 FROM updated u
-                JOIN scheduler_lessontime lt ON u.lesson_time_id = lt.id
+                JOIN scheduler_period lt ON u.period_id = lt.id
                 """)
                 for group_id, teacher_id, date in cursor.fetchall():
                     affected_entities_map['Group'][group_id].add(date)
@@ -56,20 +56,20 @@ def synchronize_lessons(group_ids):
                 # Вставка новых уроков из буфера
                 cursor.execute("""
                 WITH inserted AS (
-                    INSERT INTO scheduler_lesson (group_id, lesson_time_id, subject_id, classroom_id, teacher_id,
+                    INSERT INTO scheduler_lesson (group_id, period_id, subject_id, classroom_id, teacher_id,
                         subgroup, is_active)
-                    SELECT lb.group_id, lb.lesson_time_id, lb.subject_id, lb.classroom_id, 
+                    SELECT lb.group_id, lb.period_id, lb.subject_id, lb.classroom_id, 
                         lb.teacher_id, lb.subgroup, true
                     FROM scheduler_lessonbuffer lb
                     WHERE NOT EXISTS (
                         SELECT 1 FROM scheduler_lesson l
-                        WHERE l.group_id = lb.group_id AND l.lesson_time_id = lb.lesson_time_id
+                        WHERE l.group_id = lb.group_id AND l.period_id = lb.period_id
                     )
-                    RETURNING group_id, teacher_id, lesson_time_id
+                    RETURNING group_id, teacher_id, period_id
                 )
                 SELECT i.group_id, i.teacher_id, lt.date
                 FROM inserted i
-                JOIN scheduler_lessontime lt ON i.lesson_time_id = lt.id
+                JOIN scheduler_period lt ON i.period_id = lt.id
                 """)
                 for group_id, teacher_id, date in cursor.fetchall():
                     affected_entities_map['Group'][group_id].add(date)
@@ -85,12 +85,14 @@ def synchronize_lessons(group_ids):
                 JOIN scheduler_lessontime lt ON l_sub.lesson_time_id = lt.id
                 LEFT JOIN scheduler_lessonbuffer lb ON l_sub.group_id = lb.group_id 
                     AND l_sub.lesson_time_id = lb.lesson_time_id
+                JOIN scheduler_period lt ON l_sub.period_id = lt.id
+                    AND l_sub.period_id = lb.period_id
                 WHERE l_sub.group_id = l.group_id
-                    AND l_sub.lesson_time_id = l.lesson_time_id
+                    AND l_sub.period_id = l.period_id
                     AND l_sub.group_id IN %s
                     AND lt.date >= %s
                     AND lb.group_id IS NULL
-                    AND lb.lesson_time_id IS NULL
+                    AND lb.period_id IS NULL
                     AND l.is_active = true
                 RETURNING l.group_id, l.teacher_id, lt.date
             )

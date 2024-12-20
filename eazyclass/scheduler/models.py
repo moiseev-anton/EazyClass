@@ -134,27 +134,27 @@ class Classroom(models.Model):
         return f"{self.title}"
 
 
-class LessonTime(models.Model):
+class Period(models.Model):
     date = models.DateField()
     lesson_number = models.IntegerField()
     start_time = models.TimeField(null=True)
     end_time = models.TimeField(null=True)
 
-    objects = LessonTimeManager()
+    objects = PeriodManager()
 
     class Meta:
         unique_together = ('date', 'lesson_number')
         indexes = [
             models.Index(fields=['date', 'lesson_number']),
-            #TODO: Проверить нужен ли этот индекс
+            # TODO: Проверить нужен ли этот индекс
             models.Index(fields=['date']),
         ]
 
     def save(self, *args, **kwargs):
         if not self.start_time or not self.end_time:
             try:
-                template = LessonTimeTemplate.objects.get(day_of_week=self.date.strftime('%A'),
-                                                          lesson_number=self.lesson_number)
+                template = PeriodTemplate.objects.get(day_of_week=self.date.strftime('%A'),
+                                                      lesson_number=self.lesson_number)
                 self.start_time = template.start_time
                 self.end_time = template.end_time
             except ObjectDoesNotExist:
@@ -168,7 +168,7 @@ class LessonTime(models.Model):
 
 class Lesson(models.Model):
     group = models.ForeignKey(Group, related_name='lessons', on_delete=models.CASCADE, null=True)
-    lesson_time = models.ForeignKey(LessonTime, related_name='lessons', on_delete=models.CASCADE, null=True)
+    period = models.ForeignKey(Period, related_name='lessons', on_delete=models.CASCADE, null=True)
     subject = models.ForeignKey(Subject, related_name='lessons', on_delete=models.CASCADE, null=True)
     teacher = models.ForeignKey(Teacher, related_name='lessons', on_delete=models.CASCADE, null=True)
     classroom = models.ForeignKey(Classroom, related_name='lessons', on_delete=models.CASCADE, null=True)
@@ -176,18 +176,18 @@ class Lesson(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.group.title}({self.subgroup})-{self.lesson_time}-{self.subject}"
+        return f"{self.group.title}({self.subgroup})-{self.period}-{self.subject}"
 
     class Meta:
         indexes = [
-            models.Index(fields=['group', 'lesson_time']),
-            models.Index(fields=['group', 'lesson_time', 'subgroup']),
+            models.Index(fields=['group', 'period']),
+            models.Index(fields=['group', 'period', 'subgroup']),
         ]
 
 
 class LessonBuffer(models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
-    lesson_time = models.ForeignKey(LessonTime, on_delete=models.CASCADE, null=True)
+    period = models.ForeignKey(Period, on_delete=models.CASCADE, null=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, null=True)
@@ -196,12 +196,12 @@ class LessonBuffer(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['group', 'lesson_time']),
-            models.Index(fields=['group', 'lesson_time', 'subgroup']),
+            models.Index(fields=['group', 'period']),
+            models.Index(fields=['group', 'period', 'subgroup']),
         ]
 
     def __str__(self):
-        return f"{self.group.title}({self.subgroup})-{self.lesson_time}-{self.subject}"
+        return f"{self.group.title}({self.subgroup})-{self.period}-{self.subject}"
 
 
 class User(AbstractUser):
@@ -301,6 +301,7 @@ class LessonTimeTemplate(models.Model):
         ('Friday', 'Пятница'),
         ('Saturday', 'Суббота')
     ])
+class PeriodTemplate(models.Model):
     lesson_number = models.IntegerField()
     start_time = models.TimeField()
     end_time = models.TimeField()

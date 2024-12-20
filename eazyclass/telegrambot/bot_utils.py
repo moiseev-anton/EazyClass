@@ -2,9 +2,8 @@ import logging
 from datetime import datetime, timedelta
 
 from django.core.cache import caches
-from telebot.types import User as TelegramUser
 
-from scheduler.models import User
+from scheduler.models import Lesson
 
 cache = caches['telegrambot_cache']
 logger = logging.getLogger(__name__)
@@ -80,14 +79,14 @@ def get_date_range(request_type):
 
 def get_schedule_for_dates(start_date, end_date, group_id=None, teacher_id=None):
     lessons = Lesson.objects.filter(
-        lesson_time__date__range=(start_date, end_date),
+        period__date__range=(start_date, end_date),
         group_id=group_id,  # или teacher_id=teacher_id, если по учителю
         is_active=True
-    ).select_related('subject', 'teacher', 'classroom').order_by('lesson_time__date', 'lesson_time__start_time')
+    ).select_related('subject', 'teacher', 'classroom').order_by('period__date', 'period__start_time')
 
     schedule_info = []
     for lesson in lessons:
-        day_info = f"{lesson.lesson_time.date.strftime('%Y-%m-%d')}: {lesson.subject.title} с {lesson.teacher.short_name} в {lesson.classroom.title}"
+        day_info = f"{lesson.period.date.strftime('%Y-%m-%d')}: {lesson.subject.title} с {lesson.teacher.short_name} в {lesson.classroom.title}"
         schedule_info.append(day_info)
 
     return "\n".join(schedule_info) if schedule_info else "Расписания на выбранный период нет."

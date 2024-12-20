@@ -93,13 +93,13 @@ class SubjectManager(BaseManager, SingleFieldManagerMixin):
         return super().get_or_create_objects_map(unique_subject_set, 'title')
 
 
-class LessonTimeManager(BaseManager):
-    @cache_data("lesson_time:{date_str}{lesson_number}", timeout=CACHE_TIMEOUT)
+class PeriodManager(BaseManager):
+    @cache_data("period:{date_str}{lesson_number}", timeout=CACHE_TIMEOUT)
     def get_or_create_cached_id(self, date, lesson_number: str) -> int:
         obj, created = self.get_or_create(date=date, lesson_number=lesson_number)
         return obj.id
 
-    def get_map(self, lesson_times_set):
+    def get_map(self, period_set):
         """
         Возвращает словарь {(date, lesson_number): id} для существующих записей.
         Принимает множество кортежей вида {(date_str, lesson_number)}.
@@ -107,34 +107,34 @@ class LessonTimeManager(BaseManager):
         # Выполняем запрос в БД на получение кортежей (date, lesson_number, id)
         # Создаем список условий для фильтрации
         filters = models.Q()
-        for date, lesson_number in lesson_times_set:
+        for date, lesson_number in period_set:
             filters |= models.Q(date=date, lesson_number=lesson_number)
 
         # Применяем фильтры
-        existing_lesson_times = self.filter(filters).values_list("date", "lesson_number", "id")
-        return {(date, lesson_number): lesson_time_id for date, lesson_number, lesson_time_id in existing_lesson_times}
+        existing_periods = self.filter(filters).values_list("date", "lesson_number", "id")
+        return {(date, lesson_number): period_id for date, lesson_number, period_id in existing_periods}
 
-    def get_or_create_map(self, unique_lesson_times):
+    def get_or_create_map(self, unique_periods):
         """
         Возвращает словарь {(date, lesson_number): id}, создавая недостающие записи.
         Принимает множество кортежей вида {(date_str, lesson_number)}.
         """
         # Получаем существующие записи
-        lesson_times_map = self.get_map(unique_lesson_times)
+        periods_map = self.get_map(unique_periods)
 
         # Определяем недостающие элементы
-        missing_lesson_times = unique_lesson_times - set(lesson_times_map.keys())
-        if missing_lesson_times:
-            logger.info(f"Создано {len(missing_lesson_times)} новых записей Lesson_times")
+        missing_periods = unique_periods - set(periods_map.keys())
+        if missing_periods:
             self.bulk_create([
                 self.model(date=date, lesson_number=lesson_number)
-                for date, lesson_number in missing_lesson_times
+                for date, lesson_number in missing_periods
             ])
+            logger.info(f"Создано {len(missing_periods)} новых записей в Periods")
 
             # Обновляем словарь с добавленными объектами
-            lesson_times_map.update(self.get_map(missing_lesson_times))
+            periods_map.update(self.get_map(missing_periods))
 
-        return lesson_times_map
+        return periods_map
 
 
 class SubscriptionManager(models.Manager):
