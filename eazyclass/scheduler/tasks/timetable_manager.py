@@ -10,6 +10,38 @@ from scheduler.models import Period, PeriodTemplate
 logger = logging.getLogger(__name__)
 
 
+class LessonPeriodFiller:
+    def __init__(self):
+        self.today = timezone.now().date()
+        self.template_data = self._fetch_template_data()
+
+    def _fetch_template_data(self):
+        """
+        Загружает шаблоны уроков из базы и преобразует их в удобный для работы словарь.
+        """
+        templates = PeriodTemplate.objects.all()
+        template_dict = {}
+        for template in templates:
+            template_dict.setdefault(template.day_of_week, []).append({
+                "lesson_number": template.lesson_number,
+                "start_time": template.start_time,
+                "end_time": template.end_time,
+            })
+        return template_dict
+
+    def _set_start_date(self):
+        max_date = Period.objects.aggregate(max_date=Max('date'))['max_date']
+        if max_date:
+            return max_date + timedelta(days=1)
+        return self.today - timedelta(days=1)
+
+    def _set_date_28_days_ahead(self):
+        return self.today + timedelta(days=28)
+
+    def fill_periods_by_template(self):
+        pass
+
+
 @shared_task(queue='periodic_tasks')
 def fill_periods():
     """

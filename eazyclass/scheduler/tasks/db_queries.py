@@ -82,10 +82,8 @@ def synchronize_lessons(group_ids):
                 UPDATE scheduler_lesson l
                 SET is_active = false
                 FROM scheduler_lesson l_sub
-                JOIN scheduler_lessontime lt ON l_sub.lesson_time_id = lt.id
-                LEFT JOIN scheduler_lessonbuffer lb ON l_sub.group_id = lb.group_id 
-                    AND l_sub.lesson_time_id = lb.lesson_time_id
                 JOIN scheduler_period lt ON l_sub.period_id = lt.id
+                LEFT JOIN scheduler_lesson_buffer lb ON l_sub.group_id = lb.group_id 
                     AND l_sub.period_id = lb.period_id
                 WHERE l_sub.group_id = l.group_id
                     AND l_sub.period_id = l.period_id

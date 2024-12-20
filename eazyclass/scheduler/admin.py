@@ -5,7 +5,8 @@ from django.urls import path
 from rangefilter.filters import DateRangeFilter
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from scheduler.activities import *
+from scheduler.activities.admin_query_actions import *
+from scheduler.activities.period_activities import apply_template_changes
 from scheduler.models import *
 
 
