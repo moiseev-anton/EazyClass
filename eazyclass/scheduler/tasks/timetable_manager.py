@@ -2,7 +2,6 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
-from django.db.models import Max
 from django.utils import timezone
 
 from scheduler.models import Period, PeriodTemplate
@@ -10,70 +9,76 @@ from scheduler.models import Period, PeriodTemplate
 logger = logging.getLogger(__name__)
 
 
-class LessonPeriodFiller:
+class PeriodFiller:
+    DEFAULT_DAYS_AHEAD = 28
+
     def __init__(self):
         self.today = timezone.now().date()
-        self.template_data = self._fetch_template_data()
+        self.template_map = PeriodTemplate.objects.get_template_dict()
+        self.start_date = self._calculate_start_date()
+        self.end_date = None
+        self.new_periods = []
 
-    def _fetch_template_data(self):
+    def _calculate_start_date(self):
         """
-        Загружает шаблоны уроков из базы и преобразует их в удобный для работы словарь.
+        Определяет начальную дату заполнения расписания.
         """
-        templates = PeriodTemplate.objects.all()
-        template_dict = {}
-        for template in templates:
-            template_dict.setdefault(template.day_of_week, []).append({
-                "lesson_number": template.lesson_number,
-                "start_time": template.start_time,
-                "end_time": template.end_time,
-            })
-        return template_dict
+        max_date = Period.objects.get_max_date()
+        return (max_date + timedelta(days=1)) if max_date else self.today
 
-    def _set_start_date(self):
-        max_date = Period.objects.aggregate(max_date=Max('date'))['max_date']
-        if max_date:
-            return max_date + timedelta(days=1)
-        return self.today - timedelta(days=1)
+    def set_end_date(self, days_ahead=DEFAULT_DAYS_AHEAD):
+        """
+        Устанавливает конечную дату заполнения расписания.
+        Проверяет, что конечная дата не меньше начальной.
+        """
+        calculated_end_date = self.today + timedelta(days=days_ahead)
+        if calculated_end_date < self.start_date:
+            raise ValueError(f"Таблица уже заполнена на {(self.start_date - self.today).days} дней вперёд.")
+        self.end_date = calculated_end_date
 
-    def _set_date_28_days_ahead(self):
-        return self.today + timedelta(days=28)
+    def collect_new_periods(self):
+        """
+        Формирует список новых записей для таблицы Period на основе шаблонов.
+        """
+        # Итератор диапазона дат
+        date_range = (self.start_date + timedelta(days=n) for n in range((self.end_date - self.start_date).days + 1))
 
-    def fill_periods_by_template(self):
-        pass
+        # Создаем объекты для массовой вставки
+        for single_date in date_range:
+            day_of_week = single_date.weekday()
+            day_templates = self.template_map.get(day_of_week, [])
+            for template in day_templates:
+                self.new_periods.append(
+                    Period(
+                        date=single_date,
+                        lesson_number=template["lesson_number"],
+                        start_time=template["start_time"],
+                        end_time=template["end_time"],
+                    )
+                )
+
+    def fill_periods_by_template(self, days_ahead=DEFAULT_DAYS_AHEAD):
+        """
+        Основной метод, выполняющий заполнение расписания на основе шаблона.
+        """
+        self.set_end_date(days_ahead)
+        self.collect_new_periods()
+
+        if self.new_periods:
+            created = Period.objects.bulk_create(self.new_periods)
+            logger.info(f"Добавлено {len(created)} записей в таблицу Period.")
+        else:
+            logger.info("Нет новых записей для добавления.")
+
+    @classmethod
+    def fill(cls, days_ahead=DEFAULT_DAYS_AHEAD):
+        """
+        Удобный метод для запуска заполнения через Celery или вручную.
+        """
+        filler = cls()
+        filler.fill_periods_by_template(days_ahead=days_ahead)
 
 
 @shared_task(queue='periodic_tasks')
-def fill_periods():
-    """
-    Заполняет расписание уроков на текущий и следующий месяц, начиная с сегодняшней даты
-    или следующего дня после последней заполненной даты и заканчивая последним днём следующего месяца.
-
-    Обеспечивает периодическое заполнение расписания уроков актуальными данными из шаблона
-    """
-    today = timezone.now().date()
-    next_month_start = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
-    end_date = (next_month_start + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-
-    # Получаем максимальную дату в таблице Period
-    max_date = Period.objects.aggregate(max_date=Max('date'))['max_date']
-
-    # Устанавливаем начальную дату
-    if max_date:
-        start_date = max_date + timedelta(days=1)
-    else:
-        start_date = today - timedelta(days=1)
-
-    # Проверяем, нужно ли выполнять заполнение
-    if start_date <= end_date:
-        for single_date in (start_date + timedelta(n) for n in range((end_date - start_date).days + 1)):
-            day_of_week = single_date.strftime('%A')
-            templates = PeriodTemplate.objects.filter(day_of_week=day_of_week)
-            for template in templates:
-                Period.objects.get_or_create(
-                    date=single_date,
-                    lesson_number=template.lesson_number,
-                    defaults={'start_time': template.start_time, 'end_time': template.end_time}
-                )
-
-    # Логгирование или уведомление об успешном завершении
-    logger.info(f"Расписание звонков заполнены на период {start_date} - {end_date}.")
+def fill_periods_task(days_ahead=28):
+    PeriodFiller.fill(days_ahead=days_ahead)

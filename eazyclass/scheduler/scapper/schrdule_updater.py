@@ -1,58 +1,19 @@
-import logging
 import json
-from typing import Any
+import logging
 
-
-from celery import shared_task
 from django.db import transaction
-from django.db.models import Model
 
 from scheduler.models import Subject, Lesson, LessonBuffer, Classroom, Teacher, Period
 from scheduler.tasks.db_queries import synchronize_lessons
+from scheduler.scapper.related_objects_map import RelatedObjectsMap
 from scrapy_app.eazy_scrapy.spiders.schedule_spyder import SCRAPED_LESSONS_KEY, SCRAPED_GROUPS_KEY, PAGE_HASH_KEY_PREFIX
 from utils.redis_clients import get_scrapy_redis_client
 
 logger = logging.getLogger(__name__)
 
 
-class RelatedObjectsMap:
-    __slots__ = ('model', 'mapping', 'unmapped_keys')
-    """
-    Класс для управления маппингом значений на связанные объекты из базы данных.
-    """
-
-    def __init__(self, model: Model, enforce_check=True):
-        self.model = model
-        self.mapping = {}
-        self.unmapped_keys = set()
-
-        # Опциональная проверка содержит ли модель метод маппинга ID. По умолчанию ВКЛ
-        if enforce_check and not hasattr(self.model.objects, "get_or_create_objects_map"):
-            raise AttributeError(
-                f"Менеджер модели '{self.model.__name__}' не реализует 'get_or_create_objects_map'"
-            )
-
-    def add(self, key: str | tuple):
-        if key not in self.mapping:
-            self.unmapped_keys.add(key)
-
-    def add_set(self, keys: set[str | tuple]):
-        self.unmapped_keys.update(keys)
-
-    def map(self):
-        if self.unmapped_keys:
-            new_mappings = self.model.objects.get_or_create_objects_map(self.unmapped_keys)
-            self.mapping.update(new_mappings)
-            self.unmapped_keys.clear()
-
-    def get_id(self, key: Any, default=None) -> int:
-        if key in self.unmapped_keys:
-            self.map()
-        return self.mapping.get(key, default)
-
-
 class ScheduleSyncManager:
-    PAGE_HASH_TIMEOUT = 86400 # 24 часа
+    PAGE_HASH_TIMEOUT = 86400  # 24 часа
 
     def __init__(self):
         self.scraped_groups = None
@@ -77,8 +38,8 @@ class ScheduleSyncManager:
         group_ids_json = self.redis_client.get(SCRAPED_GROUPS_KEY)
         if not lessons_json or not group_ids_json:
             raise ValueError("Данные для обработки отсутствуют в Redis")
-        self.lesson_items = json.loads(lessons_json) # [{lesson_dict},...]
-        self.scraped_groups = json.loads(group_ids_json) # {group_id: last_content_hash}
+        self.lesson_items = json.loads(lessons_json)  # [{lesson_dict},...]
+        self.scraped_groups = json.loads(group_ids_json)  # {group_id: last_content_hash}
 
     def gather_unique_elements(self):
         for item in self.lesson_items:
@@ -126,23 +87,3 @@ class ScheduleSyncManager:
         for group_id, page_content_hash in self.scraped_groups.items():
             pipe.setex(f'{PAGE_HASH_KEY_PREFIX}{group_id}', self.PAGE_HASH_TIMEOUT, page_content_hash)
         pipe.execute()
-
-
-@shared_task(bind=True, max_retries=0, default_retry_delay=60, queue='periodic_tasks')
-def update_schedule(self):
-    try:
-        updater = ScheduleSyncManager()
-        updater.update_schedule()
-        logger.info(f"Обновление расписания завершено.")
-    except Exception as e:
-        logger.error(f"Ошибка обновления расписания: {e}")
-        raise self.retry(exc=e)
-
-
-if __name__ == '__main__':
-    import os
-
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eazyclass.settings')
-    import django
-
-    django.setup()

@@ -104,7 +104,6 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -209,6 +208,13 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
+    },
+    'scrapy_cache': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'{os.getenv('REDIS_SCRAPY')}',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
     }
 }
 
@@ -219,3 +225,5 @@ CELERY_RESULT_BACKEND = os.getenv('CELERY_BACKEND')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+BASE_SCRAPING_URL = os.getenv('BASE_SCRAPING_URL')

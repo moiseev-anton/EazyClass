@@ -153,7 +153,7 @@ class Period(models.Model):
     def save(self, *args, **kwargs):
         if not self.start_time or not self.end_time:
             try:
-                template = PeriodTemplate.objects.get(day_of_week=self.date.strftime('%A'),
+                template = PeriodTemplate.objects.get(day_of_week=self.date.weekday(),
                                                       lesson_number=self.lesson_number)
                 self.start_time = template.start_time
                 self.end_time = template.end_time
@@ -195,6 +195,7 @@ class LessonBuffer(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        db_table = "scheduler_lesson_buffer"
         indexes = [
             models.Index(fields=['group', 'period']),
             models.Index(fields=['group', 'period', 'subgroup']),
@@ -292,22 +293,45 @@ class Subscription(models.Model):
         return details
 
 
-class LessonTimeTemplate(models.Model):
-    day_of_week = models.CharField(max_length=10, choices=[
-        ('Monday', 'Понедельник'),
-        ('Tuesday', 'Вторник'),
-        ('Wednesday', 'Среда'),
-        ('Thursday', 'Четверг'),
-        ('Friday', 'Пятница'),
-        ('Saturday', 'Суббота')
-    ])
 class PeriodTemplate(models.Model):
+    DAY_CHOICES = [
+        (0, 'Понедельник'),
+        (1, 'Вторник'),
+        (2, 'Среда'),
+        (3, 'Четверг'),
+        (4, 'Пятница'),
+        (5, 'Суббота'),
+        (6, 'Воскресенье'),
+    ]
+
+    day_of_week = models.PositiveSmallIntegerField(choices=DAY_CHOICES)
     lesson_number = models.IntegerField()
     start_time = models.TimeField()
     end_time = models.TimeField()
 
+    objects = PeriodTemplateManager()
+
     class Meta:
+        db_table = "scheduler_period_template"
         unique_together = ('day_of_week', 'lesson_number')
 
     def __str__(self):
         return f"{self.get_day_of_week_display()} - Пара {self.lesson_number}: {self.start_time} - {self.end_time}"
+
+
+class LessonNotificationQueue(models.Model):
+    group = models.ForeignKey('Group', on_delete=models.CASCADE)  # или используйте свойство group_id
+    teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE)
+    period = models.ForeignKey('Period', on_delete=models.CASCADE)
+    notification_date = models.DateField()  # дата, когда урок был изменен
+    is_notified = models.BooleanField(default=False)  # флаг для отслеживания отправки уведомления
+
+    class Meta:
+        db_table = "scheduler_lesson_notification_queue"
+        unique_together = ('group', 'teacher', 'period')  # исключаем дублирующие записи
+        indexes = [
+            models.Index(fields=['is_notified']),
+        ]
+
+    def __str__(self):
+        return f"Уведомление для группы {self.group.id}, преподавателя {self.teacher.id}, времени урока {self.period.id}"

@@ -2,14 +2,28 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 
-from django.core.cache import caches
 from django.db import connection
-# from telegrambot import ContentTypeService
+from django.db import transaction
+
+from scheduler.models import LessonBuffer
 
 logger = logging.getLogger(__name__)
-# cache = caches['telegrambot_cache']
 
-CACHE_TIMEOUT = 86400  # 24 часа
+
+class ScheduleDataSaver:
+    def __init__(self):
+        self.today = datetime.now().date()
+
+    def save_lessons(self):
+        try:
+            with transaction.atomic():
+                LessonBuffer.objects.bulk_create(self.lesson_model_objects)
+                synchronize_lessons(self.scraped_groups)
+                LessonBuffer.objects.all().delete()
+            logger.info(f"Данные обновлены для {len(self.scraped_groups)} групп")
+        except Exception as e:
+            logger.error(f"Ошибка при обновлении данных в БД: {str(e)}")
+            raise
 
 
 def synchronize_lessons(group_ids):
@@ -22,7 +36,7 @@ def synchronize_lessons(group_ids):
     try:
         with connection.cursor() as cursor:
             # Проверка наличия данных в буфере
-            cursor.execute("SELECT COUNT(*) FROM scheduler_lesson_buffer")
+            cursor.execute("SELECT COUNT(*) FROM scheduler_lessonbuffer")
             if cursor.fetchone()[0] == 0:
                 logger.info("Буфер пуст. Пропуск вставки и обновления уроков.")
             else:
@@ -107,39 +121,3 @@ def synchronize_lessons(group_ids):
         raise
 
     return affected_entities_map
-
-
-# def fetch_subscribers_for_type(model_name: str, object_ids: list) -> dict:
-#     content_type_id = ContentTypeService.get_content_type_id(app_label='scheduler', model_name=model_name)
-#     subscribers = defaultdict(set)
-#
-#     try:
-#         with connection.cursor() as cursor:
-#             # Сбор пользователей, подписанных на затронутые объекты
-#             if object_ids:
-#                 cursor.execute("""
-#                     SELECT u.telegram_id, s.object_id
-#                 FROM scheduler_subscriptions s
-#                 JOIN scheduler_user u ON s.user_id = u.id
-#                 WHERE s.content_type_id = %s AND s.object_id IN %s
-#                       AND u.notify_on_schedule_change = True
-#                       AND u.is_active = True;
-#                 """, [content_type_id, tuple(object_ids)])
-#                 for user_id, object_id in cursor.fetchall():
-#                     subscribers[object_id].add(user_id)
-#
-#         return subscribers
-#
-#     except Exception as e:
-#         logger.error(f"Ошибка при получении данных подписчиков: {e}")
-#         raise
-#
-#
-# def fetch_all_subscribers(affected_entities_map):
-#     subscribers_map = defaultdict(dict)
-#     for model_name, model_map in affected_entities_map.items():
-#         object_ids = model_map.keys()
-#         type_subscribers = fetch_subscribers_for_type(model_name, object_ids)
-#         subscribers_map[model_name] = type_subscribers
-#
-#     return subscribers_map

@@ -1,3 +1,4 @@
+import hashlib
 import json
 from urllib.parse import urljoin
 
@@ -7,6 +8,10 @@ from django.conf import settings
 from scheduler.models import Group  # Импорт модели Group
 from scrapy_app.eazy_scrapy.schedule_page_parser import SchedulePageParser
 from utils.redis_clients import get_scrapy_redis_client
+
+SCRAPED_LESSONS_KEY = "scrapy:scraped_lesson_items"
+SCRAPED_GROUPS_KEY = "scrapy:scraped_group_ids"
+PAGE_HASH_KEY_PREFIX = 'scrapy:last_content_hash:group_id:'
 
 
 class ScheduleSpider(scrapy.Spider):
@@ -30,27 +35,9 @@ class ScheduleSpider(scrapy.Spider):
 
     def process_page(self, response):
         try:
-            for row in response.css('tr.shadow'):
-                cells = row.css('td')
-                if len(cells) == 1:
-                    current_date = cells[0].css('::text').get().strip()
-                elif len(cells) == 5:
-                    loader = LessonLoader(item=LessonItem(), selector=row)
-                    loader.add_value('group_id', group_id)
-                    loader.add_value('date', current_date)
-                    loader.add_value('lesson_number', cells[0])
-                    loader.add_value('subject_title', cells[1])
-                    loader.add_value('classroom_title', cells[2])
-                    loader.add_value('teacher_fullname', cells[3])
-                    loader.add_value('subgroup', cells[4])
-
-                    lesson = loader.load_item()
-                    self.lessons.append(lesson)
-
-                else:
-                    raise ValueError(f"Некорректная структура таблицы. В строке {len(cells)} ячеек")
-
             group_id = response.meta['group_id']
+            current_content_hash = hashlib.md5(response.body).hexdigest()
+            # TODO: реализовать проверку прошлого хеша
             parser = SchedulePageParser(response)
             lessons = parser.parse()
             self.lessons.extend(lessons)

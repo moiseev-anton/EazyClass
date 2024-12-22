@@ -119,7 +119,7 @@ class PeriodTemplateAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('apply-template-changes/', self.admin_site.admin_view(self.apply_template_changes),
+            path('apply_template_changes/', self.admin_site.admin_view(self.apply_template_changes),
                  name='apply_template_changes')
         ]
         return custom_urls + urls
@@ -130,7 +130,7 @@ class PeriodTemplateAdmin(admin.ModelAdmin):
             if start_date:
                 try:
                     apply_template_changes(start_date)
-                    self.message_user(request, f'Changes applied successfully from {start_date}.')
+                    self.message_user(request, f'Изменения успешно применены начиная с {start_date}.')
                 except ValueError as e:
                     self.message_user(request, str(e), level='error')
                 return redirect('..')

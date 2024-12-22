@@ -3,6 +3,7 @@ from typing import Dict, Optional, Tuple, Any
 
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
+from django.db.models import Max
 
 from scheduler.utils import cache_data, invalidate_cache
 
@@ -94,6 +95,13 @@ class SubjectManager(BaseManager, SingleFieldManagerMixin):
 
 
 class PeriodManager(BaseManager):
+    def get_max_date(self):
+        """
+        Возвращает максимальную дату, которая есть в таблице LessonTime.
+        Если записей нет, возвращает None.
+        """
+        return self.aggregate(max_date=Max('date'))['max_date']
+
     @cache_data("period:{date_str}{lesson_number}", timeout=CACHE_TIMEOUT)
     def get_or_create_cached_id(self, date, lesson_number: str) -> int:
         obj, created = self.get_or_create(date=date, lesson_number=lesson_number)
@@ -135,6 +143,23 @@ class PeriodManager(BaseManager):
             periods_map.update(self.get_map(missing_periods))
 
         return periods_map
+
+
+class PeriodTemplateManager(models.Manager):
+    def get_template_dict(self) -> dict:
+        """
+        Возвращает данные шаблона в виде словаря, где ключ — день недели,
+        а значение — список словарей с данными уроков.
+        """
+        templates = self.get_queryset().all()
+        template_dict = {}
+        for template in templates:
+            template_dict.setdefault(template.day_of_week, []).append({
+                "lesson_number": template.lesson_number,
+                "start_time": template.start_time,
+                "end_time": template.end_time,
+            })
+        return template_dict
 
 
 class SubscriptionManager(models.Manager):
