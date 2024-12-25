@@ -1,0 +1,1 @@
+from scheduler.views.admin_views import apply_changes_view

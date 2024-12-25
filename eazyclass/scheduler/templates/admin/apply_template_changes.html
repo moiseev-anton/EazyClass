@@ -1,14 +1,60 @@
 {% extends "admin/base_site.html" %}
+
+{% load static %}
+
 {% block content %}
-  <form method="post">{% csrf_token %}
-    <p>Время звонков из шаблона применится ко всем соответствующим занятиям начиная с выбраной даты</p>
-    <div>
-      <label for="start_date">Дата начала:</label>
-      <input type="date" name="start_date" required>
+
+<h1>Изменение расписания</h1>
+<form method="post">
+    {% csrf_token %}
+
+    <label for="start_date">Дата начала</label>
+    <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+
+    <label for="end_date">Дата окончания</label>
+    <input type="date" id="end_date" name="end_date">
+    <hr class="form-divider">
+
+    <div class="formset">
+    {{ formset.management_form }}
+    {% for form in formset %}
+        <div class="form-row" id="form-row-{{ forloop.counter }}">
+            <div class="row">
+                <div class="col">{{ form.lesson_number.label_tag }} {{ form.lesson_number }}</div>
+                <div class="col">{{ form.start_time.label_tag }} {{ form.start_time }}</div>
+                <div class="col">{{ form.end_time.label_tag }} {{ form.end_time }}</div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label>{{ form.days_of_week.label }}</label>
+                    <div class="checkbox-list">
+                        {% for checkbox in form.days_of_week %}
+                            <div class="checkbox-item">
+                                {{ checkbox }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if forloop.counter > 1 %}
+                    <button type="button" class="remove-form-btn" data-form-id="form-row-{{ forloop.counter }}">Удалить</button>
+                {% endif %}
+            </div>
+            <hr class="form-divider">
+        </div>
+    {% endfor %}
     </div>
-    <div>
-      <input type="submit" value="Применить">
-      <a href="{% url 'admin:apply_template_changes' %}" class="button">Назад</a>
-    </div>
-  </form>
+
+    <p>Количество форм: {{ formset.forms|length }}</p>
+    {% if formset.management_form.instance.forms|length > 1 %}
+    <button type="button" id="remove-last-form" class="btn btn-danger">Удалить последнюю форму</button>
+    {% endif %}
+
+    <button type="button" id="add-form-row">+</button>
+    <button type="submit">Применить изменения</button>
+</form>
+
+{% block extrahead %}
+    <link rel="stylesheet" type="text/css" href="{% static 'scheduler/css/admin_period_form.css' %}">
+    <script src="{% static 'scheduler/js/admin_period_formset.js' %}"></script>
+{% endblock %}
 {% endblock %}

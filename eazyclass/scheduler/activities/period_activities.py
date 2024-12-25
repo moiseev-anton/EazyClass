@@ -1,11 +1,14 @@
 from datetime import time
 from datetime import timedelta
+import logging
 
 import dateparser
 from django.db import transaction
 from django.utils import timezone
 
 from scheduler.models import Period, PeriodTemplate
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_PERIOD_TEMPLATE = {
     (0, 1, 2, 3, 4,): [

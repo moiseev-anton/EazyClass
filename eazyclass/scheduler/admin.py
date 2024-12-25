@@ -1,4 +1,5 @@
 from django.contrib import admin
+from scheduler.views import apply_changes_view
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path
@@ -6,7 +7,6 @@ from rangefilter.filters import DateRangeFilter
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from scheduler.activities.admin_query_actions import *
-from scheduler.activities.period_activities import apply_template_changes
 from scheduler.models import *
 
 
@@ -119,29 +119,29 @@ class PeriodTemplateAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('apply_template_changes/', self.admin_site.admin_view(self.apply_template_changes),
+            path('apply_template_changes/', self.admin_site.admin_view(apply_changes_view),
                  name='apply_template_changes')
         ]
         return custom_urls + urls
 
-    def apply_template_changes(self, request):
-        if request.method == 'POST':
-            start_date = request.POST.get('start_date')
-            if start_date:
-                try:
-                    apply_template_changes(start_date)
-                    self.message_user(request, f'Изменения успешно применены начиная с {start_date}.')
-                except ValueError as e:
-                    self.message_user(request, str(e), level='error')
-                return redirect('..')
-
-        context = dict(
-            self.admin_site.each_context(request),
-            title="Применить шаблон звонков",
-            opts=self.model._meta,
-            action_checkbox_name=admin.helpers.ACTION_CHECKBOX_NAME,
-        )
-        return TemplateResponse(request, "admin/apply_template_changes.html", context)
+    # def apply_template_changes(self, request):
+    #     if request.method == 'POST':
+    #         start_date = request.POST.get('start_date')
+    #         if start_date:
+    #             try:
+    #                 apply_template_changes(start_date)
+    #                 self.message_user(request, f'Изменения успешно применены начиная с {start_date}.')
+    #             except ValueError as e:
+    #                 self.message_user(request, str(e), level='error')
+    #             return redirect('..')
+    #
+    #     context = dict(
+    #         self.admin_site.each_context(request),
+    #         title="Применить шаблон звонков",
+    #         opts=self.model._meta,
+    #         action_checkbox_name=admin.helpers.ACTION_CHECKBOX_NAME,
+    #     )
+    #     return TemplateResponse(request, "admin/apply_template_changes.html", context)
 
 
 @admin.register(Period)

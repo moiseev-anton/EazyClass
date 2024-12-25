@@ -146,7 +146,6 @@ class Period(models.Model):
         unique_together = ('date', 'lesson_number')
         indexes = [
             models.Index(fields=['date', 'lesson_number']),
-            # TODO: Проверить нужен ли этот индекс
             models.Index(fields=['date']),
         ]
 
