@@ -1,4 +1,4 @@
-from scheduler.activities.period_activities import fill_default_period_template
+from scheduler.activities import fill_default_period_template
 
 
 def make_active(modeladmin, request, queryset):

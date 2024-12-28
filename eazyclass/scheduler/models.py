@@ -1,14 +1,24 @@
 import uuid
-from datetime import timedelta
+from datetime import timedelta, date as DateClass
+from django.db import models
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ValidationError
 from django.utils.timezone import now
 
-from scheduler.managers import *
+from scheduler.managers import (
+    GroupManager,
+    TeacherManager,
+    SubjectManager,
+    ClassroomManager,
+    PeriodTemplateManager,
+    PeriodManager,
+    UserManager,
+    SubscriptionManager,
+)
 
 
 class Faculty(models.Model):
@@ -134,11 +144,83 @@ class Classroom(models.Model):
         return f"{self.title}"
 
 
+class PeriodTemplate(models.Model):
+    lesson_number = models.PositiveIntegerField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    start_date = models.DateField(default=DateClass.today)
+    end_date = models.DateField(null=True, blank=True, default=None)
+
+    monday = models.BooleanField(default=False)
+    tuesday = models.BooleanField(default=False)
+    wednesday = models.BooleanField(default=False)
+    thursday = models.BooleanField(default=False)
+    friday = models.BooleanField(default=False)
+    saturday = models.BooleanField(default=False)
+    sunday = models.BooleanField(default=False)
+
+    objects = PeriodTemplateManager()
+
+    class Meta:
+        db_table = "scheduler_period_template"
+
+    def clean(self) -> None:
+        """
+        Метод для валидации пересечений дней недели для шаблонов с одинаковым номером урока.
+        Проверяется, что дни недели не пересекаются для шаблонов с одинаковым номером урока в указанный период времени.
+        """
+        if self.end_date and self.end_date <= self.start_date:
+            raise ValidationError('End date должна быть позже start date.')
+
+        active_days = self.active_days
+
+        # Проверка конфликтов с другими шаблонами с одинаковым номером урока
+        overlapping_templates = PeriodTemplate.objects.filter(
+            lesson_number=self.lesson_number,
+            start_date__lte=self.end_date if self.end_date else self.start_date,
+            end_date__gte=self.start_date
+        ).exclude(pk=self.pk)
+
+        for template in overlapping_templates:
+            overlapping_days = active_days & template.active_days
+            if overlapping_days:
+                raise ValidationError(
+                    f"Уже есть действующий шаблон для {self.lesson_number} пересекающийся по дням недели: "
+                    f"{', '.join(overlapping_days)}.")
+
+    @property
+    def active_days(self) -> set[str]:
+        """
+        Возвращает множество активных дней недели для текущего шаблона.
+        """
+        days = {
+            'Пн': self.monday,
+            'Вт': self.tuesday,
+            'Ср': self.wednesday,
+            'Чт': self.thursday,
+            'Пт': self.friday,
+            'Сб': self.saturday,
+            'Вс': self.sunday,
+        }
+        return {day for day, is_active in days.items() if is_active}
+
+    def save(self, *args, **kwargs) -> None:
+        self.clean()  # Валидация перед сохранением
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        active_days = self.active_days
+        return f"Пара {self.lesson_number}: {self.start_time} - {self.end_time} ({', '.join(active_days)})"
+
+
+
+
+
 class Period(models.Model):
+    lesson_number = models.PositiveIntegerField()
     date = models.DateField()
-    lesson_number = models.IntegerField()
-    start_time = models.TimeField(null=True)
-    end_time = models.TimeField(null=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
 
     objects = PeriodManager()
 
@@ -149,20 +231,14 @@ class Period(models.Model):
             models.Index(fields=['date']),
         ]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         if not self.start_time or not self.end_time:
-            try:
-                template = PeriodTemplate.objects.get(day_of_week=self.date.weekday(),
-                                                      lesson_number=self.lesson_number)
-                self.start_time = template.start_time
-                self.end_time = template.end_time
-            except ObjectDoesNotExist:
-                self.start_time = None
-                self.end_time = None
+            template = PeriodTemplate.objects.get_template_for_day(date=self.date, lesson_number=self.lesson_number)
+            self.start_time, self.end_time = (None, None) if not template else (template.start_time, template.end_time)
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"{self.date} - {self.lesson_number} пара"
+    def __str__(self) -> str:
+        return f"{self.date} - {self.lesson_number} пара: {self.start_time} - {self.end_time}"
 
 
 class Lesson(models.Model):
@@ -290,32 +366,6 @@ class Subscription(models.Model):
                                                                       'get_display_name') else 'N/A'
         }
         return details
-
-
-class PeriodTemplate(models.Model):
-    DAY_CHOICES = [
-        (0, 'Понедельник'),
-        (1, 'Вторник'),
-        (2, 'Среда'),
-        (3, 'Четверг'),
-        (4, 'Пятница'),
-        (5, 'Суббота'),
-        (6, 'Воскресенье'),
-    ]
-
-    day_of_week = models.PositiveSmallIntegerField(choices=DAY_CHOICES)
-    lesson_number = models.IntegerField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-
-    objects = PeriodTemplateManager()
-
-    class Meta:
-        db_table = "scheduler_period_template"
-        unique_together = ('day_of_week', 'lesson_number')
-
-    def __str__(self):
-        return f"{self.get_day_of_week_display()} - Пара {self.lesson_number}: {self.start_time} - {self.end_time}"
 
 
 class LessonNotificationQueue(models.Model):

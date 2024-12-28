@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Optional, Tuple, Any
+from datetime import date as DateClass
+from typing import Dict, Any, Optional, Tuple
 
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
@@ -95,7 +96,7 @@ class SubjectManager(BaseManager, SingleFieldManagerMixin):
 
 
 class PeriodManager(BaseManager):
-    def get_max_date(self):
+    def get_max_date(self) -> DateClass:
         """
         Возвращает максимальную дату, которая есть в таблице LessonTime.
         Если записей нет, возвращает None.
@@ -103,26 +104,34 @@ class PeriodManager(BaseManager):
         return self.aggregate(max_date=Max('date'))['max_date']
 
     @cache_data("period:{date_str}{lesson_number}", timeout=CACHE_TIMEOUT)
-    def get_or_create_cached_id(self, date, lesson_number: str) -> int:
+    def get_or_create_cached_id(self, date: DateClass, lesson_number: str) -> int:
         obj, created = self.get_or_create(date=date, lesson_number=lesson_number)
         return obj.id
 
-    def get_map(self, period_set):
+    def build_period(self, date: DateClass, lesson_number: int) -> 'Period':
+        """
+        Создает объект Period, заполняя start_time и end_time из шаблона, если он доступен.
+        Если шаблон отсутствует, start_time и end_time остаются None.
+        """
+        template = PeriodTemplateManager().get_template_for_day(date=date, lesson_number=lesson_number)
+        start_time, end_time = (None, None) if not template else (template.start_time, template.end_time)
+        return self.model(date=date, lesson_number=lesson_number, start_time=start_time, end_time=end_time)
+
+    def get_map(self, period_set: set[tuple[DateClass, int]]) -> dict[tuple[DateClass, int], int]:
         """
         Возвращает словарь {(date, lesson_number): id} для существующих записей.
         Принимает множество кортежей вида {(date_str, lesson_number)}.
         """
-        # Выполняем запрос в БД на получение кортежей (date, lesson_number, id)
         # Создаем список условий для фильтрации
         filters = models.Q()
         for date, lesson_number in period_set:
             filters |= models.Q(date=date, lesson_number=lesson_number)
 
-        # Применяем фильтры
+        # Применяем фильтры, получаем кортежи (date, lesson_number, id)
         existing_periods = self.filter(filters).values_list("date", "lesson_number", "id")
         return {(date, lesson_number): period_id for date, lesson_number, period_id in existing_periods}
 
-    def get_or_create_map(self, unique_periods):
+    def get_or_create_map(self, unique_periods: set[tuple[DateClass, int]]) -> dict[tuple[DateClass, int], int]:
         """
         Возвращает словарь {(date, lesson_number): id}, создавая недостающие записи.
         Принимает множество кортежей вида {(date_str, lesson_number)}.
@@ -133,11 +142,9 @@ class PeriodManager(BaseManager):
         # Определяем недостающие элементы
         missing_periods = unique_periods - set(periods_map.keys())
         if missing_periods:
-            self.bulk_create([
-                self.model(date=date, lesson_number=lesson_number)
-                for date, lesson_number in missing_periods
-            ])
-            logger.info(f"Создано {len(missing_periods)} новых записей в Periods")
+            new_periods = [self.build_period(date, lesson_number) for date, lesson_number in missing_periods]
+            self.bulk_create(new_periods)
+            logger.info(f"Создано {len(new_periods)} новых записей в Periods")
 
             # Обновляем словарь с добавленными объектами
             periods_map.update(self.get_map(missing_periods))
@@ -146,20 +153,43 @@ class PeriodManager(BaseManager):
 
 
 class PeriodTemplateManager(models.Manager):
-    def get_template_dict(self) -> dict:
+    DAYS_OF_WEEK = {
+        0: 'monday',
+        1: 'tuesday',
+        2: 'wednesday',
+        3: 'thursday',
+        4: 'friday',
+        5: 'saturday',
+        6: 'sunday'
+    }
+
+    def get_template_for_day(self, date: DateClass, lesson_number: int) -> Optional['PeriodTemplate']:
         """
-        Возвращает данные шаблона в виде словаря, где ключ — день недели,
-        а значение — список словарей с данными уроков.
+        Возвращает подходящий шаблон для номера урока и дня недели (по дате).
         """
-        templates = self.get_queryset().all()
-        template_dict = {}
-        for template in templates:
-            template_dict.setdefault(template.day_of_week, []).append({
-                "lesson_number": template.lesson_number,
-                "start_time": template.start_time,
-                "end_time": template.end_time,
-            })
-        return template_dict
+        day_of_week_number = date.weekday()  # 0 - понедельник, 6 - воскресенье
+
+        return self.filter(
+            lesson_number=lesson_number,
+            start_date__lte=date,
+            end_date__gte=date,
+            **{self.DAYS_OF_WEEK[day_of_week_number]: True}
+        ).first()
+
+    # def get_template_dict(self) -> dict:
+    #     """
+    #     Возвращает данные шаблона в виде словаря, где ключ — день недели,
+    #     а значение — список словарей с данными уроков.
+    #     """
+    #     templates = self.get_queryset().all()
+    #     template_dict = {}
+    #     for template in templates:
+    #         template_dict.setdefault(template.day_of_week, []).append({
+    #             "lesson_number": template.lesson_number,
+    #             "start_time": template.start_time,
+    #             "end_time": template.end_time,
+    #         })
+    #     return template_dict
 
 
 class SubscriptionManager(models.Manager):
