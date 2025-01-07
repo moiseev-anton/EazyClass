@@ -1,0 +1,20 @@
+/* Устанавливаем чекбоксы в ряд */
+.timing-weekdays {
+    display: flex;
+    gap: 1px; /* Расстояние между чекбоксами */
+
+}
+
+/* Стили для включенных чекбоксов */
+.field-weekdays input[type="checkbox"] {
+    width: 13px; /* Размер */
+    height: 13px;
+    margin: 3px; /* Отступ */
+    accent-color: #008000;
+}
+
+/* Стили для выключенных чекбоксов */
+.field-weekdays input[type="checkbox"]:disabled {
+    opacity: 0.1; /* Непрозрачность */
+    cursor: not-allowed;
+}

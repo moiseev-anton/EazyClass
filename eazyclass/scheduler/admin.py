@@ -1,13 +1,23 @@
 from django.contrib import admin
-from scheduler.views import apply_changes_view
-from django.shortcuts import redirect
-from django.template.response import TemplateResponse
-from django.urls import path
-from rangefilter.filters import DateRangeFilter
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from rangefilter.filters import DateRangeFilter
 
-from scheduler.activities.admin_query_actions import *
-from scheduler.models import *
+from scheduler.activities.admin_query_actions import make_active, make_inactive, toggle_active
+from scheduler.forms import TimingForm, TimingInlineFormSet, PeriodTemplateForm
+from scheduler.models import (
+    Faculty,
+    Group,
+    Teacher,
+    Subject,
+    Classroom,
+    LessonBuffer,
+    Lesson,
+    User,
+    Timing,
+    Subscription,
+    PeriodTemplate,
+    Period
+)
 
 
 @admin.register(Faculty)
@@ -109,39 +119,25 @@ class UserAdmin(BaseUserAdmin):
     subscription_info.short_description = 'Subscription Info'
 
 
+class TimingInline(admin.TabularInline):
+    model = Timing
+    form = TimingForm
+    formset = TimingInlineFormSet
+    extra = 0  # Включаем один пустой тайминг
+
+    class Media:
+        js = ('scheduler/js/timing_weekdays_shadow.js',)
+        css = {
+            'all': ('scheduler/css/custom_timing_styles.css',),
+        }
+
+
 @admin.register(PeriodTemplate)
 class PeriodTemplateAdmin(admin.ModelAdmin):
-    list_display = ('day_of_week', 'lesson_number', 'start_time', 'end_time')
-    list_filter = ('day_of_week', 'lesson_number')
-    actions = [reset_timetable]
-    change_list_template = "admin/scheduler/period_template/change_list.html"
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path('apply_template_changes/', self.admin_site.admin_view(apply_changes_view),
-                 name='apply_template_changes')
-        ]
-        return custom_urls + urls
-
-    # def apply_template_changes(self, request):
-    #     if request.method == 'POST':
-    #         start_date = request.POST.get('start_date')
-    #         if start_date:
-    #             try:
-    #                 apply_template_changes(start_date)
-    #                 self.message_user(request, f'Изменения успешно применены начиная с {start_date}.')
-    #             except ValueError as e:
-    #                 self.message_user(request, str(e), level='error')
-    #             return redirect('..')
-    #
-    #     context = dict(
-    #         self.admin_site.each_context(request),
-    #         title="Применить шаблон звонков",
-    #         opts=self.model._meta,
-    #         action_checkbox_name=admin.helpers.ACTION_CHECKBOX_NAME,
-    #     )
-    #     return TemplateResponse(request, "admin/apply_template_changes.html", context)
+    form = PeriodTemplateForm
+    list_display = ('lesson_number', 'start_date', 'end_date')
+    search_fields = ('lesson_number',)
+    inlines = [TimingInline, ]
 
 
 @admin.register(Period)

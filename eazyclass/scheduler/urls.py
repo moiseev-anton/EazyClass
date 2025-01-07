@@ -1,6 +1,6 @@
 from django.urls import path
+
 from scheduler.views.base_views import home_view
-from scheduler.views import apply_changes_view
 
 urlpatterns = [
     path('test/', home_view, name='test'),
