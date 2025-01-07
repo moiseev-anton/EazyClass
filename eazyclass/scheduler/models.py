@@ -146,74 +146,56 @@ class Classroom(models.Model):
 
 class PeriodTemplate(models.Model):
     lesson_number = models.PositiveIntegerField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
     start_date = models.DateField(default=DateClass.today)
     end_date = models.DateField(null=True, blank=True, default=None)
-
-    monday = models.BooleanField(default=False)
-    tuesday = models.BooleanField(default=False)
-    wednesday = models.BooleanField(default=False)
-    thursday = models.BooleanField(default=False)
-    friday = models.BooleanField(default=False)
-    saturday = models.BooleanField(default=False)
-    sunday = models.BooleanField(default=False)
 
     objects = PeriodTemplateManager()
 
     class Meta:
         db_table = "scheduler_period_template"
+        ordering = ['start_date']
+        unique_together = ('lesson_number', 'start_date')
 
-    def clean(self) -> None:
-        """
-        Метод для валидации пересечений дней недели для шаблонов с одинаковым номером урока.
-        Проверяется, что дни недели не пересекаются для шаблонов с одинаковым номером урока в указанный период времени.
-        """
-        if self.end_date and self.end_date <= self.start_date:
-            raise ValidationError('End date должна быть позже start date.')
-
-        active_days = self.active_days
-
-        # Проверка конфликтов с другими шаблонами с одинаковым номером урока
-        overlapping_templates = PeriodTemplate.objects.filter(
-            lesson_number=self.lesson_number,
-            start_date__lte=self.end_date if self.end_date else self.start_date,
-            end_date__gte=self.start_date
-        ).exclude(pk=self.pk)
-
-        for template in overlapping_templates:
-            overlapping_days = active_days & template.active_days
-            if overlapping_days:
-                raise ValidationError(
-                    f"Уже есть действующий шаблон для {self.lesson_number} пересекающийся по дням недели: "
-                    f"{', '.join(overlapping_days)}.")
-
-    @property
-    def active_days(self) -> set[str]:
-        """
-        Возвращает множество активных дней недели для текущего шаблона.
-        """
-        days = {
-            'Пн': self.monday,
-            'Вт': self.tuesday,
-            'Ср': self.wednesday,
-            'Чт': self.thursday,
-            'Пт': self.friday,
-            'Сб': self.saturday,
-            'Вс': self.sunday,
-        }
-        return {day for day, is_active in days.items() if is_active}
-
-    def save(self, *args, **kwargs) -> None:
-        self.clean()  # Валидация перед сохранением
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        active_days = self.active_days
-        return f"Пара {self.lesson_number}: {self.start_time} - {self.end_time} ({', '.join(active_days)})"
+    def __str__(self):
+        return f"Урок {self.lesson_number} с {self.start_date} по {self.end_date}"
 
 
+class Timing(models.Model):
+    period_template = models.ForeignKey(PeriodTemplate, related_name='timings', on_delete=models.CASCADE)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(end_time__gt=models.F('start_time')),
+                name='check_timing_start_before_end',
+            ),
+        ]
+
+    # @property
+    # def active_days(self) -> set[str]:
+    #     """
+    #     Возвращает множество активных дней недели для текущего шаблона.
+    #     """
+    #     # Получаем все связанные записи через ForeignKey
+    #     days = self.weekdays.all().values_list('day_of_week', flat=True)
+    #     day_names = {
+    #         0: 'Пн', 1: 'Вт', 2: 'Ср', 3: 'Чт', 4: 'Пт', 5: 'Сб', 6: 'Вс'
+    #     }
+    #     return {day_names[day] for day in days}
+    #
+
+
+class TimingWeekDay(models.Model):
+    """
+    Модель для связывания шаблона расписания с днями недели.
+    """
+    timing = models.ForeignKey(Timing, related_name='weekdays', on_delete=models.CASCADE)
+    day_of_week = models.SmallIntegerField()  # 0 для понедельника, 1 для вторника и т.д.
+
+    class Meta:
+        unique_together = ('timing', 'day_of_week')
 
 
 class Period(models.Model):

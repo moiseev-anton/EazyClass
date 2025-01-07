@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional, Tuple
 
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
-from django.db.models import Max
+from django.db.models import Max, Q
 
 from scheduler.utils import cache_data, invalidate_cache
 
@@ -153,28 +153,36 @@ class PeriodManager(BaseManager):
 
 
 class PeriodTemplateManager(models.Manager):
-    DAYS_OF_WEEK = {
-        0: 'monday',
-        1: 'tuesday',
-        2: 'wednesday',
-        3: 'thursday',
-        4: 'friday',
-        5: 'saturday',
-        6: 'sunday'
-    }
-
     def get_template_for_day(self, date: DateClass, lesson_number: int) -> Optional['PeriodTemplate']:
         """
         Возвращает подходящий шаблон для номера урока и дня недели (по дате).
         """
         day_of_week_number = date.weekday()  # 0 - понедельник, 6 - воскресенье
 
+        # Получаем все шаблоны, соответствующие номеру урока и диапазону дат
         return self.filter(
             lesson_number=lesson_number,
             start_date__lte=date,
             end_date__gte=date,
-            **{self.DAYS_OF_WEEK[day_of_week_number]: True}
+        ).filter(
+            # Поскольку дни недели теперь хранятся в связанной таблице PeriodTemplateWeekDay,
+            # мы фильтруем по день недели через связь many-to-one
+            weekdays__day_of_week=day_of_week_number
         ).first()
+
+    def overlapping(self, lesson_number, start_date, end_date, exclude_pk=None):
+        """
+        Возвращает пересекающиеся шаблоны с заданным периодом действия.
+        """
+        query = Q(lesson_number=lesson_number) & (
+                Q(start_date__lte=end_date if end_date else start_date) &
+                (Q(end_date__gte=start_date) | Q(end_date__isnull=True))
+        )
+
+        if exclude_pk:
+            query &= ~Q(pk=exclude_pk)
+
+        return self.filter(query)
 
     # def get_template_dict(self) -> dict:
     #     """
