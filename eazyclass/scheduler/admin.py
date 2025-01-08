@@ -120,6 +120,19 @@ class UserAdmin(BaseUserAdmin):
 
 
 class TimingInline(admin.TabularInline):
+    """
+    Inline для редактирования связанных таймингов в модели PeriodTemplate.
+
+    - Использует кастомную форму TimingForm и формсет TimingInlineFormSet.
+    - Подключает пользовательские JS и CSS для улучшения интерфейса.
+
+    Attributes:
+        model: Связанная модель Timing.
+        form: Форма для редактирования таймингов.
+        formset: Кастомный формсет с дополнительной валидацией.
+        extra: Количество пустых строк для добавления нового тайминга.
+        Media: Подключает пользовательские скрипты и стили.
+    """
     model = Timing
     form = TimingForm
     formset = TimingInlineFormSet
@@ -134,6 +147,18 @@ class TimingInline(admin.TabularInline):
 
 @admin.register(PeriodTemplate)
 class PeriodTemplateAdmin(admin.ModelAdmin):
+    """
+    Административный интерфейс для модели PeriodTemplate.
+
+    - Использует кастомную форму PeriodTemplateForm.
+    - Отображает связанные тайминги через TimingInline.
+
+    Attributes:
+        form: Форма для редактирования PeriodTemplate.
+        list_display: Поля, отображаемые в списке записей.
+        search_fields: Поля для поиска.
+        inlines: Inline для редактирования связанных объектов.
+    """
     form = PeriodTemplateForm
     list_display = ('lesson_number', 'start_date', 'end_date')
     search_fields = ('lesson_number',)

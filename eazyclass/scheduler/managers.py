@@ -170,9 +170,23 @@ class PeriodTemplateManager(models.Manager):
             weekdays__day_of_week=day_of_week_number
         ).first()
 
-    def overlapping(self, lesson_number, start_date, end_date, exclude_pk=None):
+    def overlapping(self, lesson_number: int, start_date: DateClass, end_date: Optional[DateClass], exclude_pk: Optional[int] = None):
         """
         Возвращает пересекающиеся шаблоны с заданным периодом действия.
+
+        Период считается пересекающимся, если:
+        - Номер урока совпадает.
+        - Начало периода не позже конца другого периода.
+        - Конец периода не раньше начала другого периода или конец другого периода не указан.
+
+        Args:
+            lesson_number (int): Номер урока, для которого нужно проверить пересечение.
+            start_date (date): Дата начала искомого периода.
+            end_date (Optional[date]): Дата окончания искомого периода, может быть None.
+            exclude_pk (Optional[int]): Исключить текущий объект по первичному ключу, если есть.
+
+        Returns:
+            QuerySet: Пересекающиеся записи из модели `PeriodTemplate`.
         """
         query = Q(lesson_number=lesson_number) & (
                 Q(start_date__lte=end_date if end_date else start_date) &

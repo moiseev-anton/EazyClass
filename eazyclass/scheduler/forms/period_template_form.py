@@ -4,11 +4,31 @@ from scheduler.models import PeriodTemplate
 
 
 class PeriodTemplateForm(forms.ModelForm):
+    """
+    Форма для валидации и редактирования модели PeriodTemplate.
+
+    Проверяет:
+    - Дата окончания должна быть позже даты начала.
+    - Периоды с одинаковым номером урока не должны пересекаться.
+    """
     class Meta:
         model = PeriodTemplate
         fields = ['lesson_number', 'start_date', 'end_date']
 
-    def clean(self):
+    def clean(self) -> dict:
+        """
+        Выполняет валидацию формы.
+
+        Проверяет:
+        - Если дата окончания указана, она должна быть позже даты начала.
+        - Периоды с одинаковым lesson_number не должны пересекаться.
+
+        Returns:
+            dict: Очищенные данные формы.
+
+        Raises:
+            forms.ValidationError: Если найдены пересечения периодов или дата окончания раньше начала.
+        """
         cleaned_data = super().clean()
         if self.errors:
             return cleaned_data
