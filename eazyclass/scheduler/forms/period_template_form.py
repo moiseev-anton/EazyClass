@@ -1,3 +1,5 @@
+import logging
+
 from django import forms
 
 from scheduler.models import PeriodTemplate
@@ -32,7 +34,6 @@ class PeriodTemplateForm(forms.ModelForm):
         cleaned_data = super().clean()
         if self.errors:
             return cleaned_data
-
         lesson_number = cleaned_data.get('lesson_number')
         start_date = cleaned_data.get('start_date')
         end_date = cleaned_data.get('end_date')

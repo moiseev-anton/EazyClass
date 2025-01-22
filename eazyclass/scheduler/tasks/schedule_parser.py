@@ -9,8 +9,8 @@ from django.db.models import Model
 
 from scheduler.models import Subject, Lesson, LessonBuffer, Classroom, Teacher, Period
 from scheduler.tasks.db_queries import synchronize_lessons
-from scrapy_app.eazy_scrapy.spiders.schedule_spyder import SCRAPED_LESSONS_KEY, SCRAPED_GROUPS_KEY, PAGE_HASH_KEY_PREFIX
-from utils.redis_clients import get_scrapy_redis_client
+from scrapy_app.spiders.schedule_spyder import SCRAPED_LESSONS_KEY, SCRAPED_GROUPS_KEY, PAGE_HASH_KEY_PREFIX
+from utils import RedisClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class ScheduleSyncManager:
     def __init__(self):
         self.scraped_groups = None
         self.lesson_items = None
-        self.redis_client = get_scrapy_redis_client()
+        self.redis_client = RedisClientManager.get_client('scrapy')
         self.teachers = RelatedObjectsMap(Teacher, enforce_check=False)
         self.classrooms = RelatedObjectsMap(Classroom, enforce_check=False)
         self.subjects = RelatedObjectsMap(Subject, enforce_check=False)

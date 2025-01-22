@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from datetime import timedelta, date as DateClass
 from django.db import models
@@ -354,15 +355,13 @@ class LessonNotificationQueue(models.Model):
     group = models.ForeignKey('Group', on_delete=models.CASCADE)  # или используйте свойство group_id
     teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE)
     period = models.ForeignKey('Period', on_delete=models.CASCADE)
-    notification_date = models.DateField()  # дата, когда урок был изменен
     is_notified = models.BooleanField(default=False)  # флаг для отслеживания отправки уведомления
+    created_at = models.DateTimeField(auto_now_add=True)  # дата и время создания уведомления
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "scheduler_lesson_notification_queue"
         unique_together = ('group', 'teacher', 'period')  # исключаем дублирующие записи
-        indexes = [
-            models.Index(fields=['is_notified']),
-        ]
 
     def __str__(self):
         return f"Уведомление для группы {self.group.id}, преподавателя {self.teacher.id}, времени урока {self.period.id}"

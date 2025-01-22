@@ -1,5 +1,6 @@
-from .schedule_parser import update_schedule
-from .group_parser import update_groups
-from .timetable_manager import fill_periods
-from .db_queries import synchronize_lessons
-from .update_last_active import update_last_active_records, delete_inactive_records
+from scheduler.tasks.schedule_parser import update_schedule
+from scheduler.tasks.group_parser import update_groups
+from scheduler.tasks.db_queries import synchronize_lessons
+from scheduler.tasks.update_last_active import update_last_active_records, delete_inactive_records
+from scheduler.tasks.schedule_sync import run_schedule_spider
+from scheduler.tasks.testing_task import run_test_spider

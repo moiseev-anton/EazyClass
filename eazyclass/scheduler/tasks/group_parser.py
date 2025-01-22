@@ -128,3 +128,5 @@ def deactivate_all_groups():
     with transaction.atomic():
         deactivate_all_records(Group)
         deactivate_all_records(Faculty)
+
+

@@ -1,28 +1,31 @@
+import datetime
 import json
 import logging
 
+from bulk_sync import bulk_sync, bulk_compare
 from django.db import transaction
 
 from scheduler.models import Subject, Lesson, LessonBuffer, Classroom, Teacher, Period
 from scheduler.tasks.db_queries import synchronize_lessons
 from scheduler.scapper.related_objects_map import RelatedObjectsMap
-from scrapy_app.eazy_scrapy.spiders.schedule_spyder import SCRAPED_LESSONS_KEY, SCRAPED_GROUPS_KEY, PAGE_HASH_KEY_PREFIX
-from utils.redis_clients import get_scrapy_redis_client
+from scrapy_app.spiders import SCRAPED_LESSONS_KEY, SCRAPED_GROUPS_KEY, PAGE_HASH_KEY_PREFIX
+from utils import RedisClientManager
 
 logger = logging.getLogger(__name__)
 
 
 class ScheduleSyncManager:
     PAGE_HASH_TIMEOUT = 86400  # 24 часа
+    COMPRASION_FIELDS = ['group_id', 'period_id', 'subject_id', 'classroom_id', 'teacher_id', 'subgroup']
 
     def __init__(self):
-        self.scraped_groups = None
-        self.lesson_items = None
-        self.redis_client = get_scrapy_redis_client()
-        self.teachers = RelatedObjectsMap(Teacher, enforce_check=False)
-        self.classrooms = RelatedObjectsMap(Classroom, enforce_check=False)
-        self.subjects = RelatedObjectsMap(Subject, enforce_check=False)
-        self.periods = RelatedObjectsMap(Period, enforce_check=False)
+        self.scraped_groups = None  # {group_id: page_hash, ...}
+        self.lesson_items = None  # [{lesson_dict}, ...]
+        self.redis_client = RedisClientManager.get_client('scrapy')
+        self.teachers = RelatedObjectsMap(Teacher, ['full_name', ])
+        self.classrooms = RelatedObjectsMap(Classroom, ['title', ])
+        self.subjects = RelatedObjectsMap(Subject, ['title', ])
+        self.periods = RelatedObjectsMap(Period, ['date', 'lesson_number'])
         self.lesson_model_objects = []
 
     def update_schedule(self):
@@ -32,6 +35,7 @@ class ScheduleSyncManager:
             self.id_mapping()
             self.create_lesson_model_objects()
             self.push_lessons_to_db()
+            self.cache_page_content_hashes()
 
     def fetch_data(self):
         lessons_json = self.redis_client.get(SCRAPED_LESSONS_KEY)
@@ -43,10 +47,10 @@ class ScheduleSyncManager:
 
     def gather_unique_elements(self):
         for item in self.lesson_items:
-            self.teachers.add(item['teacher_fullname'])
-            self.classrooms.add(item['classroom_title'])
-            self.subjects.add(item['subject_title'])
-            self.periods.add((item['date'], item['lesson_number']))
+            self.teachers.add(item['teacher'])
+            self.classrooms.add(item['classroom'])
+            self.subjects.add(item['subject'])
+            self.periods.add(item['period'])
         logger.debug(f"Собраны уникальные элементы для маппинга.")
 
     def id_mapping(self):
@@ -59,15 +63,16 @@ class ScheduleSyncManager:
 
     def create_lesson_model_objects(self):
         for item in self.lesson_items:
-            lesson_obj = Lesson(
-                group_id=item['group_id'],
-                subgroup=item['subgroup'],
-                period_id=self.periods.get_id((item['date'], item['lesson_number'])),
-                teacher_id=self.teachers.get_id(item['teacher_fullname']),
-                classroom_id=self.classrooms.get_id(item['classroom_title']),
-                subject_id=self.subjects.get_id(item['subject_title'])
-            )
-            self.lesson_model_objects.append(lesson_obj)
+            if item['group_id'] in self.scraped_groups:
+                lesson_obj = Lesson(
+                    group_id=item['group_id'],
+                    subgroup=item['subgroup'],
+                    period_id=self.periods.get_id(item['period']),
+                    teacher_id=self.teachers.get_id(item['teacher']),
+                    classroom_id=self.classrooms.get_id(item['classroom']),
+                    subject_id=self.subjects.get_id(item['subject'])
+                )
+                self.lesson_model_objects.append(lesson_obj)
         logger.debug(f'Собрали {len(self.lesson_model_objects)} объектов уроков')
 
     def push_lessons_to_db(self):
@@ -81,8 +86,50 @@ class ScheduleSyncManager:
             logger.error(f"Ошибка при обновлении данных в БД: {str(e)}")
             raise
 
-    def save_page_content_hashes(self):
-        # TODO: Возможно можно будет переделать на mset()
+    def schedule_bulk_sync(self):
+        periods = Period.objects.filter(date__gte=datetime.date.today())  # Только для записей с датой >= сегодня
+
+        with transaction.atomic():
+            synced_lessons = bulk_sync(
+                new_models=self.lesson_model_objects,
+                filters={
+                    'period__in': periods,  # Фильтруем по периодам
+                    'group__in': self.scraped_groups.keys(),  # Фильтруем по успешным группам
+                    'is_active': True  # Фильтруем только активные уроки
+                },
+                key_fields=["group_id", "period", "subgroup"],  # Множество ключевых полей
+            )
+
+        return synced_lessons
+
+    def synchronize_lessons_by_compare(self):
+        periods = Period.objects.filter(date__gte=datetime.date.today())
+        new_lessons = self.lesson_model_objects
+        groups = self.scraped_groups.keys()
+        existing_lessons = Lesson.objects.filter(period__in=periods, group__in=groups, is_active=True)
+
+        comparison_result = bulk_compare(
+            new_models=new_lessons,
+            old_models=existing_lessons,
+            key_fields=self.COMPRASION_FIELDS,
+        )
+
+        to_create = comparison_result['added']
+        to_update = comparison_result['updated']
+        to_delete = comparison_result['removed']
+
+        if to_create:
+            Lesson.objects.bulk_create(to_create)
+
+        if to_update:
+            Lesson.objects.bulk_update(to_update, fields=self.COMPRASION_FIELDS)
+
+        if to_delete:
+            Lesson.objects.bulk_delete(to_delete)
+
+        # TODO: нужно сохранить эти 3 коллекции и потом в отдельных методах или отдельном классе произвести оптовые операции и создание уведомлений
+
+    def cache_page_content_hashes(self):
         pipe = self.redis_client.pipeline()
         for group_id, page_content_hash in self.scraped_groups.items():
             pipe.setex(f'{PAGE_HASH_KEY_PREFIX}{group_id}', self.PAGE_HASH_TIMEOUT, page_content_hash)

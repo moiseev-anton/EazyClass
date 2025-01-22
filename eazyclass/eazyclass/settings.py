@@ -42,7 +42,6 @@ INTERNAL_IPS = [
 ]
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -56,8 +55,10 @@ INSTALLED_APPS = [
     'rangefilter',
     'api',
     'telegrambot',
+    'utils',
     'debug_toolbar',
 ]
+
 
 MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
@@ -195,31 +196,42 @@ LOGGING = {
             'propagate': False,
         },
         'celery': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'scrapy': {
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
     }
 }
 
+REDIS_CONFIG = {
+    'default': os.getenv('REDIS_DEFAULT_CACHE_URL'),
+    'telegrambot': os.getenv('REDIS_TELEGRAM_BOT_CACHE_URL'),
+    'scrapy': os.getenv('REDIS_SCRAPY_URL'),
+}
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'{os.getenv('REDIS_DEFAULT')}',
+        'LOCATION': REDIS_CONFIG['default'],
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     },
     'telegrambot_cache': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'{os.getenv('REDIS_TELEGRAM_BOT')}',
+        'LOCATION': REDIS_CONFIG['telegrambot'],
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     },
     'scrapy_cache': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'{os.getenv('REDIS_SCRAPY')}',
+        'LOCATION': REDIS_CONFIG['scrapy'],
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
@@ -228,8 +240,8 @@ CACHES = {
 
 REDIS_SCRAPY_URL = os.getenv('REDIS_SCRAPY')
 
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_BACKEND')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

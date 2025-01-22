@@ -104,4 +104,4 @@ services:
 
 volumes:
   postgres_data:
-    external: true
+#    external: true
