@@ -223,6 +223,10 @@ class Period(models.Model):
         super().save(*args, **kwargs)
 
     def pre_save_actions(self):
+        """
+        Дополняет объект Period значениями start_time и end_time из шаблона.
+        Если шаблон отсутствует, start_time и end_time остаются None.
+        """
         if not self.start_time or not self.end_time:
             template = PeriodTemplate.objects.get_template_for_day(date=self.date, lesson_number=self.lesson_number)
             if template and template.timing.exists():
@@ -362,12 +366,11 @@ class Subscription(models.Model):
 
 
 class LessonNotificationQueue(models.Model):
-    group = models.ForeignKey('Group', on_delete=models.CASCADE)  # или используйте свойство group_id
-    teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE)
-    period = models.ForeignKey('Period', on_delete=models.CASCADE)
-    is_notified = models.BooleanField(default=False)  # флаг для отслеживания отправки уведомления
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, related_name="notifications")
+    data_key = models.CharField(max_length=255)  # Ключ в Redis
+    is_sent = models.BooleanField(default=False)  # флаг для отслеживания отправки уведомления
     created_at = models.DateTimeField(auto_now_add=True)  # дата и время создания уведомления
-    updated_at = models.DateTimeField(auto_now=True)
+    # updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "scheduler_lesson_notification_queue"

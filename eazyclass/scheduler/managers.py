@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class IDMappableMixin:
     """ Миксин для маппинга ID"""
 
-    def get_objects_map(self, values_set: set[tuple[Any]], field_names: tuple) -> dict:
+    def get_id_map(self, values_set: set[tuple[Any]], field_names: tuple) -> dict:
         """
         Получить маппинг значений из БД: {значение поля -> id}.
         """
@@ -31,36 +31,36 @@ class IDMappableMixin:
         existing_objects = self.filter(**filters).values_list(*field_names, 'id')
         return {tuple(key): obj_id for *key, obj_id in existing_objects}
 
-    def get_or_create_objects_map(self, unique_values_set: set[tuple[Any]], field_names: tuple) -> dict:
-        """
-        Получить маппинг существующих объектов и создать недостающие.
-        """
-        objects_map = self.get_objects_map(unique_values_set, field_names)
-
-        # Определяем недостающие значения
-        missing_set = unique_values_set - set(objects_map.keys())
-
-        if missing_set:
-            new_objects = self.build_model_objects(missing_set, field_names)
-            self.bulk_create(new_objects)
-            logger.info(f"Создано {len(missing_set)} новых записей '{self.model.__name__}'")
-
-            # Обновляем маппинг
-            objects_map.update(self.get_objects_map(missing_set, field_names))
-
-        return objects_map
-
-    def build_model_objects(self, values_set: set[tuple[Any]], field_names: tuple) -> list:
-        new_objects = []
-        for item in values_set:
-            if len(item) != len(field_names):
-                raise ValueError(f'Несоответствие полей {field_names} и значений {item}')
-
-            obj = self.model(**dict(zip(field_names, item)))
-            if hasattr(obj, 'pre_save_actions'):
-                obj.pre_save_actions()
-            new_objects.append(obj)
-        return new_objects
+    # def get_or_create_objects_map(self, unique_values_set: set[tuple[Any]], field_names: tuple) -> dict:
+    #     """
+    #     Получить маппинг существующих объектов и создать недостающие.
+    #     """
+    #     objects_map = self.get_objects_map(unique_values_set, field_names)
+    #
+    #     # Определяем недостающие значения
+    #     missing_set = unique_values_set - set(objects_map.keys())
+    #
+    #     if missing_set:
+    #         new_objects = self.build_model_objects(missing_set, field_names)
+    #         self.bulk_create(new_objects)
+    #         logger.info(f"Создано {len(missing_set)} новых записей '{self.model.__name__}'")
+    #
+    #         # Обновляем маппинг
+    #         objects_map.update(self.get_objects_map(missing_set, field_names))
+    #
+    #     return objects_map
+    #
+    # def build_model_objects(self, values_set: set[tuple[Any]], field_names: tuple) -> list:
+    #     new_objects = []
+    #     for item in values_set:
+    #         if len(item) != len(field_names):
+    #             raise ValueError(f'Несоответствие полей {field_names} и значений {item}')
+    #
+    #         obj = self.model(**dict(zip(field_names, item)))
+    #         if hasattr(obj, 'pre_save_actions'):
+    #             obj.pre_save_actions()
+    #         new_objects.append(obj)
+    #     return new_objects
 
 
 class BaseManager(models.Manager):
@@ -90,8 +90,8 @@ class TeacherManager(BaseManager, IDMappableMixin):
         obj, created = self.get_or_create(full_name=full_name)
         return obj.id
 
-    def get_or_create_id_map(self, unique_teachers_set):
-        return super().get_or_create_objects_map(unique_teachers_set, ('full_name',))
+    # def get_or_create_id_map(self, unique_teachers_set):
+    #     return super().get_or_create_objects_map(unique_teachers_set, ('full_name',))
 
 
 class ClassroomManager(BaseManager, IDMappableMixin):
@@ -100,8 +100,8 @@ class ClassroomManager(BaseManager, IDMappableMixin):
         obj, created = self.get_or_create(title=title)
         return obj.id
 
-    def get_or_create_id_map(self, unique_classroom_set):
-        return super().get_or_create_objects_map(unique_classroom_set, ('title',))
+    # def get_or_create_id_map(self, unique_classroom_set):
+    #     return super().get_or_create_objects_map(unique_classroom_set, ('title',))
 
 
 class SubjectManager(BaseManager, IDMappableMixin):
@@ -110,8 +110,8 @@ class SubjectManager(BaseManager, IDMappableMixin):
         obj, created = self.get_or_create(title=title)
         return obj.id
 
-    def get_or_create_id_map(self, unique_subject_set):
-        return super().get_or_create_objects_map(unique_subject_set, ('title',))
+    # def get_or_create_id_map(self, unique_subject_set):
+    #     return super().get_or_create_objects_map(unique_subject_set, ('title',))
 
 
 class PeriodManager(BaseManager, IDMappableMixin):
@@ -127,8 +127,8 @@ class PeriodManager(BaseManager, IDMappableMixin):
         obj, created = self.get_or_create(date=date, lesson_number=lesson_number)
         return obj.id
 
-    def get_or_create_id_map(self, unique_periods_set: set[tuple[Any]]) -> dict:
-        return super().get_or_create_objects_map(unique_periods_set, ('date', 'lesson_number'))
+    # def get_or_create_id_map(self, unique_periods_set: set[tuple[Any]]) -> dict:
+    #     return super().get_or_create_objects_map(unique_periods_set, ('date', 'lesson_number'))
 
     # def build_period(self, date: DateClass, lesson_number: int) -> 'Period':
     #     """

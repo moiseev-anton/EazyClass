@@ -28,8 +28,8 @@ class IdMapper:
 
     def id_mapping(self):
         """Выполняет маппинг уникальных элементов на ID."""
-        self.teachers.map()
-        self.classrooms.map()
-        self.subjects.map()
-        self.periods.map()
+        self.teachers.resolve_pending_keys()
+        self.classrooms.resolve_pending_keys()
+        self.subjects.resolve_pending_keys()
+        self.periods.resolve_pending_keys()
         logger.debug("Маппинг уникальных элементов завершен.")

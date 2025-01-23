@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 class RelatedObjectsMap:
     """Класс для управления маппингом значений на связанные объекты из базы данных."""
-    __slots__ = ('model', 'fields', 'mapping', 'unmapped_keys')
+    __slots__ = ('model', 'fields', 'existing_mappings', 'pending_keys')
 
-    def __init__(self, model: Model, fields: list[str]):
+    def __init__(self, model: Model, fields: tuple[str]):
         """
         Инициализирует объект маппера.
 
@@ -21,10 +21,10 @@ class RelatedObjectsMap:
         """
         self.model = model
         self.fields = fields
-        self.mapping = {}  # {mapping_key: id}
-        self.unmapped_keys = set()  # Ключи для маппинга
+        self.existing_mappings = {}  # {mapping_key: id}
+        self.pending_keys = set()  # Ключи для маппинга
 
-    def _create_key(self, data: dict[str, Any]) -> tuple:
+    def _generate_key(self, data: dict[str, Any]) -> tuple:
         """Создает ключ в соответствии с `fields`."""
         missing_fields = [field for field in self.fields if field not in data]
         if missing_fields:
@@ -35,38 +35,42 @@ class RelatedObjectsMap:
 
     def add(self, data: dict):
         """Добавляет ключ для маппинга."""
-        key = self._create_key(data)
-        if key not in self.mapping:
-            self.unmapped_keys.add(key)
+        key = self._generate_key(data)
+        if key not in self.existing_mappings:
+            self.pending_keys.add(key)
 
-    def map(self) -> None:
-        """
-        Получает или создает недостающие объекты и обновляет маппинг.
-
-        Использует `bulk_sync` для синхронизации объектов с базой данных.
-        """
-        if self.unmapped_keys:
-            keys_as_dicts = [dict(key) for key in self.unmapped_keys]
-            new_objects = [self.model(**key) for key in keys_as_dicts]
-
-            synced_objects = bulk_sync(
-                new_models=new_objects,
-                filters={},
-                key_fields=self.fields,
-                skip_deletes=True,
-            )
-
-            new_mappings = {
-                tuple((field, getattr(obj, field)) for field in self.fields): obj.id
-                for obj in synced_objects
-            }
-
-            self.mapping.update(new_mappings)
-            self.unmapped_keys.clear()
-
-    def get_id(self, data: dict, default=None) -> int:
+    def get_or_map_id(self, data: dict, default=None) -> int:
         """Получает ID для заданных данных."""
-        key = self._create_key(data)
-        if key in self.unmapped_keys:
-            self.map()
-        return self.mapping.get(key, default)
+        key = self._generate_key(data)
+        if key in self.pending_keys:
+            self.resolve_pending_keys()
+        return self.existing_mappings.get(key, default)
+
+    def resolve_pending_keys(self) -> None:
+        """
+        Получить маппинг существующих объектов и создать недостающие.
+        """
+        self.fetch_existing_mappings()
+
+        if self.pending_keys:
+            new_objects = self.create_new_objects()
+            self.bulk_create(new_objects)
+            logger.info(f"Создано {len(new_objects)} новых записей '{self.model.__name__}'")
+
+            self.fetch_existing_mappings()
+
+    def fetch_existing_mappings(self):
+        new_map = self.model.get_id_map(self.pending_keys, self.fields)
+        self.existing_mappings.update(new_map)
+
+        # Удаляем значения для которых получили id из БД
+        self.pending_keys -= set(new_map.keys())
+
+    def create_new_objects(self) -> list:
+        new_objects = []
+        for item in self.pending_keys:
+            obj = self.model(**dict(zip(self.fields, item)))
+            if hasattr(obj, 'pre_save_actions'):
+                obj.pre_save_actions()
+            new_objects.append(obj)
+        return new_objects

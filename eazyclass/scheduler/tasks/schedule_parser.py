@@ -121,7 +121,6 @@ class ScheduleSyncManager:
             raise
 
     def save_page_content_hashes(self):
-        # TODO: Возможно можно будет переделать на mset()
         pipe = self.redis_client.pipeline()
         for group_id, page_content_hash in self.scraped_groups.items():
             pipe.setex(f'{PAGE_HASH_KEY_PREFIX}{group_id}', self.PAGE_HASH_TIMEOUT, page_content_hash)

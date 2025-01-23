@@ -22,18 +22,19 @@ class ScheduleSyncManager:
         self.scraped_groups = None  # {group_id: page_hash, ...}
         self.lesson_items = None  # [{lesson_dict}, ...]
         self.redis_client = RedisClientManager.get_client('scrapy')
-        self.teachers = RelatedObjectsMap(Teacher, ['full_name', ])
-        self.classrooms = RelatedObjectsMap(Classroom, ['title', ])
-        self.subjects = RelatedObjectsMap(Subject, ['title', ])
-        self.periods = RelatedObjectsMap(Period, ['date', 'lesson_number'])
+        self.teachers = RelatedObjectsMap(Teacher, ('full_name', ))
+        self.classrooms = RelatedObjectsMap(Classroom, ('title', ))
+        self.subjects = RelatedObjectsMap(Subject, ('title', ))
+        self.periods = RelatedObjectsMap(Period, ('date', 'lesson_number'))
         self.lesson_model_objects = []
 
     def update_schedule(self):
         self.fetch_data()
         if self.scraped_groups:
-            self.gather_unique_elements()
-            self.id_mapping()
-            self.create_lesson_model_objects()
+            if self.lesson_items:
+                self.gather_unique_elements()
+                self.id_mapping()
+                self.create_lesson_model_objects()
             self.push_lessons_to_db()
             self.cache_page_content_hashes()
 
@@ -55,10 +56,10 @@ class ScheduleSyncManager:
 
     def id_mapping(self):
         """Выполняет маппинг уникальных элементов на ID."""
-        self.teachers.map()
-        self.classrooms.map()
-        self.subjects.map()
-        self.periods.map()
+        self.teachers.resolve_pending_keys()
+        self.classrooms.resolve_pending_keys()
+        self.subjects.resolve_pending_keys()
+        self.periods.resolve_pending_keys()
         logger.debug("Маппинг уникальных элементов завершен.")
 
     def create_lesson_model_objects(self):
@@ -67,19 +68,22 @@ class ScheduleSyncManager:
                 lesson_obj = Lesson(
                     group_id=item['group_id'],
                     subgroup=item['subgroup'],
-                    period_id=self.periods.get_id(item['period']),
-                    teacher_id=self.teachers.get_id(item['teacher']),
-                    classroom_id=self.classrooms.get_id(item['classroom']),
-                    subject_id=self.subjects.get_id(item['subject'])
+                    period_id=self.periods.get_or_map_id(item['period']),
+                    teacher_id=self.teachers.get_or_map_id(item['teacher']),
+                    classroom_id=self.classrooms.get_or_map_id(item['classroom']),
+                    subject_id=self.subjects.get_or_map_id(item['subject'])
                 )
                 self.lesson_model_objects.append(lesson_obj)
         logger.debug(f'Собрали {len(self.lesson_model_objects)} объектов уроков')
 
     def push_lessons_to_db(self):
+        """Синхронизация через буферную таблицу в БД.
+        Используется raw SQL
+        """
         try:
             with transaction.atomic():
                 LessonBuffer.objects.bulk_create(self.lesson_model_objects)
-                synchronize_lessons(self.scraped_groups)
+                synchronize_lessons(self.scraped_groups.keys())
                 LessonBuffer.objects.all().delete()
             logger.info(f"Данные обновлены для {len(self.scraped_groups)} групп")
         except Exception as e:
@@ -87,6 +91,11 @@ class ScheduleSyncManager:
             raise
 
     def schedule_bulk_sync(self):
+        """Синхронизация всех уроков с БД за 1 запрос.
+         Но не можем узнать какие уроки были изменениы, добавлены или удалены.
+         Придется полагаться только на триггеры в БД.
+        Для каждой отдельно операции записи трггер быдет вызвывать функцию, что не оптимально
+        """
         periods = Period.objects.filter(date__gte=datetime.date.today())  # Только для записей с датой >= сегодня
 
         with transaction.atomic():
@@ -103,6 +112,10 @@ class ScheduleSyncManager:
         return synced_lessons
 
     def synchronize_lessons_by_compare(self):
+        """Ручное управление синхронизацией.
+        Сепарируем объекты Lesson по группам. to_create, to_update, to_delete.
+
+        """
         periods = Period.objects.filter(date__gte=datetime.date.today())
         new_lessons = self.lesson_model_objects
         groups = self.scraped_groups.keys()
@@ -118,16 +131,14 @@ class ScheduleSyncManager:
         to_update = comparison_result['updated']
         to_delete = comparison_result['removed']
 
-        if to_create:
-            Lesson.objects.bulk_create(to_create)
+        if to_delete:
+            Lesson.objects.bulk_delete(to_delete)
 
         if to_update:
             Lesson.objects.bulk_update(to_update, fields=self.COMPRASION_FIELDS)
 
-        if to_delete:
-            Lesson.objects.bulk_delete(to_delete)
-
-        # TODO: нужно сохранить эти 3 коллекции и потом в отдельных методах или отдельном классе произвести оптовые операции и создание уведомлений
+        if to_create:
+            Lesson.objects.bulk_create(to_create)
 
     def cache_page_content_hashes(self):
         pipe = self.redis_client.pipeline()
