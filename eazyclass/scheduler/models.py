@@ -94,6 +94,10 @@ class Teacher(models.Model):
             self.short_name = self.generate_short_name()
         super().save(*args, **kwargs)
 
+    def pre_save_actions(self):
+        if not self.short_name:
+            self.short_name = self.generate_short_name()
+
     def generate_short_name(self):
         full_name = str(self.full_name).strip()
         if full_name in ("не указано", ""):
@@ -202,8 +206,8 @@ class TimingWeekDay(models.Model):
 class Period(models.Model):
     lesson_number = models.PositiveIntegerField()
     date = models.DateField()
-    start_time = models.TimeField(null=True, blank=True)
-    end_time = models.TimeField(null=True, blank=True)
+    start_time = models.TimeField(default=None, null=True, blank=True)
+    end_time = models.TimeField(default=None, null=True, blank=True)
 
     objects = PeriodManager()
 
@@ -215,10 +219,16 @@ class Period(models.Model):
         ]
 
     def save(self, *args, **kwargs) -> None:
+        self.pre_save_actions()
+        super().save(*args, **kwargs)
+
+    def pre_save_actions(self):
         if not self.start_time or not self.end_time:
             template = PeriodTemplate.objects.get_template_for_day(date=self.date, lesson_number=self.lesson_number)
-            self.start_time, self.end_time = (None, None) if not template else (template.start_time, template.end_time)
-        super().save(*args, **kwargs)
+            if template and template.timing.exists():
+                timing = template.timings.first()
+                self.start_time = timing.start_time
+                self.end_time = timing.end_time
 
     def __str__(self) -> str:
         return f"{self.date} - {self.lesson_number} пара: {self.start_time} - {self.end_time}"

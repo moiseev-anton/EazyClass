@@ -8,15 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class RelatedObjectsMap:
-    """
-    Класс для управления маппингом значений на связанные объекты из базы данных.
-
-    Attributes:
-        model (Type[Model]): Модель, с которой работает маппинг.
-        fields (list[str]): Список полей, используемых для создания ключей.
-        mapping (dict[tuple, int]): Маппинг ключей на ID объектов из базы.
-        unmapped_keys (set[tuple]): Набор ключей, которые нужно обработать.
-    """
+    """Класс для управления маппингом значений на связанные объекты из базы данных."""
     __slots__ = ('model', 'fields', 'mapping', 'unmapped_keys')
 
     def __init__(self, model: Model, fields: list[str]):
@@ -33,18 +25,7 @@ class RelatedObjectsMap:
         self.unmapped_keys = set()  # Ключи для маппинга
 
     def _create_key(self, data: dict[str, Any]) -> tuple:
-        """
-        Создает ключ в соответствии с `fields`.
-
-        Args:
-            data (dict[str, Any]): Данные, из которых создается ключ.
-
-        Returns:
-            tuple: Ключ, составленный из значений полей `fields`.
-
-        Raises:
-            ValueError: Если в данных отсутствуют необходимые поля.
-        """
+        """Создает ключ в соответствии с `fields`."""
         missing_fields = [field for field in self.fields if field not in data]
         if missing_fields:
             raise ValueError(
@@ -53,12 +34,7 @@ class RelatedObjectsMap:
         return tuple(data[field] for field in self.fields)
 
     def add(self, data: dict):
-        """
-        Добавляет ключ для маппинга.
-
-        Args:
-            data (dict[str, Any]): Данные, которые нужно добавить.
-        """
+        """Добавляет ключ для маппинга."""
         key = self._create_key(data)
         if key not in self.mapping:
             self.unmapped_keys.add(key)
@@ -89,16 +65,7 @@ class RelatedObjectsMap:
             self.unmapped_keys.clear()
 
     def get_id(self, data: dict, default=None) -> int:
-        """
-        Получает ID для заданных данных.
-
-        Args:
-            data (dict[str, Any]): Данные, для которых требуется получить ID.
-            default (Any, optional): Значение по умолчанию, если ID не найден. Defaults to None.
-
-        Returns:
-            int: ID объекта или значение по умолчанию.
-        """
+        """Получает ID для заданных данных."""
         key = self._create_key(data)
         if key in self.unmapped_keys:
             self.map()
