@@ -1,6 +1,7 @@
+import logging
+
 import redis
 from django.conf import settings
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +11,7 @@ class RedisClientManager:
     _clients = {}
 
     @staticmethod
-    def get_client(alias='default'):
+    def get_client(alias='default') -> redis.Redis:
         """
         Возвращает Redis-клиент для указанного alias.
         """

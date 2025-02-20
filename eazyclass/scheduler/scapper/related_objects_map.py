@@ -1,7 +1,8 @@
 import logging
 from typing import Any
 
-from bulk_sync import bulk_sync
+import django.db.models
+from django.db import transaction
 from django.db.models import Model
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ class RelatedObjectsMap:
             model (Type[Model]): Модель, для которой создается маппинг.
             fields (list[str]): Список полей для создания ключей.
         """
-        self.model = model
+        self.model: django.db.models.Model = model
         self.fields = fields
         self.existing_mappings = {}  # {mapping_key: id}
         self.pending_keys = set()  # Ключи для маппинга
@@ -53,14 +54,15 @@ class RelatedObjectsMap:
         self.fetch_existing_mappings()
 
         if self.pending_keys:
-            new_objects = self.create_new_objects()
-            self.bulk_create(new_objects)
-            logger.info(f"Создано {len(new_objects)} новых записей '{self.model.__name__}'")
+            with transaction.atomic():
+                new_objects = self.create_new_objects()
+                self.model.objects.bulk_create(new_objects)
+                logger.info(f"Создано {len(new_objects)} новых записей '{self.model.__name__}'")
 
             self.fetch_existing_mappings()
 
     def fetch_existing_mappings(self):
-        new_map = self.model.get_id_map(self.pending_keys, self.fields)
+        new_map = self.model.objects.map_values_to_ids(self.pending_keys, self.fields)
         self.existing_mappings.update(new_map)
 
         # Удаляем значения для которых получили id из БД
@@ -71,6 +73,10 @@ class RelatedObjectsMap:
         for item in self.pending_keys:
             obj = self.model(**dict(zip(self.fields, item)))
             if hasattr(obj, 'pre_save_actions'):
-                obj.pre_save_actions()
+                try:
+                    obj.pre_save_actions()
+                except Exception as e:
+                    logger.error(f"Ошибка в pre_save_actions для {obj}: {e}")
+                    raise
             new_objects.append(obj)
         return new_objects

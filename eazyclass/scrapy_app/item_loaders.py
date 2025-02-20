@@ -199,7 +199,7 @@ class LessonLoader(ItemLoader):
             'group_id': self.get_output_value('group_id'),
             'period': {
                 'lesson_number': self.get_output_value('lesson_number'),
-                'date': str(self.get_output_value('date')),
+                'date': self.get_output_value('date'),
             },
             'subject': {
                 'title': self.get_output_value('subject_title'),
@@ -210,5 +210,5 @@ class LessonLoader(ItemLoader):
             'teacher': {
                 'full_name': self.get_output_value('teacher_fullname'),
             },
-            'subgroup': self.get_output_value('subgroup'),
+            'subgroup': str(self.get_output_value('subgroup')),
         }

@@ -64,7 +64,7 @@ class Group(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['is_active']),
-            models.Index(fields=['grade', 'title']),  # для сортировки
+            models.Index(fields=['title']),
         ]
 
     def __str__(self):
@@ -178,19 +178,6 @@ class Timing(models.Model):
             ),
         ]
 
-    # @property
-    # def active_days(self) -> set[str]:
-    #     """
-    #     Возвращает множество активных дней недели для текущего шаблона.
-    #     """
-    #     # Получаем все связанные записи через ForeignKey
-    #     days = self.weekdays.all().values_list('day_of_week', flat=True)
-    #     day_names = {
-    #         0: 'Пн', 1: 'Вт', 2: 'Ср', 3: 'Чт', 4: 'Пт', 5: 'Сб', 6: 'Вс'
-    #     }
-    #     return {day_names[day] for day in days}
-    #
-
 
 class TimingWeekDay(models.Model):
     """
@@ -215,7 +202,6 @@ class Period(models.Model):
         unique_together = ('date', 'lesson_number')
         indexes = [
             models.Index(fields=['date', 'lesson_number']),
-            models.Index(fields=['date']),
         ]
 
     def save(self, *args, **kwargs) -> None:
@@ -229,7 +215,7 @@ class Period(models.Model):
         """
         if not self.start_time or not self.end_time:
             template = PeriodTemplate.objects.get_template_for_day(date=self.date, lesson_number=self.lesson_number)
-            if template and template.timing.exists():
+            if template and template.timings.exists():
                 timing = template.timings.first()
                 self.start_time = timing.start_time
                 self.end_time = timing.end_time
@@ -252,7 +238,7 @@ class Lesson(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['group', 'period']),
+            models.Index(fields=['period', 'group']),
             models.Index(fields=['group', 'period', 'subgroup']),
         ]
 
@@ -370,11 +356,11 @@ class LessonNotificationQueue(models.Model):
     data_key = models.CharField(max_length=255)  # Ключ в Redis
     is_sent = models.BooleanField(default=False)  # флаг для отслеживания отправки уведомления
     created_at = models.DateTimeField(auto_now_add=True)  # дата и время создания уведомления
+
     # updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "scheduler_lesson_notification_queue"
-        unique_together = ('group', 'teacher', 'period')  # исключаем дублирующие записи
 
     def __str__(self):
-        return f"Уведомление для группы {self.group.id}, преподавателя {self.teacher.id}, времени урока {self.period.id}"
+        return f"Уведомление :"

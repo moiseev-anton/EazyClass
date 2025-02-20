@@ -1,4 +1,4 @@
-import json
+import pickle
 from urllib.parse import urljoin
 
 import scrapy
@@ -8,6 +8,8 @@ from scheduler.models import Group
 from scrapy_app.response_processor import ResponseProcessor
 from utils import RedisClientManager
 
+NEW_MAIN_PAGE_HASH_KEY = "scrapy:new_hash_main_page"
+PREVIOUS_MAIN_PAGE_HASH_KEY = "scrapy:previous_hash_main_page"
 SCRAPED_LESSONS_KEY = "scrapy:scraped_lesson_items"
 SCRAPED_GROUPS_KEY = "scrapy:scraped_group_ids"
 PAGE_HASH_KEY_PREFIX = 'scrapy:content_hash:group_id:'
@@ -49,12 +51,14 @@ class ScheduleSpider(scrapy.Spider):
             self.logger.info(f'Делаем запрос к {url} (group_id:{group_id})')
             yield scrapy.Request(url=url, callback=self.process_page, meta={'group_id': group_id})
 
-    def process_page(self, response):
+    def process_page(self, response: scrapy.http.Response):
         """
         Обрабатывает страницу расписания, проверяет изменения контента и извлекает данные о занятиях.
 
         :param response: Ответ от сервера, содержащий HTML-страницу.
         """
+
+        self.logger.info(f'Получен ответ от :{response.url}(group_id:{response.meta.get('group_id')})')
         try:
             processor = ResponseProcessor(response, self.redis_client)
 
@@ -69,8 +73,6 @@ class ScheduleSpider(scrapy.Spider):
             group_id, content_hash = processor.get_group_hash_pair()
             self.scraped_groups[group_id] = content_hash
 
-            # TODO: НЕ ЗАБЫТЬ УБРАТЬ ТЕСТОВУЮ СТРОКУ!!!!!!!!!!!!!!!!!!!!!
-            self.redis_client.setex(f'{PAGE_HASH_KEY_PREFIX}{group_id}', 86400, content_hash)  # тестовая строка, убрать!
         except Exception as e:
             self.logger.error(f"Ошибка обработки страницы: {e}")
 
@@ -84,8 +86,8 @@ class ScheduleSpider(scrapy.Spider):
             self.logger.info(f"Приступаем к завершению паука. Причина: {reason}")
             if self.scraped_groups:
                 # Преобразуем список уроков в JSON
-                lessons_json = json.dumps(self.lessons)
-                group_ids_json = json.dumps(self.scraped_groups)
+                lessons_json = pickle.dumps(self.lessons)
+                group_ids_json = pickle.dumps(self.scraped_groups)
 
                 # Помещаем данные в Redis
                 self.redis_client.set(SCRAPED_LESSONS_KEY, lessons_json)
@@ -95,3 +97,5 @@ class ScheduleSpider(scrapy.Spider):
             self.logger.info(f'Закрытие паука.')
         except Exception as e:
             self.logger.error(f"Ошибка при закрытии паука: {e}")
+
+
