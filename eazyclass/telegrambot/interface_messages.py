@@ -1,3 +1,15 @@
+from scheduler.models import User
+
+
+class MessageBuilder:
+    @staticmethod
+    def start_message(user: User, is_new_user: bool) -> str:
+        if is_new_user:
+            return (f'Добро пожаловать, {user.first_name}! 👋\n\n'
+                    f'Выберите свое расписание чтобы получать уведомления о изменениях')
+        else:
+            return f'C возвращением, {user.first_name}! 👋\n'
+
 def generate_home_answer(user_data: dict):
     subscriptions = user_data.get('subscriptions')
     if subscriptions:

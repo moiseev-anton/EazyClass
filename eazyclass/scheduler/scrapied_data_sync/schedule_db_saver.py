@@ -5,7 +5,8 @@ from datetime import date as DateClass
 from django.db import connection
 from django.db import transaction
 
-from scheduler.models import LessonBuffer, Lesson
+# from scheduler.models import LessonBuffer
+from scheduler.models import Lesson
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,9 @@ class ScheduleDataSaver:
 
         try:
             with transaction.atomic():
-                LessonBuffer.objects.bulk_create(self.lessons)
+                # LessonBuffer.objects.bulk_create(self.lessons)
                 self.synchronize_lessons()
-                LessonBuffer.objects.all().delete()
+                # LessonBuffer.objects.all().delete()
             logger.info(f"Данные успешно обновлены для {len(self.group_ids)} групп.")
         except Exception as e:
             logger.error(f"Ошибка при обновлении данных в БД: {str(e)}")

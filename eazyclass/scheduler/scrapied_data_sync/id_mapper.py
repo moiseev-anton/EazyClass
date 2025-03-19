@@ -1,7 +1,7 @@
 import logging
 
 from scheduler.models import Subject, Classroom, Teacher, Period
-from scheduler.scapper.related_objects_map import RelatedObjectsMap
+from scheduler.scrapied_data_sync.related_objects_map import RelatedObjectsMap
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 from celery import shared_task, chain
 import logging
-from scheduler.scapper.schedule_updater import ScheduleSyncManager
+from scheduler.scrapied_data_sync.schedule_updater import ScheduleSyncManager
 from scheduler.tasks import run_schedule_spider
 
 

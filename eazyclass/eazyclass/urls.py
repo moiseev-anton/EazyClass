@@ -18,10 +18,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 
+from scheduler.api.v1.api_urls import router
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('scheduler/', include('scheduler.urls')),
-    path('api/', include('api.urls')),
+    path('telegrambot/', include('telegrambot.urls')),
+    # path('api/v1/', include('scheduler.api.v1.api_urls'))
+    path('api/v1/', include(router.urls))
 ]
 
 if settings.DEBUG:

@@ -3,7 +3,7 @@ from contextlib import nullcontext as does_not_raise
 import bs4
 import pytest
 
-from scheduler.scapper.extractor import SchedulePageExtractor
+from scheduler.scrapied_data_sync.extractor import SchedulePageExtractor
 from scheduler.tests.html_test_cases import html_test_cases
 
 

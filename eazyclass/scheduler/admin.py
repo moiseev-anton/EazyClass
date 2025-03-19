@@ -10,11 +10,11 @@ from scheduler.models import (
     Teacher,
     Subject,
     Classroom,
-    LessonBuffer,
+    # LessonBuffer,
     Lesson,
     User,
     Timing,
-    Subscription,
+    # Subscription,
     PeriodTemplate,
     Period
 )
@@ -65,12 +65,12 @@ class ClassroomAdmin(admin.ModelAdmin):
     actions = [make_active, make_inactive, toggle_active]
 
 
-@admin.register(LessonBuffer)
-class LessonBufferAdmin(admin.ModelAdmin):
-    list_display = ('group', 'period', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
-    search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
-    list_filter = ('group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
-    actions = [make_active, make_inactive, toggle_active]
+# @admin.register(LessonBuffer)
+# class LessonBufferAdmin(admin.ModelAdmin):
+#     list_display = ('group', 'period', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+#     search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
+#     list_filter = ('group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+#     actions = [make_active, make_inactive, toggle_active]
 
 
 @admin.register(Lesson)
@@ -84,24 +84,19 @@ class LessonAdmin(admin.ModelAdmin):
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = (
-        'username', 'first_name', 'last_name', 'telegram_id', 'is_active', 'date_joined', 'subscription_info')
-    list_filter = ('is_active', 'date_joined')
-    search_fields = ('username', 'first_name', 'last_name', 'telegram_id')
-    readonly_fields = ('date_joined', 'subscription_info')
+        'username', 'first_name', 'last_name', 'is_active', 'date_joined')
+    list_filter = ('is_active', )
+    search_fields = ('username', 'first_name', 'last_name')
+    readonly_fields = ('date_joined',)
 
     fieldsets = (
         (None, {
-            'fields': ('username', 'first_name', 'last_name', 'telegram_id', 'phone_number', 'is_active', 'date_joined')
+            'fields': ('username', 'first_name', 'last_name', 'is_active', 'date_joined')
         }),
         ('Permissions', {
             'fields': ('groups', 'user_permissions', 'is_staff', 'is_superuser'),
         }),
-        ('Notification Settings', {
-            'fields': ('notify_on_schedule_change', 'notify_on_lesson_start'),
-        }),
-        ('Subscription', {
-            'fields': ('subscription_info',),
-        }),
+
     )
     add_fieldsets = (
         (None, {
@@ -110,13 +105,6 @@ class UserAdmin(BaseUserAdmin):
                        'is_active'),
         }),
     )
-
-    def subscription_info(self, obj):
-        # Этот метод должен быть обновлен для отображения всех подписок пользователя
-        subscriptions = Subscription.objects.filter(user=obj)
-        return ", ".join([f"{sub.content_object}" for sub in subscriptions]) if subscriptions else "No subscriptions"
-
-    subscription_info.short_description = 'Subscription Info'
 
 
 class TimingInline(admin.TabularInline):

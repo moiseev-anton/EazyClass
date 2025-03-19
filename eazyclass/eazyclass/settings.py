@@ -49,14 +49,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'scheduler',
-    'scrapy_app',
+    'rest_framework',
+    # 'social_django', # auth
     'django_celery_beat',
     'rangefilter',
-    'api',
+    'debug_toolbar',
+    'scheduler',
+    'scrapy_app',
     'telegrambot',
     'utils',
-    'debug_toolbar',
 ]
 
 
@@ -109,6 +110,7 @@ DATABASES = {
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_USER_MODEL = 'scheduler.User'
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -238,6 +240,13 @@ CACHES = {
     }
 }
 
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+}
+
 REDIS_SCRAPY_URL = os.getenv('REDIS_SCRAPY')
 
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
@@ -245,5 +254,11 @@ CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+# Параметры для управления задачами
+CELERYD_POOL = 'prefork'  # Использование пула процессов
+CELERYD_CONCURRENCY = 4  # 4 рабочих процесса
 
 BASE_SCRAPING_URL = os.getenv('BASE_SCRAPING_URL')
+
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_REDIS_STORAGE_URL = os.getenv('TELEGRAM_REDIS_STORAGE_URL')

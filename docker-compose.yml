@@ -26,12 +26,25 @@ services:
     depends_on:
       - pgdb
       - redis
+      - rabbitmq
 
   redis:
     image: redis:7-alpine
     container_name: redis_cache
     ports:
       - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:management
+    hostname: rabbitmqhost
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      - .env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   celery-worker-bot:
     build:
@@ -58,8 +71,9 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - redis
       - pgdb
+      - redis
+      - rabbitmq
 
   celery-beat:
     build:
@@ -72,8 +86,9 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - redis
       - pgdb
+      - redis
+      - rabbitmq
 
   flower:
     build:
@@ -88,8 +103,9 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - redis
       - pgdb
+      - redis
+      - rabbitmq
 
 #  telegram-bot:
 #    build:
@@ -103,5 +119,6 @@ services:
 #    restart: always
 
 volumes:
+  rabbitmq_data:
   postgres_data:
 #    external: true

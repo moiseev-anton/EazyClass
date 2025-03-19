@@ -7,7 +7,7 @@ from bulk_sync import bulk_compare as original_bulk_compare
 from django.db import transaction
 
 from scheduler.models import Subject, Lesson, Classroom, Teacher, Period
-from scheduler.scapper.related_objects_map import RelatedObjectsMap
+from scheduler.scrapied_data_sync.related_objects_map import RelatedObjectsMap
 from scrapy_app.spiders import SCRAPED_LESSONS_KEY, SCRAPED_GROUPS_KEY, PAGE_HASH_KEY_PREFIX
 from utils import RedisClientManager
 

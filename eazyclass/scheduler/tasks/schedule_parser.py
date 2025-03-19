@@ -7,7 +7,7 @@ from celery import shared_task
 from django.db import transaction
 from django.db.models import Model
 
-from scheduler.models import Subject, Lesson, LessonBuffer, Classroom, Teacher, Period
+from scheduler.models import Subject, Lesson, Classroom, Teacher, Period
 from scheduler.tasks.db_queries import synchronize_lessons
 from scrapy_app.spiders.schedule_spyder import SCRAPED_LESSONS_KEY, SCRAPED_GROUPS_KEY, PAGE_HASH_KEY_PREFIX
 from utils import RedisClientManager
@@ -112,9 +112,9 @@ class ScheduleSyncManager:
     def push_lessons_to_db(self):
         try:
             with transaction.atomic():
-                LessonBuffer.objects.bulk_create(self.lesson_model_objects)
+                # LessonBuffer.objects.bulk_create(self.lesson_model_objects)
                 synchronize_lessons(self.scraped_groups)
-                LessonBuffer.objects.all().delete()
+                # LessonBuffer.objects.all().delete()
             logger.info(f"Данные обновлены для {len(self.scraped_groups)} групп")
         except Exception as e:
             logger.error(f"Ошибка при обновлении данных в БД: {str(e)}")
