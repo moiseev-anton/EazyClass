@@ -2,12 +2,14 @@ import hashlib
 
 from django.core.cache import caches
 
-cache = caches['scrapy_cache']
+# cache = caches['scrapy_cache']
 
 
+# Неиспользуемое решение
 class PageCache:
     def __init__(self):
-        self.cache = caches['scrapy_cache']
+        # self.cache = caches['scrapy_cache']
+        self.cache = ...
 
     def get_page_hash(self, url):
         """Получить сохранённый хэш для страницы по её URL."""

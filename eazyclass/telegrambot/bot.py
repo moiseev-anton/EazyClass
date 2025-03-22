@@ -9,6 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from dotenv import load_dotenv
 from telegrambot.handlers import start_router, main_router
+from telegrambot.backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 
+backend = BackendClient("http://127.0.0.1:8010/api")
 storage = RedisStorage.from_url(os.getenv('TELEGRAM_REDIS_STORAGE_URL'))
 dp = Dispatcher(storage=storage)
 
