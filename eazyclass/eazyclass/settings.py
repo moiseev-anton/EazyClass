@@ -224,6 +224,14 @@ CACHES = {
         },
         'KEY_PREFIX': 'default',
     },
+    'whitelist': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_CONFIG['default'],
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'refresh_token',
+    },
     'auth': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': REDIS_CONFIG['auth'],
@@ -237,19 +245,31 @@ CACHES = {
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-        # 'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'scheduler.authentication.HMACAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': True,
+
+    "SIGNING_KEY": SECRET_KEY,
+
     'AUTH_HEADER_TYPES': ('Bearer',),
+
+
+    "TOKEN_OBTAIN_SERIALIZER": "schedule.api.v1.serializers.CustomTokenObtainPairSerializer",
+    "TOKEN_REFRESH_SERIALIZER": "schedule.api.v1.serializers.CustomTokenRefreshSerializer",
 }
 
 REDIS_SCRAPY_URL = os.getenv('REDIS_SCRAPY')
@@ -270,6 +290,11 @@ TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
 TELEGRAM_REDIS_STORAGE_URL = os.getenv('TELEGRAM_REDIS_STORAGE_URL')
 
 AUTH_DEEPLINK_TEMPLATES = {
-    'telegram': f'https://t.me/{TELEGRAM_BOT_USERNAME}?start={{token}}',
-    'vk': f'https://vk.com/<bot_name>?start={{token}}',
+    'telegram': f'https://t.me/{TELEGRAM_BOT_USERNAME}?start={{nonce}}',
+    'vk': f'https://vk.com/<bot_name>?start={{nonce}}',
+}
+
+BOT_HMAC_SECRETS = {
+    'telegram': os.getenv('TELEGRAM_HMAC_SECRET'),
+    'vk': os.getenv('VK_HMAC_SECRET'),
 }

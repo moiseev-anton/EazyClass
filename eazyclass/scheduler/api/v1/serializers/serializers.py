@@ -1,6 +1,6 @@
 from rest_framework import serializers
+
 from scheduler.models import Group, Faculty, User, SocialAccount
-from django.conf import settings
 
 SOCIAL_ID_MAX_LENGTH = SocialAccount._meta.get_field('social_id').max_length
 PROVIDER_MAX_LENGTH = SocialAccount._meta.get_field('provider').max_length
@@ -22,8 +22,8 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'grade', 'faculty']
 
 
-class TokenSerializer(serializers.Serializer):
-    token = serializers.UUIDField(required=True)
+class NonceSerializer(serializers.Serializer):
+    nonce = serializers.UUIDField(required=True)
 
 
 class BotAuthSerializer(serializers.Serializer):
@@ -34,7 +34,7 @@ class BotAuthSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=LAST_NAME_MAX_LENGTH, required=False, allow_blank=True,
                                       allow_null=True)
     extra_data = serializers.JSONField(required=False, allow_null=True)
-    token = serializers. UUIDField(required=False)
+    nonce = serializers.UUIDField(required=False)
 
     def create(self, validated_data):
         social_id = validated_data['social_id']
