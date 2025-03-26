@@ -52,7 +52,3 @@ class HMACAuthentication(BaseAuthentication):
             return social_account.user, None  # `None` вместо токена, так как он не нужен
         except SocialAccount.DoesNotExist:
             raise AuthenticationFailed("User not found.")
-
-
-
-
