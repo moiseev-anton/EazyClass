@@ -1,3 +1,6 @@
+import json
+import logging
+import os
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Callable, Dict, Optional
@@ -6,6 +9,9 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from django.db.models import QuerySet
 
 # from scheduler.models import Group, Teacher
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 CACHE_TIMEOUT = 86400  # 24 часа
 KEYBOARD_ROW_WIDTH = 4
@@ -63,6 +69,85 @@ class KeyboardManager:
     )
     subscribe = InlineKeyboardMarkup(inline_keyboard=Buttons.subscribe_menu)
     extend_subscribe = InlineKeyboardMarkup(inline_keyboard=[[Buttons.context_schedule]] + Buttons.subscribe_menu)
+
+
+class DynamicKeyboardManager:
+    api_endpoint = "bot-faculties/"
+    cache_file = "cached_data.json"
+    cached_data = None
+
+    @classmethod
+    def load_initial_cache(cls):
+        """Загрузка данных из файла при инициализации"""
+        if os.path.exists(cls.cache_file):
+            with open(cls.cache_file, "r") as f:
+                cls.cached_data = json.load(f)
+            logger.info("Кэш загружен из файла")
+        else:
+            logger.info("Файл кэша не найден, требуется обновление")
+
+    async def fetch_schedule_data(self):
+        """Запрос данных от API"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(self.api_url) as response:
+                if response.status == 200:
+                    return await response.json()
+                logger.warning(f"Ошибка API: {response.status}")
+                return None
+
+    async def update_cache(self):
+        """Обновление кэшированных данных"""
+        new_data = await self.fetch_schedule_data()
+        if new_data and isinstance(new_data, dict) and new_data:
+            self.cached_data = new_data
+            with open(self.cache_file, "w") as f:
+                json.dump(new_data, f)
+            logger.info("Кэш обновлён из API")
+        else:
+            logger.warning("Получены некорректные данные или ошибка API")
+
+    def get_faculty_keyboard(self):
+        """Построение клавиатуры факультетов"""
+        if not self.cached_data:
+            return None
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+        for faculty_id, faculty in self.cached_data.items():
+            keyboard.inline_keyboard.append([
+                InlineKeyboardButton(text=faculty["title"], callback_data=f"faculty_{faculty_id}")
+            ])
+        return keyboard
+
+    def get_course_keyboard(self, faculty_id):
+        """Построение клавиатуры курсов"""
+        if not self.cached_data or faculty_id not in self.cached_data:
+            return None
+        faculty = self.cached_data[faculty_id]
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+        for course in faculty["courses"].keys():
+            keyboard.inline_keyboard.append([
+                InlineKeyboardButton(text=f"Курс {course}", callback_data=f"course_{course}")
+            ])
+        keyboard.inline_keyboard.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+        return keyboard
+
+    def get_group_keyboard(self, faculty_id, course):
+        """Построение клавиатуры групп"""
+        if not self.cached_data or faculty_id not in self.cached_data:
+            return None
+        faculty = self.cached_data[faculty_id]
+        if course not in faculty["courses"]:
+            return None
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+        for group in faculty["courses"][course]:
+            keyboard.inline_keyboard.append([
+                InlineKeyboardButton(text=group["title"], callback_data=f"group_{group['id']}")
+            ])
+        keyboard.inline_keyboard.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+        return keyboard
+
+    def is_data_available(self):
+        """Проверка доступности данных"""
+        return self.cached_data is not None and bool(self.cached_data)
 
     # _static_keyboards = {
     #     'home': InlineKeyboardMarkup(inline_keyboard=[[Buttons.home]]),

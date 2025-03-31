@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Any, TypeVar
 
@@ -8,6 +9,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.models import TokenUser
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import AccessToken, Token
+
+logger = logging.getLogger(__name__)
 
 cache = caches['whitelist']
 
@@ -65,13 +68,14 @@ class CustomRefreshToken(Token):
         jti = self.payload[api_settings.JTI_CLAIM]
         exp = self.payload["exp"]
         timeout = max(exp - time.time(), 1)  # Минимальное время хранения — 1 сек
+        logger.info(f'Пробуем сохранить токен в белом листе: jti={jti}, exp={exp}, timeout={timeout}')
         cache.set(jti, True, timeout=timeout)
 
-    def remove_from_whitelist(self):
+    def remove_from_whitelist(self, old_jti=None) -> None:
         """
         Удаляет токен из белого списка.
         """
-        jti = self.payload[api_settings.JTI_CLAIM]
+        jti = old_jti or self.payload[api_settings.JTI_CLAIM]
         if cache.has_key(jti):
             cache.delete(jti)
 
@@ -81,5 +85,6 @@ class CustomRefreshToken(Token):
         Создает токен и сразу добавляет в белый список.
         """
         token = super().for_user(user)  # type: ignore
+        logger.info("Токен создан. Переходим к проверке в белом листе")
         token.add_to_whitelist()  # type: ignore
         return token  # type: ignore

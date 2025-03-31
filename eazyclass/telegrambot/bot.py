@@ -3,38 +3,50 @@ import logging
 import os
 import sys
 
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.fsm.storage.redis import RedisStorage
+from aiogram import Dispatcher
 from dotenv import load_dotenv
-from telegrambot.handlers import start_router, main_router
-from telegrambot.backend_client import BackendClient
 
+from dependencies import Container
+from telegrambot.handlers import start_router, main_router
+from telegrambot.middleware import DependencyMiddleware
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
 
-# bot = Bot(
-#     token=settings.TELEGRAM_TOKEN,
-#     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-# )
-#
-# storage = RedisStorage.from_url(settings.TELEGRAM_REDIS_STORAGE_URL)
-# dp = Dispatcher(storage=storage)
+container = Container()
+
+container.config.api_base_url.from_env("API_BASE_URL", default="http://localhost:8010/api/v1/")
+container.config.hmac_secret.from_env("HMAC_SECRET")
+container.config.provider.from_env("PROVIDER", default="telegram")
+container.config.bot_token.from_env("TELEGRAM_BOT_TOKEN")
+container.config.redis_storage_url.from_env("TELEGRAM_REDIS_STORAGE_URL")
+
+api_client = container.api_client()
+keyboard_manager = container.keyboard_manager()
 
 
-bot = Bot(
-    token=os.getenv('TELEGRAM_BOT_TOKEN'),
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
+# Хуки запуска и остановки
+async def on_startup():
+    await api_client.start()
+    logger.info("Bot started.")
 
-backend = BackendClient("http://127.0.0.1:8010/api")
-storage = RedisStorage.from_url(os.getenv('TELEGRAM_REDIS_STORAGE_URL'))
-dp = Dispatcher(storage=storage)
 
+async def on_shutdown():
+    await api_client.close()
+    logger.info("Bot stopped.")
+
+
+bot = container.bot()
+storage = container.storage()
+dp = Dispatcher(bot=bot, storage=storage)
+
+dp.update.outer_middleware(DependencyMiddleware(container))
 dp.include_router(start_router)
 dp.include_router(main_router)
+dp.startup.register(on_startup)
+dp.shutdown.register(on_shutdown)
 
 
 async def main():
@@ -43,7 +55,6 @@ async def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
 
 # # Асинхронный обработчик команды /start

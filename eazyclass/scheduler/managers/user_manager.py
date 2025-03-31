@@ -17,7 +17,10 @@ class UserManager(BaseUserManager):
 
     @transaction.atomic
     def _create_user(self, social_id, provider, first_name=None, last_name=None, extra_data=None, **extra_fields):
-        from scheduler.models import SocialAccount
+        from scheduler.models import SocialAccount, Provider
+
+        if provider not in [p.value for p in Provider]:
+            raise ValueError(f"Недопустимый провайдер: {provider}. Допустимые значения: {[p.value for p in Provider]}")
 
         if SocialAccount.objects.filter(provider=provider, social_id=social_id).exists():
             raise ValueError(f"Аккаунт {provider} c id:{social_id} уже существует.")

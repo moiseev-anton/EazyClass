@@ -3,14 +3,14 @@ from django.db import models
 from scheduler.managers.social_account_manager import SocialAccountManager
 
 
-class SocialAccount(models.Model):
-    PLATFORM_CHOICES = [
-        ('telegram', 'Telegram'),
-        ('vk', 'VKontakte'),
-    ]
+class Provider(models.TextChoices):
+    TELEGRAM = 'telegram', 'Telegram'
+    VK = 'vk', 'VKontakte'
 
-    user = models.ForeignKey('scheduler.User', related_name='profiles', on_delete=models.CASCADE)
-    provider = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+
+class SocialAccount(models.Model):
+    user = models.ForeignKey('scheduler.User', related_name='accounts', on_delete=models.CASCADE)
+    provider = models.CharField(max_length=10, choices=Provider.choices)
     social_id = models.CharField(max_length=50)
     extra_data = models.JSONField(blank=True, null=True)
 

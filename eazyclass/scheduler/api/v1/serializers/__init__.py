@@ -1,2 +1,3 @@
-from .serializers import GroupSerializer, BotAuthSerializer, NonceSerializer
+from .auth_serializers import BotAuthSerializer, NonceSerializer
+from .serializers import GroupSerializer
 from .token_serializer import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer

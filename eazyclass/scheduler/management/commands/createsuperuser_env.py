@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from scheduler.models import User
+from scheduler.models import User, Provider
 import os
 from dotenv import load_dotenv
 import logging
@@ -31,6 +31,13 @@ class Command(BaseCommand):
         missing_fields = [key for key, value in required_fields.items() if not value]
         if missing_fields:
             self.stdout.write(self.style.ERROR(f"Отсутствуют обязательные переменные в .env: {', '.join(missing_fields)}"))
+            return
+
+        valid_providers = [p.value for p in Provider]  # ['telegram', 'vk']
+        if provider not in valid_providers:
+            self.stdout.write(self.style.ERROR(
+                f"Недопустимое значение provider: {provider}. Допустимые значения: {', '.join(valid_providers)}"
+            ))
             return
 
         try:

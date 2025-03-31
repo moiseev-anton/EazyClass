@@ -1,5 +1,7 @@
 import hashlib
 import hmac
+import logging
+import sys
 import time
 
 from django.conf import settings
@@ -7,6 +9,10 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
 from scheduler.models import SocialAccount
+
+logger = logging.getLogger(__name__)
+
+HMAC_TIMEOUT = 180  # 3 минуты
 
 
 class HMACAuthentication(BaseAuthentication):
@@ -18,13 +24,14 @@ class HMACAuthentication(BaseAuthentication):
         if not hmac_secret:
             return False
 
-        # Формируем сообщение, включая метод, URL и тело
+        # Воссоздаем изначальную строку
         method = request.method
         url = request.build_absolute_uri()
         body_hash = hashlib.sha256(request.body).hexdigest()
-        data = f"{method}\n{url}\n{timestamp}\n{provider}\n{social_id}\n{body_hash}".encode()
+        data = f"{method}\n{url}\n{timestamp}\n{provider}\n{social_id}\n{body_hash}".encode("utf-8")
 
-        expected_signature = hmac.new(hmac_secret.encode(), data, hashlib.sha256).hexdigest()
+        # Получаем HMAC и сравниваем
+        expected_signature = hmac.new(hmac_secret.encode("utf-8"), data, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected_signature, signature)
 
     def authenticate(self, request):
@@ -38,7 +45,7 @@ class HMACAuthentication(BaseAuthentication):
 
         # Проверка временной метки
         try:
-            if abs(time.time() - int(timestamp)) > 300:
+            if abs(time.time() - int(timestamp)) > HMAC_TIMEOUT:
                 raise AuthenticationFailed("Timestamp out of range.")
         except ValueError:
             raise AuthenticationFailed("Invalid timestamp format.")
@@ -49,6 +56,6 @@ class HMACAuthentication(BaseAuthentication):
 
         try:
             social_account = SocialAccount.objects.select_related("user").get(provider=provider, social_id=social_id)
-            return social_account.user, None  # `None` вместо токена, так как он не нужен
+            return social_account.user, None
         except SocialAccount.DoesNotExist:
-            raise AuthenticationFailed("User not found.")
+            return None, None
