@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart, CommandObject
 
 from telegrambot.dependencies import Container
 from telegrambot.keyboards import KeyboardManager
-from telegrambot.message_factory import MessageFactory
+from telegrambot.message_manager import MessageManager
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -22,7 +22,7 @@ async def start_handler(message: types.Message, command: CommandObject, deps: Co
         response = await deps.user_service().register_or_login_user(tlg_user, nonce)
 
         # Формируем ответ пользователю
-        reply = MessageFactory.get_start_message(
+        reply = MessageManager.get_start_message(
             user=response["user"],
             created=response["created"],
             nonce_status=response.get("nonce_status"),

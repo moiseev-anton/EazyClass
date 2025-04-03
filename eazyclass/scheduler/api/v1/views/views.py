@@ -11,9 +11,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from scheduler.api.v1.serializers import GroupSerializer, BotAuthSerializer, NonceSerializer
-from scheduler.api.v1.serializers.serializers import BotFacultySerializer, BotFacultyMapSerializer
+from scheduler.api.v1.serializers.serializers import (
+    BotFacultySerializer,
+    BotFacultyMapSerializer,
+    BotTeacherSerializer,
+    BotTeacherMapSerializer
+)
 from scheduler.authentication import HMACAuthentication
-from scheduler.models import Group, Faculty
+from scheduler.models import Group, Faculty, Teacher
 
 logger = logging.getLogger(__name__)
 
@@ -25,20 +30,20 @@ NONCE_TIMEOUT = 300  # 5 минут
 
 class DeeplinkFactory:
     @classmethod
-    def generate(cls, provider, nonce):
+    def generate(cls, platform, nonce):
         templates = getattr(settings, 'AUTH_DEEPLINK_TEMPLATES', {})
-        if provider not in templates:
-            raise ValueError(f"Invalid provider: {provider}")
+        if platform not in templates:
+            raise ValueError(f"Invalid platform: {platform}")
 
-        return templates[provider].format(nonce=nonce)
+        return templates[platform].format(nonce=nonce)
 
 
 class DeeplinkView(APIView):
-    def get(self, request: Request, provider):
+    def get(self, request: Request, platform):
         try:
             nonce = str(uuid.uuid4())
-            deeplink = DeeplinkFactory.generate(provider, nonce)
-            logger.info(f"Generated deeplink for provider {provider} with nonce {nonce}")
+            deeplink = DeeplinkFactory.generate(platform, nonce)
+            logger.info(f"Generated deeplink for platform {platform} with nonce {nonce}")
             return Response({"deeplink": deeplink, "nonce": nonce})
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
@@ -98,4 +103,20 @@ class BotFacultyView(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = BotFacultyMapSerializer(queryset)
+        return Response(serializer.data)
+
+# =====================================================================
+
+
+class BotTeacherView(viewsets.ReadOnlyModelViewSet):
+    serializer_class = BotTeacherSerializer
+    pagination_class = None
+    http_method_names = ['get']
+
+    def get_queryset(self):
+        return Teacher.objects.filter(is_active=True)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = BotTeacherMapSerializer(queryset)
         return Response(serializer.data)

@@ -6,21 +6,18 @@ import logging
 import time
 from typing import Optional, Dict, Any
 from urllib.parse import urljoin
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 
 import aiohttp
-import os
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api")
 
-
-class APIClient:
-    def __init__(self, base_url: str, hmac_secret: str, provider: str, bot_social_id: str = "bot"):
+class ApiClient:
+    def __init__(self, base_url: str, hmac_secret: str, platform: str, bot_social_id: str = "bot"):
         self.base_url = base_url
         self.hmac_secret = hmac_secret.encode("utf-8")
-        self.provider = provider
+        self.platform = platform
         self.bot_social_id = bot_social_id
         self.session: Optional[aiohttp.ClientSession] = None
         self.timeout = aiohttp.ClientTimeout(total=10, connect=3, sock_read=5)
@@ -29,24 +26,24 @@ class APIClient:
         """Инициализация сессии."""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(timeout=self.timeout)
-            logger.info("Backend client session started.")
+            logger.info("API client session started.")
 
     async def close(self) -> None:
         """Закрытие сессии."""
         if self.session and not self.session.closed:
             await self.session.close()
-            logger.info("Backend client session closed.")
+            logger.info("API client session closed.")
 
     def _generate_hmac_headers(self, method: str, url: str, body_json: bytes,  social_id: str) -> Dict[str, str]:
         """Генерирует HMAC-заголовки для запроса."""
         timestamp = str(int(time.time()))
         body_hash = hashlib.sha256(body_json).hexdigest()
-        message = f"{method}\n{url}\n{timestamp}\n{self.provider}\n{social_id}\n{body_hash}".encode("utf-8")
+        message = f"{method}\n{url}\n{timestamp}\n{self.platform}\n{social_id}\n{body_hash}".encode("utf-8")
         signature = hmac.new(self.hmac_secret, message, hashlib.sha256).hexdigest()
         return {
             "X-Signature": signature,
             "X-Timestamp": timestamp,
-            "X-Provider": self.provider,
+            "X-Platform": self.platform,
             "X-Social-ID": social_id,
             "Content-Type": "application/json",
         }

@@ -16,14 +16,14 @@ class UserManager(BaseUserManager):
                 return username
 
     @transaction.atomic
-    def _create_user(self, social_id, provider, first_name=None, last_name=None, extra_data=None, **extra_fields):
-        from scheduler.models import SocialAccount, Provider
+    def _create_user(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
+        from scheduler.models import SocialAccount, Platform
 
-        if provider not in [p.value for p in Provider]:
-            raise ValueError(f"Недопустимый провайдер: {provider}. Допустимые значения: {[p.value for p in Provider]}")
+        if platform not in [p.value for p in Platform]:
+            raise ValueError(f"Недопустимая платформа: {platform}. Допустимые значения: {[p.value for p in Platform]}")
 
-        if SocialAccount.objects.filter(provider=provider, social_id=social_id).exists():
-            raise ValueError(f"Аккаунт {provider} c id:{social_id} уже существует.")
+        if SocialAccount.objects.filter(platform=platform, social_id=social_id).exists():
+            raise ValueError(f"Аккаунт {platform} c id:{social_id} уже существует.")
 
         user = self.model(
             first_name=first_name,
@@ -37,19 +37,19 @@ class UserManager(BaseUserManager):
         # Привязываем к платформе (Telegram/VK)
         SocialAccount.objects.create(
             user=user,
-            provider=provider,
+            platform=platform,
             social_id=social_id,
             extra_data=extra_data
         )
         return user
 
-    def create_user(self, social_id, provider, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def create_user(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
         extra_fields.setdefault("is_staff", False)
         extra_fields.setdefault("is_superuser", False)
 
-        return self._create_user(social_id, provider, first_name, last_name, extra_data, **extra_fields)
+        return self._create_user(social_id, platform, first_name, last_name, extra_data, **extra_fields)
 
-    def create_superuser(self, social_id, provider, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def create_superuser(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -58,19 +58,19 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self._create_user(social_id, provider, first_name, last_name, extra_data, **extra_fields)
+        return self._create_user(social_id, platform, first_name, last_name, extra_data, **extra_fields)
 
     @transaction.atomic
-    def get_or_create_user(self, social_id, provider, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def get_or_create_user(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
         from scheduler.models import SocialAccount
 
         try:
-            social_account = SocialAccount.objects.get(provider=provider, social_id=social_id)
+            social_account = SocialAccount.objects.get(platform=platform, social_id=social_id)
             return social_account.user, False
         except SocialAccount.DoesNotExist:
             user = self.create_user(
                 social_id=social_id,
-                provider=provider,
+                platform=platform,
                 first_name=first_name,
                 last_name=last_name,
                 extra_data=extra_data,

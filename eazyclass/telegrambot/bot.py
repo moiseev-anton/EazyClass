@@ -1,55 +1,49 @@
 import asyncio
 import logging
-import os
 import sys
 
 from aiogram import Dispatcher
-from dotenv import load_dotenv
 
+from config import settings
 from dependencies import Container
-from telegrambot.handlers import start_router, main_router
-from telegrambot.middleware import DependencyMiddleware
+from telegrambot.handlers import start_router, main_router, faculty_router, teacher_router
+from telegrambot.tasks import setup_periodic_task_scheduler
 
-logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logging.basicConfig(level=getattr(logging, settings.log_level), stream=sys.stdout)
 logger = logging.getLogger(__name__)
-
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
-
-container = Container()
-
-container.config.api_base_url.from_env("API_BASE_URL", default="http://localhost:8010/api/v1/")
-container.config.hmac_secret.from_env("HMAC_SECRET")
-container.config.provider.from_env("PROVIDER", default="telegram")
-container.config.bot_token.from_env("TELEGRAM_BOT_TOKEN")
-container.config.redis_storage_url.from_env("TELEGRAM_REDIS_STORAGE_URL")
-
-api_client = container.api_client()
-keyboard_manager = container.keyboard_manager()
 
 
 # Хуки запуска и остановки
-async def on_startup():
+async def on_startup(deps: Container):
+    api_client = deps.api_client()
+    cache_service = deps.cache_service()
     await api_client.start()
+    await cache_service.update_all()  # Первичное обновление клавиатур
+    await setup_periodic_task_scheduler(deps=deps)  # Запуск планировщика
     logger.info("Bot started.")
 
 
-async def on_shutdown():
+async def on_shutdown(deps: Container):
+    api_client = deps.api_client()
     await api_client.close()
     logger.info("Bot stopped.")
 
 
-bot = container.bot()
-storage = container.storage()
-dp = Dispatcher(bot=bot, storage=storage)
-
-dp.update.outer_middleware(DependencyMiddleware(container))
-dp.include_router(start_router)
-dp.include_router(main_router)
-dp.startup.register(on_startup)
-dp.shutdown.register(on_shutdown)
-
-
 async def main():
+    container = Container()
+    container.config.from_pydantic(settings)
+
+    bot = container.bot()
+    storage = container.storage()
+    dp = Dispatcher(bot=bot, storage=storage, deps=container)
+
+    dp.include_router(start_router)
+    dp.include_router(main_router)
+    dp.include_router(faculty_router)
+    dp.include_router(teacher_router)
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
@@ -57,52 +51,8 @@ async def main():
 if __name__ == '__main__':
     asyncio.run(main())
 
-# # Асинхронный обработчик команды /start
-# @bot.message_handler(commands=['start'])
-# async def start_message(message):
-#     try:
-#         telegram_user = message.from_user
-#         created = UserService.sign_up_user(telegram_user)
-#         user_data = User.objects.get_user_data_by_telegram_id(telegram_user.id)
-#
-#         keyboard = get_keyboard('phone_request')
-#         if created:
-#             response_message = "Добро пожаловать!\nПожалуйста, поделитесь своим номером телефона"
-#         elif user_data.get('phone_number'):
-#             response_message = "С возвращением!"
-#             keyboard = get_keyboard('start')
-#         else:
-#             response_message = "С возвращением!\nПожалуйста, поделитесь своим номером телефона"
-#
-#         # Асинхронная отправка сообщения с клавиатурой
-#         await bot.send_message(message.chat.id, response_message, reply_markup=keyboard)
-#     except Exception as e:
-#         logger.error(f"Ошибка обработки команды start: {str(e)}")
-#         await bot.send_message(message.chat.id, "Что-то пошло не так.\nПожалуйста, попробуйте позже.")
-#
-#
-# @bot.message_handler(content_types=['contact'])
-# async def handle_contact(message):
-#     try:
-#         chat_id = message.chat.id
-#         msg_id = message.message_id
-#         contact = message.contact
-#         telegram_id = message.from_user.id
-#
-#         User.objects.update_contact(
-#             telegram_id=telegram_id,
-#             contact=contact
-#         )
-#
-#         await bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text="Номер сохранен",
-#                                     reply_markup=get_keyboard('start'))
-#
-#     except Exception as e:
-#         logger.error(f"Ошибка в обработке contact сообщения: {str(e)}")
-#         error_message = "Кажется что-то пошло не так. Попробуйте повторить позже"
-#         await bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
-#                                     text=error_message, reply_markup=get_keyboard('start'))
-#
+
+
 #
 # # Асинхронный обработчик нажатий на кнопки
 # @bot.callback_query_handler(func=lambda call: True)

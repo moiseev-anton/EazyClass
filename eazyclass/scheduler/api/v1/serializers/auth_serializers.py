@@ -3,10 +3,10 @@ import logging
 from django.core.cache import caches
 from rest_framework import serializers
 
-from scheduler.models import User, SocialAccount, Provider
+from scheduler.models import User, SocialAccount, Platform
 
 SOCIAL_ID_MAX_LENGTH = SocialAccount._meta.get_field('social_id').max_length
-PROVIDER_MAX_LENGTH = SocialAccount._meta.get_field('provider').max_length
+PLATFORM_MAX_LENGTH = SocialAccount._meta.get_field('platform').max_length
 FIRST_NAME_MAX_LENGTH = User._meta.get_field('first_name').max_length
 LAST_NAME_MAX_LENGTH = User._meta.get_field('last_name').max_length
 
@@ -39,8 +39,8 @@ class BotAuthSerializer(serializers.Serializer):
         max_length=SOCIAL_ID_MAX_LENGTH,
         required=True
     )
-    provider = serializers.ChoiceField(
-        choices=Provider.choices,
+    platform = serializers.ChoiceField(
+        choices=Platform.choices,
     )
     first_name = serializers.CharField(
         max_length=FIRST_NAME_MAX_LENGTH,
@@ -60,14 +60,14 @@ class BotAuthSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         social_id = validated_data['social_id']
-        provider = validated_data['provider']
+        platform = validated_data['platform']
         first_name = validated_data['first_name']
         last_name = validated_data['last_name']
         extra_data = validated_data.get('extra_data', {})
 
         user, created = User.objects.get_or_create_user(
             social_id=social_id,
-            provider=provider,
+            platform=platform,
             first_name=first_name,
             last_name=last_name,
             extra_data=extra_data
