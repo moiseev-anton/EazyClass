@@ -6,7 +6,7 @@ from aiogram import Dispatcher
 
 from config import settings
 from dependencies import Container
-from telegrambot.handlers import start_router, main_router, faculty_router, teacher_router
+from telegrambot.handlers import start_router, main_router, faculty_router, teacher_router, navigation_router
 from telegrambot.tasks import setup_periodic_task_scheduler
 
 logging.basicConfig(level=getattr(logging, settings.log_level), stream=sys.stdout)
@@ -41,6 +41,7 @@ async def main():
     dp.include_router(main_router)
     dp.include_router(faculty_router)
     dp.include_router(teacher_router)
+    dp.include_router(navigation_router)
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 

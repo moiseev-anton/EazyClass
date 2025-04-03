@@ -12,8 +12,8 @@ class MessageManager:
     }
 
     FACULTIES_PROMPT = "Выберите факультет:"
-    COURSES_PROMPT = "<b>{faculty_title}</b>\n\nВыберите курс:"
-    GROUPS_PROMPT = "<b>{faculty_title}</b>\n<b>Курс:</b> {course_id}\n\nВыберите группу:"
+    COURSES_PROMPT = "{faculty_title}\n\nВыберите курс:"
+    GROUPS_PROMPT = "{faculty_title}\n{course_id} курс\n\nВыберите группу:"
     GROUP_SELECTED = "Вы выбрали группу: {group_title}\nСсылка: {group_link}"
     ERROR_DEFAULT = "⚠ Что-то пошло не так, попробуйте снова."
 
@@ -63,7 +63,7 @@ class MessageManager:
         return cls.GROUPS_PROMPT.format(faculty_title=faculty_title, course_id=course_id)
 
     @classmethod
-    def get_group_selected_message(cls, faculty_id: str, course_id: str, group_id: int) -> str:
+    def get_group_selected_message(cls, faculty_id: str, course_id: str, group_id: str) -> str:
         """Сообщение после выбора группы."""
         group = cache_manager.get_group(faculty_id, course_id, group_id)
         if not group:
@@ -79,7 +79,7 @@ class MessageManager:
         return cls.TEACHERS_PROMPT.format(letter=letter)
 
     @classmethod
-    def get_teacher_selected_message(cls, letter: str, teacher_id: int) -> str:
+    def get_teacher_selected_message(cls, letter: str, teacher_id: str) -> str:
         teacher = cache_manager.get_teacher(letter, teacher_id)
         if not teacher:
             return "Ошибка: преподаватель не найден."

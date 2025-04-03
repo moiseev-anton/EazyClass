@@ -15,8 +15,7 @@ class GroupSerializer(serializers.ModelSerializer):
 class BotFacultyMapSerializer(serializers.Serializer):
     def to_representation(self, data):
         # Преобразуем queryset в словарь с ключами по id
-        return {str(faculty.id): BotFacultySerializer(faculty).data
-                for faculty in data}
+        return {faculty.id: BotFacultySerializer(faculty).data for faculty in data}
 
 
 class BotFacultySerializer(serializers.ModelSerializer):
@@ -29,11 +28,13 @@ class BotFacultySerializer(serializers.ModelSerializer):
 
     def get_courses(self, faculty):
         """ Формирование структуры курсов с группами """
-        courses = defaultdict(list)
+        courses = defaultdict(dict)
         groups = getattr(faculty, 'active_groups', [])
         for group in groups:
-            courses[group.grade].append(GroupSerializer(group).data)
-        return dict(sorted(courses.items(), key=lambda x: x[0]))
+            grade = str(group.grade)
+            group_data = GroupSerializer(group).data
+            courses[grade][group.id] = group_data
+        return courses
 
 
 class BotTeacherSerializer(serializers.ModelSerializer):
@@ -49,15 +50,9 @@ class BotTeacherMapSerializer(serializers.Serializer):
         Преобразует queryset учителей в словарь, где ключи — первые буквы фамилий,
         а значения — списки учителей, отсортированные по full_name.
         """
-        teachers_map = {}
+        teachers_map = defaultdict(dict)
         for teacher in data:
-            first_letter = teacher.full_name[0].upper()  # Берем первую букву и приводим к верхнему регистру
-            if first_letter not in teachers_map:
-                teachers_map[first_letter] = []
-            teachers_map[first_letter].append(BotTeacherSerializer(teacher).data)
-
-        # Сортируем списки учителей внутри каждого ключа
-        for letter in teachers_map:
-            teachers_map[letter].sort(key=lambda x: x['full_name'])
+            first_letter = teacher.full_name[0].upper()
+            teachers_map[first_letter][teacher.id] = BotTeacherSerializer(teacher).data
 
         return teachers_map

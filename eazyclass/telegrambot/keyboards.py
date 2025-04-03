@@ -1,4 +1,5 @@
 import logging
+from cachetools.func import ttl_cache
 
 from aiogram.filters.callback_data import CallbackData
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton, InlineKeyboardMarkup
@@ -25,7 +26,7 @@ class CourseCallback(CallbackData, prefix="c"):
 
 
 class GroupCallback(CallbackData, prefix="g"):
-    id: int
+    id: str
 
 
 class AlphabetCallback(CallbackData, prefix="a"):
@@ -33,7 +34,7 @@ class AlphabetCallback(CallbackData, prefix="a"):
 
 
 class TeacherCallback(CallbackData, prefix="t"):
-    id: int
+    id: str
 
 
 class Buttons:
@@ -109,6 +110,7 @@ class KeyboardManager:
     extend_subscribe = InlineKeyboardMarkup(inline_keyboard=[[Buttons.context_schedule]] + Buttons.subscribe_menu)
 
     @staticmethod
+    @ttl_cache(maxsize=1, ttl=60*30)
     def get_faculties_keyboard() -> InlineKeyboardMarkup:
         """Собирает клавиатуру факультетов из кэша."""
         builder = InlineKeyboardBuilder()
@@ -123,13 +125,13 @@ class KeyboardManager:
         return builder.as_markup()
 
     @staticmethod
+    @ttl_cache(maxsize=128, ttl=60 * 10)
     def get_courses_keyboard(faculty_id: str) -> InlineKeyboardMarkup:
         """
         Клавиатура курсов для выбранного факультета
         """
         builder = InlineKeyboardBuilder()
-        faculty = cache_manager.faculties.get(faculty_id, {})
-        courses = faculty.get("courses", {})
+        courses = cache_manager.get_faculty_courses(faculty_id)
 
         for course_key in courses.keys():
             builder.add(Buttons.course(course_key))
@@ -138,17 +140,16 @@ class KeyboardManager:
         return builder.as_markup()
 
     @staticmethod
+    @ttl_cache(maxsize=128, ttl=60 * 10)
     def get_groups_keyboard(faculty_id: str, course: str) -> InlineKeyboardMarkup:
         """Собирает клавиатуру групп для выбранного факультета и курса."""
         builder = InlineKeyboardBuilder()
-        faculty = cache_manager.faculties.get(faculty_id, {})
-        courses = faculty.get("courses", {})
-        groups = courses.get(course, [])
+        groups = cache_manager.get_course(faculty_id, course)
 
-        for group in groups:
+        for group_id, group in groups.items():
             builder.button(
                 text=group.get("title", "-"),
-                callback_data=GroupCallback(id=group["id"]).pack()
+                callback_data=GroupCallback(id=group_id).pack()
             )
 
         if groups:
@@ -158,26 +159,31 @@ class KeyboardManager:
         return builder.as_markup()
 
     @staticmethod
+    @ttl_cache(maxsize=1, ttl=60 * 30)
     def get_alphabet_keyboard() -> InlineKeyboardMarkup:
         """Собирает клавиатуру с буквами алфавита из teachers_cache."""
         builder = InlineKeyboardBuilder()
-        for letter in cache_manager.get_alphabet():
+        letters = cache_manager.get_alphabet()
+
+        for letter in letters:
             builder.add(Buttons.letter(letter))
-        if cache_manager.teachers:
+
+        if letters:
             builder.adjust(5)  # 5 букв в ряд
         builder.row(Buttons.home)
         return builder.as_markup()
 
     @staticmethod
+    @ttl_cache(maxsize=33, ttl=60 * 10)
     def get_teachers_keyboard(letter: str) -> InlineKeyboardMarkup:
         """Собирает клавиатуру учителей для выбранной буквы."""
         builder = InlineKeyboardBuilder()
         teachers = cache_manager.get_teachers_by_letter(letter)
 
-        for teacher in teachers:
+        for teacher_id, teacher in teachers.items():
             builder.button(
                 text=teacher.get("short_name", "-"),
-                callback_data=TeacherCallback(id=teacher["id"]).pack()
+                callback_data=TeacherCallback(id=teacher_id).pack()
             )
 
         if teachers:

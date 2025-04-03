@@ -46,15 +46,3 @@ async def teacher_selected_handler(callback: types.CallbackQuery, callback_data:
     )
     await state.clear()
     await callback.answer()
-
-
-async def back_handler(callback: types.CallbackQuery, state: FSMContext):
-    current_state = await state.get_state()
-    data = await state.get_data()
-    letter = data.get("letter")
-
-    if current_state == TeacherStates.selecting_teacher.state:
-        if letter:
-            await alphabet_handler(callback, state)
-        else:
-            await handle_error(callback, state)

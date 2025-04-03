@@ -66,20 +66,6 @@ async def group_selected_handler(callback: types.CallbackQuery, callback_data: G
     await callback.answer()
 
 
-@router.callback_query(F.data == "back")
-async def back_handler(callback: types.CallbackQuery, state: FSMContext):
-    current_state = await state.get_state()
-    data = await state.get_data()
-    faculty_id = data.get("faculty_id")
-
-    if current_state == FacultyStates.selecting_course.state:
-        await faculties_handler(callback, state)
-    elif current_state == FacultyStates.selecting_group.state and faculty_id:
-        if faculty_id:
-            fake_callback_data = FacultyCallback(key=faculty_id)
-            await faculty_courses_handler(callback, fake_callback_data, state)
-    else:
-        await handle_error(callback, state)
 
 
 
