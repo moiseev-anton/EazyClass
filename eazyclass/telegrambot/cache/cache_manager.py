@@ -1,5 +1,3 @@
-
-
 class CacheManager:
     def __init__(self):
         self.faculties = {}
@@ -34,7 +32,3 @@ class CacheManager:
         """Возвращает данные учителя по букве и ID."""
         teachers = self.get_teachers_by_letter(letter)
         return teachers.get(teacher_id, {})
-
-
-cache_manager = CacheManager()
-

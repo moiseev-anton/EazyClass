@@ -1,8 +1,10 @@
+import logging
+
 from aiogram import types
 from aiogram.fsm.context import FSMContext
+
 from telegrambot.keyboards import KeyboardManager
 from telegrambot.message_manager import MessageManager
-import logging
 
 logger = logging.getLogger(__name__)
 

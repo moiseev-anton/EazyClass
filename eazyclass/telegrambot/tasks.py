@@ -1,7 +1,9 @@
 import logging
-from telegrambot.dependencies import Container
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from telegrambot.config import settings
+from telegrambot.dependencies import Container
 
 logger = logging.getLogger(__name__)
 
@@ -26,5 +28,3 @@ async def setup_periodic_task_scheduler(deps: Container) -> AsyncIOScheduler:
 
     scheduler.start()
     return scheduler
-
-

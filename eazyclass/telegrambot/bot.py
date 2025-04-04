@@ -6,7 +6,13 @@ from aiogram import Dispatcher
 
 from config import settings
 from dependencies import Container
-from telegrambot.handlers import start_router, main_router, faculty_router, teacher_router, navigation_router
+from telegrambot.handlers import (
+    start_router,
+    main_router,
+    faculty_router,
+    teacher_router,
+    navigation_router,
+)
 from telegrambot.tasks import setup_periodic_task_scheduler
 
 logging.basicConfig(level=getattr(logging, settings.log_level), stream=sys.stdout)
@@ -49,9 +55,8 @@ async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
-
 
 
 #

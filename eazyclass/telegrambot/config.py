@@ -1,4 +1,3 @@
-# config.py
 from pathlib import Path
 
 from pydantic import Field
@@ -16,11 +15,16 @@ class Settings(BaseSettings):
     storage_data_ttl: int
     platform: str = "telegram"
 
-    base_link: str = Field(alias='base_scraping_url')
+    base_link: str = Field(alias="base_scraping_url")
 
     faculties_cache_file: str = str(BASE_DIR / "cache" / "faculties.json")
     teachers_cache_file: str = str(BASE_DIR / "cache" / "teachers.json")
-    update_keyboards_rule: dict = {"trigger": "cron", "hour": 3, "minute": 0, "timezone": "Europe/Moscow"}
+    update_keyboards_rule: dict = {
+        "trigger": "cron",
+        "hour": 3,
+        "minute": 0,
+        "timezone": "Europe/Moscow",
+    }
 
     log_level: str = "INFO"
     project_name: str = "TelegramBot"
@@ -37,7 +41,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 if __name__ == "__main__":
-    print(settings.model_config['env_file'])
+    print(settings.model_config["env_file"])
     print(settings.hmac_secret)
     print(settings.api_base_url)
     print(settings.base_link)

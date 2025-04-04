@@ -1,1 +1,1 @@
-from .cache_manager import cache_manager, CacheManager
+from .cache_manager import CacheManager
