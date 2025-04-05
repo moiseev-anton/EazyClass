@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
 
-from telegrambot.cache import CacheManager
+from telegrambot.cache import CacheRepository
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ class MessageManager:
     TEACHERS_PROMPT = "Выберите преподавателя:"
     TEACHER_SELECTED = "Вы выбрали преподавателя: {teacher_full_name}"
 
-    def __init__(self, cache_manager: CacheManager):
-        self.cache_manager = cache_manager
+    def __init__(self, cache_repository: CacheRepository):
+        self.cache_repository = cache_repository
 
     @classmethod
     def get_start_message(
@@ -53,14 +53,14 @@ class MessageManager:
 
     def get_courses_message(self, faculty_id: str) -> str:
         """Сообщение для выбора курса с указанием факультета."""
-        faculty_title = self.cache_manager.get_faculty(faculty_id).get(
+        faculty_title = self.cache_repository.get_faculty(faculty_id).get(
             "title", "Неизвестный факультет"
         )
         return self.COURSES_PROMPT.format(faculty_title=faculty_title)
 
     def get_groups_message(self, faculty_id: str, course_id: str) -> str:
         """Сообщение для выбора группы с указанием факультета и курса."""
-        faculty_title = self.cache_manager.get_faculty(faculty_id).get(
+        faculty_title = self.cache_repository.get_faculty(faculty_id).get(
             "title", "Неизвестный факультет"
         )
         return self.GROUPS_PROMPT.format(
@@ -71,7 +71,7 @@ class MessageManager:
         self, faculty_id: str, course_id: str, group_id: str
     ) -> str:
         """Сообщение после выбора группы."""
-        group = self.cache_manager.get_group(faculty_id, course_id, group_id)
+        group = self.cache_repository.get_group(faculty_id, course_id, group_id)
         if not group:
             return "Ошибка: группа не найдена."
         return self.GROUP_SELECTED.format(
@@ -87,7 +87,7 @@ class MessageManager:
         return cls.TEACHERS_PROMPT.format(letter=letter)
 
     def get_teacher_selected_message(self, letter: str, teacher_id: str) -> str:
-        teacher = self.cache_manager.get_teacher(letter, teacher_id)
+        teacher = self.cache_repository.get_teacher(letter, teacher_id)
         if not teacher:
             return "Ошибка: преподаватель не найден."
         return self.TEACHER_SELECTED.format(

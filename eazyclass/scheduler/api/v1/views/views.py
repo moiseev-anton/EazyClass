@@ -10,20 +10,24 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from scheduler.api.v1.serializers import GroupSerializer, BotAuthSerializer, NonceSerializer
+from scheduler.api.v1.serializers import (
+    GroupSerializer,
+    BotAuthSerializer,
+    NonceSerializer,
+)
 from scheduler.api.v1.serializers.serializers import (
     BotFacultySerializer,
     BotFacultyMapSerializer,
     BotTeacherSerializer,
-    BotTeacherMapSerializer
+    BotTeacherMapSerializer,
 )
-from scheduler.authentication import HMACAuthentication
+from scheduler.authentication import HMACAuthentication, IsHMACAuthenticated
 from scheduler.models import Group, Faculty, Teacher
 
 logger = logging.getLogger(__name__)
 
 # Получаем кэш для аутентификации
-auth_cache = caches['auth']
+auth_cache = caches["auth"]
 
 NONCE_TIMEOUT = 300  # 5 минут
 
@@ -31,7 +35,7 @@ NONCE_TIMEOUT = 300  # 5 минут
 class DeeplinkFactory:
     @classmethod
     def generate(cls, platform, nonce):
-        templates = getattr(settings, 'AUTH_DEEPLINK_TEMPLATES', {})
+        templates = getattr(settings, "AUTH_DEEPLINK_TEMPLATES", {})
         if platform not in templates:
             raise ValueError(f"Invalid platform: {platform}")
 
@@ -39,11 +43,15 @@ class DeeplinkFactory:
 
 
 class DeeplinkView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request: Request, platform):
         try:
             nonce = str(uuid.uuid4())
             deeplink = DeeplinkFactory.generate(platform, nonce)
-            logger.info(f"Generated deeplink for platform {platform} with nonce {nonce}")
+            logger.info(
+                f"Generated deeplink for platform {platform} with nonce {nonce}"
+            )
             return Response({"deeplink": deeplink, "nonce": nonce})
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
@@ -51,7 +59,7 @@ class DeeplinkView(APIView):
 
 class BotAuthView(APIView):
     authentication_classes = [HMACAuthentication]
-    permission_classes = [AllowAny]
+    permission_classes = [IsHMACAuthenticated]
 
     def post(self, request: Request):
         user = request.user
@@ -67,19 +75,23 @@ class BotAuthView(APIView):
         nonce_serializer.is_valid(raise_exception=True)
         nonce_status = nonce_serializer.save_nonce(user_id=str(user.id), timeout=300)
 
-        return Response({
-            "user": {
-                "id": user.id,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "username": user.username
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "username": user.username,
+                },
+                "created": created,
+                "nonce_status": nonce_status,
             },
-            "created": created,
-            "nonce_status": nonce_status
-        }, status=status.HTTP_200_OK)
+            status=status.HTTP_200_OK,
+        )
 
 
 # =====================================================================
+
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
@@ -87,16 +99,21 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class BotFacultyView(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = [HMACAuthentication]
+    permission_classes = [AllowAny]
+
     serializer_class = BotFacultySerializer
     pagination_class = None
-    http_method_names = ['get']
+    http_method_names = ["get"]
 
     def get_queryset(self):
         return Faculty.objects.filter(is_active=True).prefetch_related(
             models.Prefetch(
-                'groups',
-                queryset=Group.objects.filter(is_active=True).order_by('grade', 'title'),
-                to_attr='active_groups'
+                "groups",
+                queryset=Group.objects.filter(is_active=True).order_by(
+                    "grade", "title"
+                ),
+                to_attr="active_groups",
             )
         )
 
@@ -105,13 +122,17 @@ class BotFacultyView(viewsets.ReadOnlyModelViewSet):
         serializer = BotFacultyMapSerializer(queryset)
         return Response(serializer.data)
 
+
 # =====================================================================
 
 
 class BotTeacherView(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = [HMACAuthentication]
+    permission_classes = [AllowAny]
+
     serializer_class = BotTeacherSerializer
     pagination_class = None
-    http_method_names = ['get']
+    http_method_names = ["get"]
 
     def get_queryset(self):
         return Teacher.objects.filter(is_active=True)

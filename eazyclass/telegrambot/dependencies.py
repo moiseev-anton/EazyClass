@@ -6,9 +6,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dependency_injector import containers, providers
 
 from telegrambot.api_client import ApiClient
-from telegrambot.cache import CacheManager
-from telegrambot.keyboards import KeyboardManager
-from telegrambot.message_manager import MessageManager
+from telegrambot.cache import CacheRepository
+from telegrambot.managers.keyboard_manager import KeyboardManager
+from telegrambot.managers.message_manager import MessageManager
 from telegrambot.services import UserService, CacheService
 
 
@@ -20,6 +20,7 @@ class Container(containers.DeclarativeContainer):
         base_url=config.api_base_url,
         hmac_secret=config.hmac_secret,
         platform=config.platform,
+        bot_social_id=config.bot_social_id,
     )
 
     bot = providers.Singleton(
@@ -37,17 +38,17 @@ class Container(containers.DeclarativeContainer):
 
     scheduler = providers.Singleton(AsyncIOScheduler)
 
-    cache_manager = providers.Singleton(CacheManager)
+    cache_repository = providers.Singleton(CacheRepository)
 
-    keyboard_manager = providers.Singleton(KeyboardManager, cache_manager=cache_manager)
-    message_manager = providers.Singleton(MessageManager, cache_manager=cache_manager)
+    keyboard_manager = providers.Singleton(KeyboardManager, cache_repository=cache_repository)
+    message_manager = providers.Singleton(MessageManager, cache_repository=cache_repository)
 
     cache_service = providers.Factory(
         CacheService,
         api_client=api_client,
         faculties_cache_file=config.faculties_cache_file,
         teachers_cache_file=config.teachers_cache_file,
-        cache_manager=cache_manager,
+        cache_repository=cache_repository,
     )
 
-    user_service = providers.Factory(UserService, api_client=api_client)
+    user_service = providers.Factory(UserService, api_client=api_client,)

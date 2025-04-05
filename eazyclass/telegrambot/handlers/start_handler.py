@@ -19,9 +19,9 @@ async def start_handler(
     nonce = command.args
 
     try:
-        response = await deps.user_service(tlg_user).register_or_login_user(nonce)
+        response = await deps.user_service(user=tlg_user).register_or_login_user(nonce)
 
-        # Формируем ответ пользователю
+        # Формируем ответ пользовател
         reply = deps.message_manager().get_start_message(
             user=response["user"],
             created=response["created"],

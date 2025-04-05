@@ -1,4 +1,4 @@
-class CacheManager:
+class CacheRepository:
     def __init__(self):
         self.faculties = {}
         self.teachers = {}

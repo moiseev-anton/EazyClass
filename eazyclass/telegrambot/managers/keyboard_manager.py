@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import (
 )
 from cachetools.func import ttl_cache
 
-from telegrambot.cache import CacheManager
+from telegrambot.cache import CacheRepository
 from telegrambot.config import settings
 
 logger = logging.getLogger(__name__)
@@ -128,19 +128,19 @@ class KeyboardManager:
         inline_keyboard=[[Button.context_schedule]] + Button.subscribe_menu
     )
 
-    def __init__(self, cache_manager: CacheManager):
-        self.cache_manager = cache_manager
+    def __init__(self, cache_repository: CacheRepository):
+        self.cache_repository = cache_repository
 
     @ttl_cache(maxsize=1, ttl=60 * 30)
     def get_faculties_keyboard(self) -> InlineKeyboardMarkup:
         """Собирает клавиатуру факультетов из кэша."""
         builder = InlineKeyboardBuilder()
-        for faculty_key, faculty in self.cache_manager.faculties.items():
+        for faculty_key, faculty in self.cache_repository.faculties.items():
             builder.button(
                 text=faculty.get("short_title", "-"),
                 callback_data=FacultyCallback(key=faculty_key).pack(),
             )
-        if self.cache_manager.faculties:
+        if self.cache_repository.faculties:
             builder.adjust(3)  # # до 2 факультетов в строке
         builder.row(Button.home)
         return builder.as_markup()
@@ -151,7 +151,7 @@ class KeyboardManager:
         Клавиатура курсов для выбранного факультета
         """
         builder = InlineKeyboardBuilder()
-        courses = self.cache_manager.get_faculty_courses(faculty_id)
+        courses = self.cache_repository.get_faculty_courses(faculty_id)
 
         for course_key in courses.keys():
             builder.add(Button.course(course_key))
@@ -163,7 +163,7 @@ class KeyboardManager:
     def get_groups_keyboard(self, faculty_id: str, course: str) -> InlineKeyboardMarkup:
         """Собирает клавиатуру групп для выбранного факультета и курса."""
         builder = InlineKeyboardBuilder()
-        groups = self.cache_manager.get_course(faculty_id, course)
+        groups = self.cache_repository.get_course(faculty_id, course)
 
         for group_id, group in groups.items():
             builder.button(
@@ -181,7 +181,7 @@ class KeyboardManager:
     def get_alphabet_keyboard(self) -> InlineKeyboardMarkup:
         """Собирает клавиатуру с буквами алфавита из teachers_cache."""
         builder = InlineKeyboardBuilder()
-        letters = self.cache_manager.get_alphabet()
+        letters = self.cache_repository.get_alphabet()
 
         for letter in letters:
             builder.add(Button.letter(letter))
@@ -195,7 +195,7 @@ class KeyboardManager:
     def get_teachers_keyboard(self, letter: str) -> InlineKeyboardMarkup:
         """Собирает клавиатуру учителей для выбранной буквы."""
         builder = InlineKeyboardBuilder()
-        teachers = self.cache_manager.get_teachers_by_letter(letter)
+        teachers = self.cache_repository.get_teachers_by_letter(letter)
 
         for teacher_id, teacher in teachers.items():
             builder.button(

@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 class UserService:
-    def __init__(self, api_client: ApiClient, tlg_user: User):
+    def __init__(self, api_client: ApiClient, user: User):
         self.api_client = api_client
-        self.user = tlg_user
+        self.user = user
 
     async def register_or_login_user(
         self, nonce: Optional[str] = None
@@ -36,7 +36,12 @@ class UserService:
             response = await self.api_client.request(
                 social_id=social_id, endpoint="bot/", method="POST", payload=payload
             )
-            return response
+            if response.get("success"):
+                return response.get("data")
+
+            error = response.get("errors", {})
+            logger.error(f"API error: {error.get('code', 'unknown')} - {error.get('message', 'No message')}")
+            raise Exception(f"API error: {error.get('message', 'Unknown error')}")
         except Exception as e:
             logger.error(f"Failed to register/login user {social_id}: {str(e)}")
             raise

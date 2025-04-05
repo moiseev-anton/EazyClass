@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class ApiClient:
-    def __init__(self, base_url: str, hmac_secret: str, platform: str, bot_social_id: str = "bot"):
+    def __init__(self, base_url: str, hmac_secret: str, platform: str, bot_social_id: str):
         self.base_url = base_url
         self.hmac_secret = hmac_secret.encode("utf-8")
         self.platform = platform

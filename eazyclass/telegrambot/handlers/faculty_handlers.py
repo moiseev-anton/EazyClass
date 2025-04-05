@@ -4,7 +4,7 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
 from telegrambot.dependencies import Container
-from telegrambot.keyboards import (
+from telegrambot.managers.keyboard_manager import (
     FacultyCallback,
     CourseCallback,
     GroupCallback,
@@ -54,9 +54,6 @@ async def course_groups_handler(
     course_id = callback_data.key
     data = await state.get_data()
     faculty_id = data.get("faculty_id")
-    # if not faculty_id:
-    #     await handle_error(callback, state)
-    #     return
     await state.update_data(course_id=course_id)
     await callback.message.edit_text(
         text=deps.message_manager().get_groups_message(faculty_id, course_id),
@@ -77,9 +74,6 @@ async def group_selected_handler(
     data = await state.get_data()
     faculty_id = data.get("faculty_id")
     course_id = data.get("course_id")
-    # if not faculty_id or not course_id:
-    #     await handle_error(callback, state)
-    #     return
     await callback.message.edit_text(
         text=deps.message_manager().get_group_selected_message(
             faculty_id, course_id, group_id

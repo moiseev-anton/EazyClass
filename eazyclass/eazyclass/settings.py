@@ -249,13 +249,14 @@ CACHES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+        'scheduler.api.renderers.CustomJSONRenderer',
         # 'rest_framework.renderers.BrowsableAPIRenderer',
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'scheduler.authentication.HMACAuthentication',
-    ),
+    # 'DEFAULT_AUTHENTICATION_CLASSES': (
+        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'scheduler.authentication.HMACAuthentication',
+    # ),
+    'EXCEPTION_HANDLER': 'scheduler.api.exceptions.custom_exception_handler',
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     'rest_framework.permissions.IsAuthenticated',
     # ],
@@ -290,6 +291,7 @@ CELERYD_CONCURRENCY = 4  # 4 рабочих процесса
 
 BASE_SCRAPING_URL = os.getenv('BASE_SCRAPING_URL')
 
+BOT_SOCIAL_ID = os.getenv('BOT_SOCIAL_ID')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME')
 TELEGRAM_REDIS_STORAGE_URL = os.getenv('TELEGRAM_REDIS_STORAGE_URL')

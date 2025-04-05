@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 from telegrambot.dependencies import Container
 from telegrambot.handlers.error_handler import handle_error
-from telegrambot.keyboards import AlphabetCallback, TeacherCallback
+from telegrambot.managers.keyboard_manager import AlphabetCallback, TeacherCallback
 from telegrambot.states import TeacherStates
 
 logger = logging.getLogger(__name__)
