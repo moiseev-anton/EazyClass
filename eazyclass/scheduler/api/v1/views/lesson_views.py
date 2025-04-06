@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from scheduler.api.filters import LessonFilter
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -22,24 +23,23 @@ class LessonViewSet(ReadOnlyModelViewSet):
             "group", "teacher", "subject", "classroom", "period"
         ).order_by("period__date", "period__lesson_number", "subgroup")
 
-    @action(detail=False, methods=['get'])
-    def grouped(self, request):
-        # Получаем отфильтрованный queryset
-        queryset = self.filter_queryset(self.get_queryset())
+    @action(detail=False, methods=['get'], url_path='group/(?P<group_id>[^/.]+)')
+    def by_group(self, request, group_id):
+        queryset = self.get_queryset().filter(group=group_id)
+        queryset = self.filter_queryset(queryset)  # Применяем фильтры по датам
+        return self._grouped_response(queryset)
 
-        # Сериализация данных
-        serializer = self.get_serializer(queryset, many=True)
-        lessons = serializer.data
+    @action(detail=False, methods=['get'], url_path='teacher/(?P<teacher_id>[^/.]+)')
+    def by_teacher(self, request, teacher_id):
+        queryset = self.get_queryset().filter(teacher=teacher_id)
+        queryset = self.filter_queryset(queryset)  # Применяем фильтры по датам
+        return self._grouped_response(queryset)
 
-        # Группировка по дате
+    def _grouped_response(self, queryset):
+        """Вспомогательный метод для группировки уроков по дате."""
+        lessons = self.get_serializer(queryset, many=True).data
         grouped_lessons = defaultdict(list)
         for lesson in lessons:
             date = lesson["period"]["date"]
             grouped_lessons[date].append(lesson)
-
-        # Преобразуем в список для ответа
-        response_data = [
-            {"date": date, "lessons": lessons} for date, lessons in grouped_lessons.items()
-        ]
-
-        return Response(response_data)
+        return Response([{"date": date, "lessons": lessons} for date, lessons in grouped_lessons.items()])
