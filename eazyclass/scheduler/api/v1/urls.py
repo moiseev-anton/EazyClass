@@ -6,11 +6,13 @@ from scheduler.api.v1.views import (
     CustomTokenRefreshView,
     CustomTokenObtainPairView,
     BotFacultyView,
-    BotTeacherView
+    BotTeacherView,
+    LessonViewSet
 )
-from scheduler.api.v1.views.views import DeeplinkView, BotAuthView
+from scheduler.api.v1.views.auth_views import DeeplinkView, BotAuthView
 
 router = routers.DefaultRouter()
+router.register(r'lessons', LessonViewSet, basename='lessons')
 router.register(r'bot-faculties', BotFacultyView, basename='bot-faculties')
 router.register(r'bot-teachers', BotTeacherView, basename='bot-teachers')
 router.register(r'groups', viewset=GroupViewSet)

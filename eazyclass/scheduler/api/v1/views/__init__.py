@@ -1,3 +1,5 @@
 from .token_views import CustomTokenRefreshView, CustomTokenObtainPairView
-from .views import BotAuthView, GroupViewSet, BotFacultyView, BotTeacherView
-
+from .auth_views import BotAuthView
+from .group_views import GroupViewSet, BotFacultyView
+from .teacher_views import BotTeacherView
+from .lesson_views import LessonViewSet

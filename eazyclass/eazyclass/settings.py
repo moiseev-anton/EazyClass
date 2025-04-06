@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
     'rest_framework',
     'rest_framework_simplejwt',
     'django_celery_beat',
@@ -57,7 +58,6 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'scheduler',
     'scrapy_app',
-    'telegrambot',
     'utils',
 ]
 
@@ -248,6 +248,10 @@ CACHES = {
 }
 
 REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+    ],
     'DEFAULT_RENDERER_CLASSES': [
         'scheduler.api.renderers.CustomJSONRenderer',
         # 'rest_framework.renderers.BrowsableAPIRenderer',

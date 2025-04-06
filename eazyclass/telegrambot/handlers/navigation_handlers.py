@@ -25,22 +25,18 @@ async def back_handler(
     data = await state.get_data()
 
     # Навигация по факультетам
-    if current_state == FacultyStates.selecting_course.state:
-        await faculties_handler(callback, state, deps)
-        return
-    elif current_state == FacultyStates.selecting_group.state:
-        faculty_id = data.get("faculty_id")
-        if faculty_id:
+    match current_state:
+        case FacultyStates.selecting_course.state:
+            await faculties_handler(callback, state, deps)
+            return
+        case FacultyStates.selecting_group.state:
+            faculty_id = data.get("faculty_id")
             fake_callback_data = FacultyCallback(key=faculty_id)
             await faculty_courses_handler(callback, fake_callback_data, state, deps)
             return
-
-    # Навигация по учителям
-    elif current_state == TeacherStates.selecting_teacher.state:
-        letter = data.get("letter")
-        if letter:
+        case TeacherStates.selecting_teacher.state:
             await alphabet_handler(callback, state, deps)
             return
+        case _:
+            await handle_error(callback, state)
 
-    # Неизвестное состояние
-    await handle_error(callback, state)

@@ -76,7 +76,6 @@ class ScheduleSyncManager:
             self.periods.add(item['period'])
         logger.info(f"Собраны уникальные элементы для маппинга.")
         logger.info(f'Собрано уникальных периодов {len(self.periods.pending_keys)}')
-        logger.info(f'Уникальные периоды {self.periods.pending_keys}')
         logger.info(f'Собрано уникальных учителей {len(self.teachers.pending_keys)}')
         logger.info(f'Собрано уникальных предметов {len(self.subjects.pending_keys)}')
         logger.info(f'Собрано уникальных кабинетов {len(self.classrooms.pending_keys)}')
