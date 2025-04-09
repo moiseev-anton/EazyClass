@@ -225,7 +225,7 @@ CACHES = {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': REDIS_CONFIG['default'],
         'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.cache.RedisCache',
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         },
         'KEY_PREFIX': 'default',
     },
@@ -247,23 +247,24 @@ CACHES = {
     },
 }
 
+from rest_framework.authentication import SessionAuthentication
+
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.OrderingFilter',
     ],
     'DEFAULT_RENDERER_CLASSES': [
+        # 'rest_framework.renderers.JSONRenderer',
         'scheduler.api.renderers.CustomJSONRenderer',
-        # 'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
     ],
-    # 'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
         # 'rest_framework_simplejwt.authentication.JWTAuthentication',
         # 'scheduler.authentication.HMACAuthentication',
-    # ),
+    ),
     'EXCEPTION_HANDLER': 'scheduler.api.exceptions.custom_exception_handler',
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.IsAuthenticated',
-    # ],
 }
 
 SIMPLE_JWT = {

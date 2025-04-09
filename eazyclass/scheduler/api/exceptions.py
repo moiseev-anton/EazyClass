@@ -1,5 +1,5 @@
-from rest_framework.views import exception_handler
 from rest_framework.response import Response
+from rest_framework.views import exception_handler
 
 
 def custom_exception_handler(exc, context):
@@ -11,7 +11,7 @@ def custom_exception_handler(exc, context):
         return Response(
             {
                 "code": response.status_code,
-                "message": response.data.get("detail", "Unknown error"),
+                "detail": response.data.get("detail", "Unknown error"),
             },
             status=response.status_code,
         )

@@ -11,9 +11,9 @@ class Teacher(models.Model):
     objects = TeacherManager()
 
     class Meta:
-        ordering = ['full_name']
+        ordering = ["full_name"]
         indexes = [
-            models.Index(fields=['full_name']),
+            models.Index(fields=["full_name"]),
         ]
 
     def __str__(self):
