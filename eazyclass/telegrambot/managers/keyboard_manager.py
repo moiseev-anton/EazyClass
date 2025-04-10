@@ -1,4 +1,5 @@
 import logging
+from typing import Dict, Any
 
 from aiogram.filters.callback_data import CallbackData
 from aiogram.utils.keyboard import (
@@ -39,6 +40,12 @@ class AlphabetCallback(CallbackData, prefix="a"):
 
 class TeacherCallback(CallbackData, prefix="t"):
     id: str
+
+
+class ActionCallback(CallbackData, prefix="action"):
+    action: str
+    obj_type: str
+    id: int
 
 
 class Button:
@@ -208,5 +215,26 @@ class KeyboardManager:
                 builder.adjust(2)
             else:
                 builder.adjust(1)  # 1 учитель в ряд
+        builder.row(Button.back, Button.home)
+        return builder.as_markup()
+
+    def get_actions_keyboard(self, obj_type:str, object_data: Dict[str, Any]) -> InlineKeyboardMarkup:
+        """Собирает клавиатуру учителей для выбранной буквы."""
+        object_id = object_data.get("id")
+        link = object_data.get("link")
+
+        builder = InlineKeyboardBuilder()
+        builder.add(InlineKeyboardButton(
+                    text="🗓 Расписание",
+                    callback_data=ActionCallback(action='schedule', obj_type=obj_type, id=object_id).pack()
+                ))
+        builder.add(InlineKeyboardButton(
+                    text="⭐ Подписаться",
+                    callback_data=ActionCallback(action='subscribe', obj_type=obj_type, id=object_id).pack()
+                ))
+        if link is not None:
+            builder.add(InlineKeyboardButton(text="🌍 На сайте", url=settings.base_link + link))
+
+        builder.adjust(1)
         builder.row(Button.back, Button.home)
         return builder.as_markup()
