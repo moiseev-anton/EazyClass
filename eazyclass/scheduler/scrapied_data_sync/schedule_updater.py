@@ -88,8 +88,6 @@ class ScheduleSyncManager:
         self.periods.resolve_pending_keys()
         logger.debug("Маппинг уникальных элементов завершен.")
         logger.info(f'Получено id периодов {len(self.periods.existing_mappings)}')
-        logger.info(f'id периодов {self.periods.existing_mappings}')
-
         logger.info(f'Получено id учителей {len(self.teachers.existing_mappings)}')
         logger.info(f'Получено id предметов {len(self.subjects.existing_mappings)}')
         logger.info(f'Получено id кабинетов {len(self.classrooms.existing_mappings)}')
