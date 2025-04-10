@@ -18,12 +18,12 @@ class MessageManager:
     FACULTIES_PROMPT = "Выберите факультет:"
     COURSES_PROMPT = "{faculty_title}\n\nВыберите курс:"
     GROUPS_PROMPT = "{faculty_title}\n{course_id} курс\n\nВыберите группу:"
-    GROUP_SELECTED = "Вы выбрали группу: {group_title}\nСсылка: {group_link}"
+    GROUP_SELECTED = "Группа: {group_title}"
     ERROR_DEFAULT = "⚠ Что-то пошло не так, попробуйте снова."
 
     ALPHABET_PROMPT = "Выберите букву:"
     TEACHERS_PROMPT = "Выберите преподавателя:"
-    TEACHER_SELECTED = "Вы выбрали преподавателя: {teacher_full_name}"
+    TEACHER_SELECTED = "Преподаватель: {teacher_full_name}"
 
     def __init__(self, cache_repository: CacheRepository):
         self.cache_repository = cache_repository
@@ -67,16 +67,9 @@ class MessageManager:
             faculty_title=faculty_title, course_id=course_id
         )
 
-    def get_group_selected_message(
-        self, faculty_id: str, course_id: str, group_id: str
-    ) -> str:
+    def get_group_selected_message(self, group: Dict[str, Any]) -> str:
         """Сообщение после выбора группы."""
-        group = self.cache_repository.get_group(faculty_id, course_id, group_id)
-        if not group:
-            return "Ошибка: группа не найдена."
-        return self.GROUP_SELECTED.format(
-            group_title=group.get("title", "-"), group_link=group.get("link", "")
-        )
+        return self.GROUP_SELECTED.format(group_title=group.get("title", "-"))
 
     @classmethod
     def get_alphabet_message(cls) -> str:
@@ -86,12 +79,9 @@ class MessageManager:
     def get_teachers_message(cls, letter: str) -> str:
         return cls.TEACHERS_PROMPT.format(letter=letter)
 
-    def get_teacher_selected_message(self, letter: str, teacher_id: str) -> str:
-        teacher = self.cache_repository.get_teacher(letter, teacher_id)
-        if not teacher:
-            return "Ошибка: преподаватель не найден."
+    def get_teacher_selected_message(self, teacher_data: Dict[str, Any]) -> str:
         return self.TEACHER_SELECTED.format(
-            teacher_full_name=teacher.get("full_name", "-")
+            teacher_full_name=teacher_data.get("full_name", "-")
         )
 
     @classmethod

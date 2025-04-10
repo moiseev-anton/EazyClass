@@ -71,14 +71,15 @@ async def group_selected_handler(
     deps: Container,
 ):
     group_id = callback_data.id
+    await state.update_data(group_id=group_id)
     data = await state.get_data()
     faculty_id = data.get("faculty_id")
     course_id = data.get("course_id")
+    group_data = deps.cache_repository().get_group(faculty_id, course_id, group_id)
+
     await callback.message.edit_text(
-        text=deps.message_manager().get_group_selected_message(
-            faculty_id, course_id, group_id
-        ),
-        reply_markup=deps.keyboard_manager().home,
+        text=deps.message_manager().get_group_selected_message(group_data),
+        reply_markup=deps.keyboard_manager().get_actions_keyboard("group", group_data),
     )
-    await state.clear()
+    await state.set_state(FacultyStates.selecting_action)
     await callback.answer()

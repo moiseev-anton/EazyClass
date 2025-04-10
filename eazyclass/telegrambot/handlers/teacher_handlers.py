@@ -49,14 +49,13 @@ async def teacher_selected_handler(
     deps: Container,
 ):
     teacher_id = callback_data.id
+    await state.update_data(teacher_id=teacher_id)
     data = await state.get_data()
     letter = data.get("letter")
-    if not letter:
-        await handle_error(callback, state)
-        return
+    teacher_data = deps.cache_repository().get_teacher(letter, teacher_id)
     await callback.message.edit_text(
-        text=deps.message_manager().get_teacher_selected_message(letter, teacher_id),
-        reply_markup=deps.keyboard_manager().home,
+        text=deps.message_manager().get_teacher_selected_message(teacher_data),
+        reply_markup=deps.keyboard_manager().get_actions_keyboard("teacher", teacher_data),
     )
-    await state.clear()
+    await state.set_state(TeacherStates.selecting_action)
     await callback.answer()

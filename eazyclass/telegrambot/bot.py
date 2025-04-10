@@ -12,6 +12,7 @@ from telegrambot.handlers import (
     faculty_router,
     teacher_router,
     navigation_router,
+    action_router,
 )
 from telegrambot.tasks import setup_periodic_task_scheduler
 
@@ -43,6 +44,7 @@ async def main():
     storage = container.storage()
     dp = Dispatcher(bot=bot, storage=storage, deps=container)
 
+    dp.include_router(action_router)
     dp.include_router(start_router)
     dp.include_router(main_router)
     dp.include_router(faculty_router)
