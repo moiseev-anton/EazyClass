@@ -9,7 +9,7 @@ from telegrambot.api_client import ApiClient
 from telegrambot.cache import CacheRepository
 from telegrambot.managers.keyboard_manager import KeyboardManager
 from telegrambot.managers.message_manager import MessageManager
-from telegrambot.services import UserService, CacheService
+from telegrambot.services import UserService, CacheService, LessonService
 
 
 class Container(containers.DeclarativeContainer):
@@ -52,3 +52,5 @@ class Container(containers.DeclarativeContainer):
     )
 
     user_service = providers.Factory(UserService, api_client=api_client,)
+    lesson_service = providers.Factory(LessonService, api_client=api_client,)
+

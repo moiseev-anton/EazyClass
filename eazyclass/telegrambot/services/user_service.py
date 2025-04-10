@@ -45,3 +45,6 @@ class UserService:
         except Exception as e:
             logger.error(f"Failed to register/login user {social_id}: {str(e)}")
             raise
+
+
+
