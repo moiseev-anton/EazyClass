@@ -1,3 +1,4 @@
+from .action_handlers import router as action_router
 from .faculty_handlers import router as faculty_router
 from .main_handler import router as main_router
 from .navigation_handlers import router as navigation_router

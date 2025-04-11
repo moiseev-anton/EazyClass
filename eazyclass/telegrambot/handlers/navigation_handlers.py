@@ -10,12 +10,13 @@ from telegrambot.handlers.faculty_handlers import (
     faculty_courses_handler,
     course_groups_handler,
     FacultyCallback,
-    CourseCallback
+    CourseCallback, group_selected_handler
 )
 from telegrambot.handlers.teacher_handlers import (alphabet_handler,
                                                    teachers_handler,
-                                                   AlphabetCallback
+                                                   AlphabetCallback, teacher_selected_handler
                                                    )
+from telegrambot.managers.keyboard_manager import GroupCallback, TeacherCallback
 from telegrambot.states import FacultyStates, TeacherStates
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,11 @@ async def back_handler(
             fake_callback_data = CourseCallback(key=course)
             await course_groups_handler(callback, fake_callback_data, state, deps)
             return
+        case FacultyStates.action.state:
+            group_id = data.get("group_id")
+            fake_callback_data = GroupCallback(id=group_id)
+            await group_selected_handler(callback, fake_callback_data, state, deps)
+            return
 
         case TeacherStates.selecting_teacher.state:
             await alphabet_handler(callback, state, deps)
@@ -52,6 +58,11 @@ async def back_handler(
             letter = data.get("letter")
             fake_callback_data = AlphabetCallback(letter=letter)
             await teachers_handler(callback, fake_callback_data, state, deps)
+            return
+        case TeacherStates.action.state:
+            teacher_id = data.get("teacher_id")
+            fake_callback_data = TeacherCallback(id=teacher_id)
+            await teacher_selected_handler(callback, fake_callback_data, state, deps)
             return
 
         case _:

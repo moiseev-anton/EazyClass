@@ -119,7 +119,7 @@ class LessonService:
 
         try:
             response = await self.api_client.request(
-                social_id=self.user.id,
+                social_id=str(self.user.id),
                 endpoint=endpoint,
                 method="GET",
                 params=params if params else None,

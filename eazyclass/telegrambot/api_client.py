@@ -54,12 +54,12 @@ class ApiClient:
             "Content-Type": "application/json",
         }
 
-    # @retry(
-    #     stop=stop_after_attempt(3),
-    #     wait=wait_fixed(1),
-    #     retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)),
-    #     reraise=True,
-    # )
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)),
+        reraise=True,
+    )
     async def _send_request(
         self,
         method: str,

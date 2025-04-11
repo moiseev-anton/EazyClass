@@ -51,6 +51,6 @@ class Container(containers.DeclarativeContainer):
         cache_repository=cache_repository,
     )
 
-    user_service = providers.Factory(UserService, api_client=api_client,)
-    lesson_service = providers.Factory(LessonService, api_client=api_client,)
+    user_service = providers.Factory(UserService, api_client=api_client)
+    lesson_service = providers.Factory(LessonService, api_client=api_client)
 

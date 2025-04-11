@@ -45,7 +45,7 @@ class TeacherCallback(CallbackData, prefix="t"):
 class ActionCallback(CallbackData, prefix="action"):
     action: str
     obj_type: str
-    id: int
+    id: str
 
 
 class Button:
@@ -120,6 +120,7 @@ class Button:
 
 class KeyboardManager:
     home = InlineKeyboardMarkup(inline_keyboard=[[Button.home]])
+    back_home = InlineKeyboardMarkup(inline_keyboard=[[Button.back, Button.home]])
     phone_request = InlineKeyboardMarkup(
         inline_keyboard=[[Button.phone], [Button.home]]
     )
@@ -218,9 +219,9 @@ class KeyboardManager:
         builder.row(Button.back, Button.home)
         return builder.as_markup()
 
-    def get_actions_keyboard(self, obj_type:str, object_data: Dict[str, Any]) -> InlineKeyboardMarkup:
+    def get_actions_keyboard(self, obj_type: str, object_data: Dict[str, Any]) -> InlineKeyboardMarkup:
         """Собирает клавиатуру учителей для выбранной буквы."""
-        object_id = object_data.get("id")
+        object_id = str(object_data.get("id"))
         link = object_data.get("link")
 
         builder = InlineKeyboardBuilder()
