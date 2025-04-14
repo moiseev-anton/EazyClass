@@ -26,6 +26,13 @@ urlpatterns = [
     path('telegrambot/', include('telegrambot.urls')),
 ]
 
+
+handler400 = 'scheduler.views.error_views.error_400'
+handler403 = 'scheduler.views.error_views.error_403'
+handler404 = 'scheduler.views.error_views.error_404'
+handler500 = 'scheduler.views.error_views.error_500'
+
+
 if settings.DEBUG:
     import debug_toolbar
     urlpatterns = [
