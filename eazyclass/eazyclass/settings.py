@@ -27,7 +27,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG') == 'True'
+# DEBUG = os.getenv('DEBUG') == 'True'
+DEBUG = False
+
 
 DEBUG_TOOLBAR_CONFIG = {
     'IS_RUNNING_TESTS': False,  # Отключение панели инструментов при тестах
@@ -52,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_filters',
     'rest_framework',
+    'rest_framework_json_api',
     'rest_framework_simplejwt',
     'django_celery_beat',
     'rangefilter',
@@ -250,22 +253,45 @@ CACHES = {
 from rest_framework.authentication import SessionAuthentication
 
 REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.OrderingFilter',
-    ],
-    'DEFAULT_RENDERER_CLASSES': [
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework_json_api.parsers.JSONParser',
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser'
+    ),
+
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework_json_api.renderers.JSONRenderer',
         # 'rest_framework.renderers.JSONRenderer',
-        'scheduler.api.renderers.CustomJSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
-    ],
+        # 'scheduler.api.renderers.APIJSONRenderer',
+        # 'rest_framework.renderers.BrowsableAPIRenderer',
+    ),
+
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
-        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
-        # 'scheduler.authentication.HMACAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'scheduler.authentication.HMACAuthentication',
     ),
-    'EXCEPTION_HANDLER': 'scheduler.api.exceptions.custom_exception_handler',
+
+    # 'EXCEPTION_HANDLER': 'scheduler.api.exceptions.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'rest_framework_json_api.exceptions.exception_handler',
+
+    'DEFAULT_METADATA_CLASS': 'rest_framework_json_api.metadata.JSONAPIMetadata',
+
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework_json_api.filters.QueryParameterValidationFilter',
+        'rest_framework_json_api.filters.OrderingFilter',
+        'rest_framework_json_api.django_filters.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+    ),
+
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework_json_api.schemas.openapi.AutoSchema',
+    'SEARCH_PARAM': 'filter[search]',
+
 }
+
+JSON_API_UNIFORM_EXCEPTIONS = True
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),

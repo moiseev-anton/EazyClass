@@ -1,6 +1,6 @@
 from .auth_serializers import BotAuthSerializer, NonceSerializer
-from .group_serializers import GroupSerializer, CompactGroupSerializer
-from .lesson_serializer import LessonSerializer
+from .group_serializers import CompactGroupSerializer, SimpleGroupSerializer
+from .lesson_serializer import LessonSerializer, CompactLessonSerializer
 from .serializers import GroupSerializer
 from .subscription_serializer import SubscriptionSerializer
 from .teacher_serializers import TeacherSerializer, CompactTeacherSerializer

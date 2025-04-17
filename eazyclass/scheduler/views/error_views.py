@@ -14,48 +14,62 @@ from rest_framework.exceptions import (
     APIException,
 )
 from rest_framework.request import Request as DRFRequest
-
-from scheduler.api.exceptions import custom_exception_handler
-from scheduler.api.renderers import APIJSONRenderer
+from rest_framework_json_api.exceptions import exception_handler
+from rest_framework_json_api.renderers import JSONRenderer
 
 logger = logging.getLogger(__name__)
 
 
+class MockView:
+    """Фейковое представление для обработки ошибок без view."""
+
+    resource_name = "errors"
+    renderer_classes = [JSONRenderer]
+
+
+MOCK_VIEW = MockView()
+
+
 def wants_json(request):
-    return "application/json" in request.META.get("HTTP_ACCEPT", "")
-
-
-def render_response_with_custom_renderer(drf_response, request):
-    renderer = APIJSONRenderer()
-
-    renderer_context = {
-        "request": request,
-        "response": drf_response,
-        "view": None,
-    }
-
-    rendered_content = renderer.render(
-        drf_response.data,
-        accepted_media_type="application/json",
-        renderer_context=renderer_context,
-    )
-
-    return HttpResponse(
-        content=rendered_content,
-        status=drf_response.status_code,
-        content_type="application/json",
+    """Проверяет, требуется ли клиенту JSON-ответ."""
+    accept = request.META.get("HTTP_ACCEPT", "")
+    # Проверяем путь или Accept заголовок
+    is_api_request = request.path.startswith("/api/")
+    return (
+        is_api_request
+        or "application/vnd.api+json" in accept
+        or "application/json" in accept
     )
 
 
 def handle_django_error(request, drf_exception, default_view, exception=None):
+    """Обрабатывает Django-ошибку, возвращая JSON:API или HTML."""
     if wants_json(request):
-        context = {"request": DRFRequest(request), "view": None}
-        drf_response = custom_exception_handler(drf_exception, context)
-        return render_response_with_custom_renderer(drf_response, request)
+        context = {"request": DRFRequest(request), "view": MOCK_VIEW}
+        drf_response = exception_handler(drf_exception, context)
+        logger.info(drf_response.data)
+        renderer = JSONRenderer()
+        renderer_context = {
+            "request": request,
+            "response": drf_response,
+            "view": MOCK_VIEW,
+        }
+        rendered_content = renderer.render(
+            drf_response.data,
+            accepted_media_type="application/vnd.api+json",
+            renderer_context=renderer_context,
+        )
+        return HttpResponse(
+            content=rendered_content,
+            status=drf_response.status_code,
+            content_type="application/vnd.api+json",
+        )
+    # Возвращаем HTML для не-JSON клиентов
     return default_view(request, exception) if exception else default_view(request)
 
 
 def error_400(request, exception=None):
+    """Обработчик для HTTP 400 Bad Request."""
     return handle_django_error(
         request=request,
         drf_exception=ValidationError(detail="Некорректный запрос"),
@@ -65,6 +79,7 @@ def error_400(request, exception=None):
 
 
 def error_403(request, exception=None):
+    """Обработчик для HTTP 403 Forbidden."""
     return handle_django_error(
         request=request,
         drf_exception=PermissionDenied(detail="Доступ запрещён"),
@@ -74,6 +89,7 @@ def error_403(request, exception=None):
 
 
 def error_404(request, exception=None):
+    """Обработчик для HTTP 404 Not Found."""
     return handle_django_error(
         request=request,
         drf_exception=NotFound(detail="Ресурс не найден"),
@@ -83,6 +99,7 @@ def error_404(request, exception=None):
 
 
 def error_500(request):
+    """Обработчик для HTTP 500 Server Error."""
     return handle_django_error(
         request=request,
         drf_exception=APIException(detail="Внутренняя ошибка сервера"),

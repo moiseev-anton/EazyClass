@@ -1,44 +1,75 @@
-from collections import defaultdict
+import logging
 
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.mixins import RetrieveModelMixin
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import ModelViewSet
 
 from scheduler.api.filters import LessonFilter
-from scheduler.api.v1.serializers import LessonSerializer
+from scheduler.api.v1.serializers import LessonSerializer, CompactLessonSerializer
 from scheduler.models import Lesson, Subscription
 
+logger = logging.getLogger(__name__)
 
-class LessonViewSet(RetrieveModelMixin, GenericViewSet):
-    permission_classes = [AllowAny]
+
+class LessonViewSet(ModelViewSet):
+    queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
-    filter_backends = [DjangoFilterBackend]
     filterset_class = LessonFilter
+
+    permission_classes_by_action = {
+        "group": [AllowAny],
+        "teacher": [AllowAny],
+        "me": [IsAuthenticated],
+        "default": [IsAuthenticated],
+    }
+
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except KeyError:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action["default"]
+            ]
 
     def get_queryset(self):
         return (
-            Lesson.objects.filter(is_active=True)
+            super()
+            .get_queryset()
+            .filter(is_active=True)
             .select_related("group", "teacher", "subject", "classroom", "period")
             .order_by("period__date", "period__lesson_number", "subgroup")
         )
 
+    def get_serializer_class(self):
+        # Получаем формат из допустимого JSON:API фильтра
+        response_format = self.request.query_params.get("filter[format]", "full")
+        logger.info(f"Формат: {response_format}")
+
+        if response_format == "compact":
+            return CompactLessonSerializer
+        return LessonSerializer
+
     # @method_decorator(cache_page(60 * 15))
     @action(detail=False, methods=["get"], url_path="group/(?P<group_id>[^/.]+)")
-    def by_group(self, request, group_id):
-        queryset = self.get_queryset().filter(group=group_id)
-        queryset = self.filter_queryset(queryset)  # Применяем фильтры по датам
-        return self._grouped_response(queryset)
+    def by_group(self, request, group_id=None):
+        queryset = self.get_queryset().filter(group_id=group_id)
+        queryset = self.filter_queryset(queryset)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     # @method_decorator(cache_page(60 * 15))
     @action(detail=False, methods=["get"], url_path="teacher/(?P<teacher_id>[^/.]+)")
     def by_teacher(self, request, teacher_id):
-        queryset = self.get_queryset().filter(teacher=teacher_id)
-        queryset = self.filter_queryset(queryset)  # Применяем фильтры по датам
-        return self._grouped_response(queryset)
+        queryset = self.get_queryset().filter(teacher_id=teacher_id)
+        queryset = self.filter_queryset(queryset)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     @action(
         detail=False,
@@ -47,43 +78,47 @@ class LessonViewSet(RetrieveModelMixin, GenericViewSet):
         permission_classes=[IsAuthenticated],
     )
     def get_me(self, request):
-        """
-        Возвращает уроки для объекта, на который подписан текущий пользователь.
-        Применяет фильтры по дате из LessonFilter.
-        """
         subscription = (
             Subscription.objects.filter(user=request.user)
             .select_related("content_type")
             .first()
         )
         if not subscription:
-            return Response(
-                {"detail": "Подписка не найдена"}, status=status.HTTP_404_NOT_FOUND
+            raise NotFound(
+                {
+                    "code": "subscription_not_found",
+                    "detail": "Подписка не найдена",
+                    "source": {"pointer": "/subscription"},
+                }
             )
 
         content_type = subscription.content_type.model
         object_id = subscription.object_id
 
-        queryset = self.get_queryset()
         if content_type == "group":
             return self.by_group(request, object_id)
         elif content_type == "teacher":
             return self.by_teacher(request, object_id)
         else:
-            return Response(
-                {"detail": "Неверный тип подписки"}, status=status.HTTP_400_BAD_REQUEST
+            raise ValidationError(
+                {
+                    "code": "invalid_subscription_type",
+                    "detail": "Неверный тип подписки",
+                    "source": {"pointer": "/subscription"},
+                }
             )
 
-    def _grouped_response(self, queryset):
-        """Вспомогательный метод для группировки уроков по дате."""
-        lessons = self.get_serializer(queryset, many=True).data
-        grouped_lessons = defaultdict(list)
-        for lesson in lessons:
-            date = lesson["period"]["date"]
-            grouped_lessons[date].append(lesson)
-        return Response(
-            [
-                {"date": date, "lessons": lessons}
-                for date, lessons in grouped_lessons.items()
-            ]
-        )
+    def create(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response({"detail": "Method not allowed"}, status=403)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response({"detail": "Method not allowed"}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response({"detail": "Method not allowed"}, status=403)
+        return super().destroy(request, *args, **kwargs)
