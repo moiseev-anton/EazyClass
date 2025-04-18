@@ -17,7 +17,7 @@ router.register(r"subscriptions", SubscriptionViewSet, basename="subscription")
 router.register(r"lessons", LessonViewSet, basename="lessons")
 router.register(r"bot-faculties", BotFacultyView, basename="bot-faculties")
 router.register(r"bot-teachers", BotTeacherView, basename="bot-teachers")
-router.register(r"groups", viewset=GroupViewSet)
+router.register(r"groups", GroupViewSet, basename="groups")
 
 urlpatterns = [
     path("", include(router.urls)),

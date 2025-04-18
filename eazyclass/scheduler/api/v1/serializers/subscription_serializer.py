@@ -1,14 +1,14 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from scheduler.api.v1.serializers.group_serializers import CompactGroupSerializer
+from scheduler.api.v1.serializers.group_serializers import ShortGroupSerializer
 from scheduler.api.v1.serializers.teacher_serializers import CompactTeacherSerializer
 from scheduler.models import Subscription
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     SUBSCRIPTION_MODELS = {
-        "group": CompactGroupSerializer,
+        "group": ShortGroupSerializer,
         "teacher": CompactTeacherSerializer,
     }
 
