@@ -7,7 +7,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from scheduler.api.filters import LessonFilter
 from scheduler.api.permissions import IsAdminOrReadOnly
-from scheduler.api.v1.serializers import LessonSerializer
+from scheduler.api.v1.serializers import LessonSerializer, CompactLessonSerializer
 from scheduler.models import Lesson, Subscription, Group, Teacher
 
 logger = logging.getLogger(__name__)
@@ -27,6 +27,13 @@ class LessonViewSet(ModelViewSet):
             .select_related("group", "teacher", "subject", "classroom", "period")
             .order_by("period__date", "period__lesson_number", "subgroup")
         )
+
+    @property
+    def is_compact_format(self):
+        return self.request.query_params.get("filter[format]") == "compact"
+
+    def get_serializer_class(self):
+        return CompactLessonSerializer if self.is_compact_format else LessonSerializer
 
     @action(detail=False, methods=["get"], url_path="group/(?P<group_id>[^/.]+)")
     def by_group(self, request, group_id=None):
