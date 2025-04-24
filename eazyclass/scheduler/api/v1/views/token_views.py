@@ -1,9 +1,11 @@
+from drf_spectacular.openapi import AutoSchema
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.exceptions import AuthenticationFailed
+from django.utils.translation import gettext_lazy as _
 
 from scheduler.api.v1.serializers import CustomTokenObtainPairSerializer, CustomTokenRefreshSerializer
 
@@ -26,6 +28,7 @@ def set_refresh_token_cookie(response: Response) -> None:
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    schema = AutoSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
@@ -46,6 +49,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class CustomTokenRefreshView(TokenRefreshView):
     serializer_class = CustomTokenRefreshSerializer
+    schema = AutoSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         # Проверяем источник refresh-токена
@@ -60,7 +64,7 @@ class CustomTokenRefreshView(TokenRefreshView):
             refresh_token = refresh_token_from_cookie
             is_browser = True  # Браузер
         else:
-            raise AuthenticationFailed("Refresh token is missing", "authorization")
+            raise AuthenticationFailed(_("Refresh token is missing"), "authorization")
             # return Response({"error": "No refresh token provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Вызываем родительский метод для обработки запроса

@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from rest_framework import serializers
+from rest_framework_json_api import serializers
 
 from scheduler.api.v1.serializers.group_serializers import ShortGroupSerializer
 from scheduler.api.v1.serializers.teacher_serializers import CompactTeacherSerializer

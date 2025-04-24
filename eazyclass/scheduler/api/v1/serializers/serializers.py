@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from rest_framework import serializers
+from rest_framework_json_api import serializers
 
 from scheduler.models import Group, Faculty, Teacher
 

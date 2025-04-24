@@ -1,5 +1,6 @@
 import logging
 
+from drf_spectacular.openapi import AutoSchema
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -15,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class BotTeacherView(viewsets.ReadOnlyModelViewSet):
-    authentication_classes = [HMACAuthentication]
     permission_classes = [AllowAny]
 
     serializer_class = BotTeacherSerializer
     pagination_class = None
     http_method_names = ["get"]
+    schema = AutoSchema()
 
     def get_queryset(self):
         return Teacher.objects.filter(is_active=True)

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from django.core.cache import caches
 from django.utils.translation import gettext_lazy as _
-from rest_framework import serializers
+from rest_framework_json_api import serializers
 from rest_framework.exceptions import APIException
 from rest_framework_simplejwt.exceptions import TokenError, AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
