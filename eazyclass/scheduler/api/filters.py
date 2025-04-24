@@ -88,3 +88,20 @@ class GroupFilter(filters.FilterSet):
     class Meta:
         model = Group
         fields = ["faculty", "grade"]
+
+
+class TeacherFilter(filters.FilterSet):
+    starts_with = filters.CharFilter(method='filter_starts_with',
+        help_text=_("Filter by first letter"),)
+
+    class Meta:
+        model = Teacher
+        fields = ['starts_with']
+
+    def filter_starts_with(self, queryset, name, value):
+        if not value or len(value) != 1 or not value.isalpha():
+            raise ValidationError(
+                code="invalid_starts_with",
+                detail=_("Filter 'starts_with' must be a single alphabetic character.")
+            )
+        return queryset.filter(full_name__istartswith=value)
