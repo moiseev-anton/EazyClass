@@ -18,6 +18,8 @@ class Group(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["is_active"]),
+            models.Index(fields=['faculty', 'is_active']),
+            models.Index(fields=['grade', 'is_active']),
             models.Index(fields=["title"]),
         ]
 
