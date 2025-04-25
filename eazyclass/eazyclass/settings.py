@@ -308,6 +308,7 @@ SPECTACULAR_SETTINGS = {
     "PREPROCESSING_HOOKS": [
         "drf_spectacular_jsonapi.hooks.fix_nested_path_parameters"
     ],
+    'SERVE_INCLUDE_SCHEMA': True,
     "GENERIC_ADDITIONAL_PROPERTIES": "include",
     "SERVE_URLCONF": "eazyclass.urls",
 }

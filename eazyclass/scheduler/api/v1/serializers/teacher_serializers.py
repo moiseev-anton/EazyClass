@@ -17,13 +17,3 @@ class TeacherSerializer(serializers.ModelSerializer):
         fields = ["id", "full_name", "short_name"]
         read_only_fields = fields
         resource_name = "teacher"
-
-    # def to_representation(self, instance):
-    #     return {
-    #         "id": instance.id,
-    #         "type": "teacher",
-    #         "attributes": {
-    #             "short_name": instance.short_name,
-    #             "full_name": instance.full_name,
-    #         },
-    #     }

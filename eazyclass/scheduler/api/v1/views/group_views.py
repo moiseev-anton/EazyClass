@@ -1,6 +1,11 @@
 import logging
 
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiParameter,
+    OpenApiResponse,
+)
 from rest_framework.permissions import AllowAny
 from rest_framework_json_api.views import ReadOnlyModelViewSet
 
