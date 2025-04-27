@@ -4,3 +4,4 @@ from .lesson_views import LessonViewSet
 from .subscription_views import SubscriptionViewSet
 from .teacher_views import TeacherViewSet
 from .token_views import CustomTokenRefreshView, CustomTokenObtainPairView
+from .user_views import UserViewSet

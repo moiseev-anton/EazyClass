@@ -11,7 +11,7 @@ from scheduler.api.v1.views import (
     CustomTokenRefreshView,
     CustomTokenObtainPairView,
     LessonViewSet,
-    SubscriptionViewSet, TeacherViewSet,
+    SubscriptionViewSet, TeacherViewSet, UserViewSet,
 )
 from scheduler.api.v1.views.auth_views import DeeplinkView, BotAuthView
 
@@ -20,6 +20,8 @@ router.register(r"subscriptions", SubscriptionViewSet, basename="subscription")
 router.register(r"lessons", LessonViewSet, basename="lessons")
 router.register(r"groups", GroupViewSet, basename="groups")
 router.register(r"teachers", TeacherViewSet, basename="teachers")
+router.register(r"users", UserViewSet, basename="users")
+
 
 
 urlpatterns = [

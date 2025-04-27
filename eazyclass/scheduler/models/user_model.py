@@ -19,5 +19,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = "username"
 
+    class Meta:
+        indexes = [models.Index(fields=['username'])]
+
     def __str__(self):
         return f"{self.first_name or ''} {self.last_name or ''} ({self.username or ''}) [ID: {self.id}]"

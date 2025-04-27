@@ -5,3 +5,4 @@ from .lesson_serializer import LessonSerializer
 from .subscription_serializer import SubscriptionSerializer
 from .teacher_serializers import TeacherSerializer, CompactTeacherSerializer
 from .token_serializer import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer
+from .user_serializers import UserSerializer, UserUpdateSerializer
