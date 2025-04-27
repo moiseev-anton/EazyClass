@@ -79,6 +79,12 @@ class LessonViewSet(ReadOnlyModelViewSet):
     filterset_class = LessonFilter
     permission_classes = [AllowAny]
 
+    select_for_includes = {
+        '__all__': [],
+        'group': ['group'],
+        'teacher': ['teacher'],
+    }
+
     def get_queryset(self):
         """
         Возвращает отфильтрованный и оптимизированный набор уроков.
@@ -88,7 +94,7 @@ class LessonViewSet(ReadOnlyModelViewSet):
             super()
             .get_queryset()
             .filter(is_active=True)
-            .select_related("group", "teacher", "subject", "classroom", "period")
+            .select_related("subject", "classroom", "period")
             .order_by("period__date", "period__lesson_number", "subgroup")
         )
 
