@@ -1,7 +1,7 @@
 import logging
 
-from drf_spectacular.utils import extend_schema
-from rest_framework import viewsets, status
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -41,19 +41,19 @@ class UserViewSet(
         return UserSerializer
 
     @extend_schema(
-        tags=['User'],
-        methods=['GET'],
+        tags=["User"],
+        methods=["GET"],
         summary="Get current user",
-        description='Retrieve the authenticated user’s profile.',
-        responses={200: UserSerializer},
+        description="Retrieve the authenticated user’s profile.",
+        responses={200: OpenApiResponse(UserSerializer(many=True))},
     )
     @extend_schema(
-        tags=['User'],
-        methods=['PATCH'],
+        tags=["User"],
+        methods=["PATCH"],
         summary="Update current user",
-        description='Update user profile (username, first_name, last_name).',
+        description="Update user profile (username, first_name, last_name).",
         request=UserUpdateSerializer,
-        responses={200: UserSerializer}
+        responses={200: OpenApiResponse(UserSerializer(many=True))},
     )
     # @extend_schema(
     #     tags=['User'],
@@ -64,7 +64,7 @@ class UserViewSet(
     # )
     @action(detail=False, methods=["get", "patch"], url_path="me")
     def me(self, request):
-        self.kwargs['pk'] = request.user.pk
+        self.kwargs["pk"] = request.user.pk
 
         if request.method == "GET":
             serializer = self.get_serializer(request.user)
@@ -72,9 +72,7 @@ class UserViewSet(
 
         elif request.method == "PATCH":
             serializer = self.get_serializer(
-                request.user,
-                data=request.data,
-                partial=True
+                request.user, data=request.data, partial=True
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()

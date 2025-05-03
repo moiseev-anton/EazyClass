@@ -10,3 +10,8 @@ class IsAdminOrReadOnly(BasePermission):
     """Разрешает чтение всем, изменение — только админам."""
     def has_permission(self, request, view):
         return request.method in ['GET', 'HEAD', 'OPTIONS'] or request.user.is_staff
+
+
+class IsHMACAuthenticated(BasePermission):
+    def has_permission(self, request, view):
+        return request.auth == "hmac"

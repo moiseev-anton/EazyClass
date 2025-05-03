@@ -1,81 +1,92 @@
 import logging
-import uuid
 
-from django.conf import settings
-from django.core.cache import caches
-from rest_framework import status
-from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema
+from rest_framework import views
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
+from scheduler.api.permissions import IsHMACAuthenticated
 from scheduler.api.v1.serializers import (
-    BotAuthSerializer,
-    NonceSerializer,
+    RegisterSerializer,
+    UserOutputSerializer,
+    AuthResult,
+    RegisterWithNonceSerializer,
 )
-from scheduler.authentication import HMACAuthentication, IsHMACAuthenticated
 
 logger = logging.getLogger(__name__)
 
-# Получаем кэш для аутентификации
-auth_cache = caches["auth"]
 
-NONCE_TIMEOUT = 300  # 5 минут
-
-
-class DeeplinkFactory:
-    @classmethod
-    def generate(cls, platform, nonce):
-        templates = getattr(settings, "AUTH_DEEPLINK_TEMPLATES", {})
-        if platform not in templates:
-            raise ValueError(f"Invalid platform: {platform}")
-
-        return templates[platform].format(nonce=nonce)
-
-
-class DeeplinkView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request: Request, platform):
-        try:
-            nonce = str(uuid.uuid4())
-            deeplink = DeeplinkFactory.generate(platform, nonce)
-            logger.info(
-                f"Generated deeplink for platform {platform} with nonce {nonce}"
-            )
-            return Response({"deeplink": deeplink, "nonce": nonce})
-        except ValueError as e:
-            return Response({"error": str(e)}, status=400)
-
-
-class BotAuthView(APIView):
-    authentication_classes = [HMACAuthentication]
+class RegisterView(views.APIView):
     permission_classes = [IsHMACAuthenticated]
+    resource_name = "user"
 
-    def post(self, request: Request):
-        user = request.user
-
-        if user is None or not user.is_authenticated:
-            serializer = BotAuthSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            user, created = serializer.save()
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Register User",
+        methods=["POST"],
+        auth=[],
+        request=RegisterSerializer,
+        responses={
+            200: UserOutputSerializer(many=False),
+            # 201: UserOutputSerializer(many=False),
+            # 400: OpenApiResponse(description="Bad Request"),
+            # 403: OpenApiResponse(description="Forbidden (invalid HMAC)"),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """Register or authenticate user"""
+        if request.user.is_authenticated:
+            auth_result = AuthResult(user=request.user, created=False)
         else:
-            created = False
+            serializer = RegisterSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            auth_result = serializer.save()
+            logger.info(
+                f"User {auth_result.user.id} {'created' if auth_result.created else 'retrieved'} via bot auth"
+            )
+            request.user = auth_result.user  # важно для обработки nonce
 
-        nonce_serializer = NonceSerializer(data=request.data)
-        nonce_serializer.is_valid(raise_exception=True)
-        nonce_status = nonce_serializer.save_nonce(user_id=str(user.id), timeout=300)
+        response_data = UserOutputSerializer(auth_result.user).data
+        response_data["meta"] = {"created": auth_result.created}
 
-        return Response(
-            {
-                "user": {
-                    "id": user.id,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "username": user.username,
-                },
-                "created": created,
-                "nonce_status": nonce_status,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response(response_data, status=auth_result.status_code)
+
+
+class RegisterWithNonceView(views.APIView):
+    permission_classes = [IsHMACAuthenticated]
+    resource_name = "user"
+
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Register with Nonce",
+        auth=[],
+        methods=["POST"],
+        request=RegisterWithNonceSerializer,
+        responses={
+            200: UserOutputSerializer(many=False),
+            # 201: UserOutputSerializer(many=False),
+            # 400: OpenApiResponse(description="Bad Request"),
+            # 403: OpenApiResponse(description="Forbidden (invalid HMAC)"),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """
+        Register a new user and immediately bind a nonce.
+        Used when both registration and nonce binding are needed in a single call.
+        """
+        logger.info("Вызывается общий метод")
+        user_response = RegisterView().post(request)
+
+        nonce_value = request.data.get("nonce")
+        request._full_data = {"type": "nonce", "nonce": nonce_value}
+
+        from .nonce_view import NonceView
+
+        logger.info("Закрепляем nonce")
+        nonce_response = NonceView().post(request)
+
+        user_data: dict = user_response.data
+        meta = user_data.setdefault("meta", {})
+        meta.update(nonce_response.data)
+
+        return user_response

@@ -1,79 +1,67 @@
 import logging
+from dataclasses import dataclass
 
-from django.core.cache import caches
-from rest_framework import serializers
+from rest_framework import status
+from rest_framework_json_api import serializers as json_api_serializers
 
 from scheduler.models import User, SocialAccount, Platform
 
-SOCIAL_ID_MAX_LENGTH = SocialAccount._meta.get_field('social_id').max_length
-PLATFORM_MAX_LENGTH = SocialAccount._meta.get_field('platform').max_length
-FIRST_NAME_MAX_LENGTH = User._meta.get_field('first_name').max_length
-LAST_NAME_MAX_LENGTH = User._meta.get_field('last_name').max_length
+SOCIAL_ID_MAX_LENGTH = SocialAccount._meta.get_field("social_id").max_length
+PLATFORM_MAX_LENGTH = SocialAccount._meta.get_field("platform").max_length
+FIRST_NAME_MAX_LENGTH = User._meta.get_field("first_name").max_length
+LAST_NAME_MAX_LENGTH = User._meta.get_field("last_name").max_length
 
 logger = logging.getLogger(__name__)
-cache = caches['auth']
 
 
-class NonceSerializer(serializers.Serializer):
-    nonce = serializers.UUIDField(required=False)
+@dataclass
+class AuthResult:
+    user: User
+    created: bool
 
-    def save_nonce(self, user_id: str, timeout: int = 300) -> str:
-        """Сохраняет nonce в Redis, если он передан, и возвращает статус."""
-        nonce = self.validated_data.get("nonce")
-        if nonce:
-            try:
-                cache.set(str(nonce), user_id, timeout=timeout)
-                logger.info(f"User {user_id} authenticated with nonce {nonce}")
-                return "authenticated"
-
-            except Exception as e:  # Общее исключение для совместимости с любым бэкендом кеша
-                logger.error(f"Failed to save nonce {nonce} for user {user_id} in cache: {str(e)}")
-                return "failed"
-
-        logger.debug(f"User {user_id} started bot without nonce")
-        return "none"
+    @property
+    def status_code(self) -> int:
+        return status.HTTP_201_CREATED if self.created else status.HTTP_200_OK
 
 
-class BotAuthSerializer(serializers.Serializer):
-    social_id = serializers.CharField(
+class RegisterSerializer(json_api_serializers.Serializer):
+    social_id = json_api_serializers.CharField(
         max_length=SOCIAL_ID_MAX_LENGTH,
-        required=True
     )
-    platform = serializers.ChoiceField(
+    platform = json_api_serializers.ChoiceField(
         choices=Platform.choices,
     )
-    first_name = serializers.CharField(
+    first_name = json_api_serializers.CharField(
         max_length=FIRST_NAME_MAX_LENGTH,
-        required=False, allow_blank=True,
-        allow_null=True
+        required=False,
+        allow_blank=True,
+        allow_null=True,
     )
-    last_name = serializers.CharField(
+    last_name = json_api_serializers.CharField(
         max_length=LAST_NAME_MAX_LENGTH,
         required=False,
         allow_blank=True,
-        allow_null=True
+        allow_null=True,
     )
-    extra_data = serializers.JSONField(
-        required=False,
-        allow_null=True
-    )
+    extra_data = json_api_serializers.JSONField(required=False, allow_null=True)
 
-    def create(self, validated_data):
-        social_id = validated_data['social_id']
-        platform = validated_data['platform']
-        first_name = validated_data['first_name']
-        last_name = validated_data['last_name']
-        extra_data = validated_data.get('extra_data', {})
+    class Meta:
+        resource_name = "user"
 
+    def create(self, validated_data) -> AuthResult:
         user, created = User.objects.get_or_create_user(
-            social_id=social_id,
-            platform=platform,
-            first_name=first_name,
-            last_name=last_name,
-            extra_data=extra_data
+            social_id=validated_data["social_id"],
+            platform=validated_data["platform"],
+            first_name=validated_data.get("first_name") or "",
+            last_name=validated_data.get("last_name") or "",
+            extra_data=validated_data.get("extra_data") or {},
         )
+        return AuthResult(user=user, created=created)
 
-        return user, created
-
-    def save(self, **kwargs):
+    def save(self, **kwargs) -> AuthResult:
+        """Save and return AuthResult with user instance and creation flag."""
         return self.create(self.validated_data)
+
+
+class RegisterWithNonceSerializer(RegisterSerializer):
+    nonce = json_api_serializers.UUIDField()

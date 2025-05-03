@@ -70,8 +70,3 @@ class HMACAuthentication(BaseAuthentication):
 
         except SocialAccount.DoesNotExist:
             return AnonymousUser(), "hmac"
-
-
-class IsHMACAuthenticated(BasePermission):
-    def has_permission(self, request, view):
-        return request.auth == "hmac"

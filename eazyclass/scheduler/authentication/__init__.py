@@ -1,2 +1,2 @@
 from .custom_refresh_token import CustomRefreshToken
-from .hmac_authentication import HMACAuthentication, IsHMACAuthenticated
+from .hmac_authentication import HMACAuthentication

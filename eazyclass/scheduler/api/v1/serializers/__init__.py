@@ -1,8 +1,10 @@
-from .auth_serializers import BotAuthSerializer, NonceSerializer
+from .auth_serializers import RegisterSerializer, RegisterWithNonceSerializer, AuthResult
+from .deeplink_serializators import DeeplinkParamsSerializer, DeeplinkOutputSerializer
 from .faculty_serialiazer import FacultySerializer
 from .group_serializers import CompactGroupSerializer, ShortGroupSerializer, GroupSerializer
 from .lesson_serializer import LessonSerializer
+from .nonce_serializers import NonceSerializer, NonceBindOutputSerializer
 from .subscription_serializer import SubscriptionSerializer
 from .teacher_serializers import TeacherSerializer, CompactTeacherSerializer
 from .token_serializer import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer
-from .user_serializers import UserSerializer, UserUpdateSerializer
+from .user_serializers import UserSerializer, UserUpdateSerializer, UserOutputSerializer
