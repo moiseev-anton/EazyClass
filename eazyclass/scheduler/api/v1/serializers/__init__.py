@@ -6,5 +6,5 @@ from .lesson_serializer import LessonSerializer
 from .nonce_serializers import NonceSerializer
 from .subscription_serializer import SubscriptionSerializer
 from .teacher_serializers import TeacherSerializer, CompactTeacherSerializer
-from .token_serializer import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer
+from .token_serializers import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer, TokenResponseSerializer
 from .user_serializers import UserSerializer, UserUpdateSerializer, UserOutputSerializer
