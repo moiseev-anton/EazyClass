@@ -54,7 +54,7 @@ class CustomTokenObtainPairView(
 
     @extend_schema(
         tags=["Token"],
-        summary="Obtain access and refresh tokens",
+        summary="Obtain access and refresh tokens (non-JSON:API)",
         description=(
             "Returns a pair of JWT tokens (access and refresh). "
             "If the client is a browser, the refresh token is set in an HttpOnly cookie."
@@ -130,7 +130,7 @@ class CustomTokenRefreshView(
 
     @extend_schema(
         tags=["Token"],
-        summary="Refresh access and refresh tokens",
+        summary="Refresh access and refresh tokens (non-JSON:API)",
         description=(
             "Accepts a refresh token from either the request body or cookie, "
             "and returns a new pair of JWT tokens. "

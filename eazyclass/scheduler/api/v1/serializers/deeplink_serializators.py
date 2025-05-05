@@ -11,6 +11,3 @@ class DeeplinkParamsSerializer(serializers.Serializer):
 class DeeplinkOutputSerializer(serializers.Serializer):
     deeplink = json_api_serializers.URLField()
     nonce = json_api_serializers.UUIDField()
-
-    class Meta:
-        resource_name = "deeplink"

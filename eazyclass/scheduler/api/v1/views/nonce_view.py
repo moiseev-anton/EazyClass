@@ -1,7 +1,7 @@
 import logging
 
-from drf_spectacular.utils import extend_schema
-from rest_framework import status, views
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import status, views, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -24,8 +24,14 @@ class NonceView(PlainApiViewMixin, views.APIView):
         auth=[],
         methods=["POST"],
         request={"application/json": NonceSerializer},
-        # responses={
-        #     200:
+        responses={
+            200: OpenApiResponse(
+                        response=inline_serializer(
+                            name="NonceResponse",
+                            fields={"nonce_status": serializers.CharField()},
+                        ),
+                    ),
+        }
     )
     def post(self, request: Request) -> Response:
         """

@@ -15,7 +15,7 @@ from scheduler.api.v1.serializers import (
     DeeplinkOutputSerializer,
     DeeplinkParamsSerializer,
 )
-from scheduler.api.v1.views.mixins import JsonApiViewMixin
+from scheduler.api.v1.views.mixins import PlainApiViewMixin
 from scheduler.models import Platform
 
 logger = logging.getLogger(__name__)
@@ -30,13 +30,12 @@ class DeeplinkFactory:
         return templates[platform].format(nonce=nonce)
 
 
-class DeeplinkView(JsonApiViewMixin, views.APIView):
+class DeeplinkView(PlainApiViewMixin, views.APIView):
     permission_classes = [AllowAny]
-    resource_name = "deeplink"
 
     @extend_schema(
         tags=["Authentication"],
-        summary="Get deeplink",
+        summary="Get deeplink (non-JSON:API)",
         auth=[],
         methods=["GET"],
         parameters=[
