@@ -14,6 +14,7 @@ from rest_framework_json_api.views import ReadOnlyModelViewSet
 
 from scheduler.api.filters import LessonFilter
 from scheduler.api.v1.serializers import LessonSerializer
+from scheduler.api.v1.views.mixins import JsonApiViewMixin
 from scheduler.models import Lesson, Subscription, Group, Teacher
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ logger = logging.getLogger(__name__)
         },
     ),
 )
-class LessonViewSet(ReadOnlyModelViewSet):
+class LessonViewSet(JsonApiViewMixin, ReadOnlyModelViewSet):
     """
     Представление для получения информации об уроках.
 
@@ -78,11 +79,12 @@ class LessonViewSet(ReadOnlyModelViewSet):
     serializer_class = LessonSerializer
     filterset_class = LessonFilter
     permission_classes = [AllowAny]
+    resource_name = "lesson"
 
     select_for_includes = {
-        '__all__': [],
-        'group': ['group'],
-        'teacher': ['teacher'],
+        "__all__": [],
+        "group": ["group"],
+        "teacher": ["teacher"],
     }
 
     def get_queryset(self):

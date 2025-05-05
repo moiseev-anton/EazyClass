@@ -11,13 +11,15 @@ from rest_framework_json_api.views import (
     RelatedMixin,
 )
 
+from scheduler.api.v1.serializers import UserSerializer, UserUpdateSerializer
+from scheduler.api.v1.views.mixins import JsonApiViewMixin
 from scheduler.models import User
-from ..serializers import UserSerializer, UserUpdateSerializer
 
 logger = logging.getLogger(__name__)
 
 
 class UserViewSet(
+    JsonApiViewMixin,
     AutoPrefetchMixin,
     PreloadIncludesMixin,
     RelatedMixin,

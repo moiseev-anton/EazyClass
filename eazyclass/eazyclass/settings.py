@@ -260,8 +260,6 @@ CACHES = {
     },
 }
 
-from rest_framework.authentication import SessionAuthentication
-
 REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": (
         "rest_framework_json_api.parsers.JSONParser",
@@ -271,7 +269,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework_json_api.renderers.JSONRenderer",
-        # 'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.JSONRenderer',
         # 'scheduler.api.renderers.APIJSONRenderer',
         # 'rest_framework.renderers.BrowsableAPIRenderer',
     ),
@@ -289,7 +287,7 @@ REST_FRAMEWORK = {
         "rest_framework_json_api.django_filters.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
     ),
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular_jsonapi.schemas.openapi.JsonApiAutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "drf_spectacular_jsonapi.schemas.pagination.JsonApiPageNumberPagination",
     "SEARCH_PARAM": "filter[search]",
 }
@@ -300,9 +298,6 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1",
     "SCHEMA_PATH_PREFIX": "/api/v1/",
     "COMPONENT_SPLIT_REQUEST": True,
-    "ENUM_NAME_OVERRIDES": {
-        "FormatEnum": ["full", "compact"],
-    },
     "CAMELIZE_NAMES": False,
     "COMPONENT_NO_READ_ONLY_REQUIRED": True,
     "PREPROCESSING_HOOKS": [

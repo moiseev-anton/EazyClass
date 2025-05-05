@@ -3,7 +3,7 @@ from .deeplink_serializators import DeeplinkParamsSerializer, DeeplinkOutputSeri
 from .faculty_serialiazer import FacultySerializer
 from .group_serializers import CompactGroupSerializer, ShortGroupSerializer, GroupSerializer
 from .lesson_serializer import LessonSerializer
-from .nonce_serializers import NonceSerializer, NonceBindOutputSerializer
+from .nonce_serializers import NonceSerializer
 from .subscription_serializer import SubscriptionSerializer
 from .teacher_serializers import TeacherSerializer, CompactTeacherSerializer
 from .token_serializer import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer

@@ -6,29 +6,26 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from scheduler.api.v1.serializers import (
-    NonceSerializer,
-    NonceBindOutputSerializer,
-)
+from scheduler.api.exceptions import custom_exception_handler
+from scheduler.api.v1.serializers import NonceSerializer
+from scheduler.api.v1.views.mixins import PlainApiViewMixin
 
 logger = logging.getLogger(__name__)
 
 
-class NonceView(views.APIView):
+class NonceView(PlainApiViewMixin, views.APIView):
     permission_classes = [IsAuthenticated]
+    exception_handler = custom_exception_handler
     resource_name = "nonce"
 
     @extend_schema(
         tags=["Authentication"],
-        summary="Bind Nonce",
+        summary="Bind nonce (non-JSON:API)",
         auth=[],
         methods=["POST"],
-        request=NonceSerializer,
-        responses={
-            200: NonceBindOutputSerializer(many=False),
-            # 400: OpenApiResponse(description="Bad Request"),
-            # 403: OpenApiResponse(description="Forbidden")
-        },
+        request={"application/json": NonceSerializer},
+        # responses={
+        #     200:
     )
     def post(self, request: Request) -> Response:
         """
@@ -40,5 +37,4 @@ class NonceView(views.APIView):
         serializer.is_valid(raise_exception=True)
         nonce_status = serializer.save_nonce(user_id=user_id, timeout=300)
 
-        output_serializer = NonceBindOutputSerializer({"nonce_status": nonce_status})
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
+        return Response({"nonce_status": nonce_status}, status=status.HTTP_200_OK)

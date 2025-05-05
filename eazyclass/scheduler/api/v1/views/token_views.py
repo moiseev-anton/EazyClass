@@ -8,6 +8,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from django.utils.translation import gettext_lazy as _
 
 from scheduler.api.v1.serializers import CustomTokenObtainPairSerializer, CustomTokenRefreshSerializer
+from scheduler.api.v1.views.mixins import PlainApiViewMixin
 
 
 def set_refresh_token_cookie(response: Response) -> None:
@@ -26,7 +27,7 @@ def set_refresh_token_cookie(response: Response) -> None:
         del response.data["refresh"]  # Убираем refresh из тела для браузеров
 
 
-class CustomTokenObtainPairView(TokenObtainPairView):
+class CustomTokenObtainPairView(PlainApiViewMixin, TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     schema = AutoSchema()
 
@@ -47,7 +48,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
 
 
-class CustomTokenRefreshView(TokenRefreshView):
+
+class CustomTokenRefreshView(PlainApiViewMixin, TokenRefreshView):
     serializer_class = CustomTokenRefreshSerializer
     schema = AutoSchema()
 

@@ -11,6 +11,7 @@ from rest_framework_json_api.views import ReadOnlyModelViewSet
 
 from scheduler.api.filters import GroupFilter
 from scheduler.api.v1.serializers import GroupSerializer
+from scheduler.api.v1.views.mixins import JsonApiViewMixin
 from scheduler.models import Group
 
 logger = logging.getLogger(__name__)
@@ -43,11 +44,12 @@ logger = logging.getLogger(__name__)
         },
     ),
 )
-class GroupViewSet(ReadOnlyModelViewSet):
+class GroupViewSet(JsonApiViewMixin, ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [AllowAny]
     filterset_class = GroupFilter
+    permission_classes = [AllowAny]
+    resource_name = "group"
 
     select_for_includes = {
         "__all__": [],

@@ -8,13 +8,15 @@ from rest_framework.viewsets import ModelViewSet
 
 from scheduler.api.permissions import IsOwner
 from scheduler.api.v1.serializers import SubscriptionSerializer
+from scheduler.api.v1.views.mixins import JsonApiViewMixin
 from scheduler.models import Subscription
 
 
-class SubscriptionViewSet(ModelViewSet):
+class SubscriptionViewSet(JsonApiViewMixin, ModelViewSet):
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated, IsOwner]
     lookup_field = "id"
+    resource_name = "subscription"
 
     def get_queryset(self):
         """Возвращает только подписки текущего пользователя."""
