@@ -9,8 +9,11 @@ from django.db.models import Model, ForeignKey, ManyToManyField, OneToOneField
 from django.http import Http404
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular_jsonapi.schemas.openapi import JsonApiAutoSchema
+from rest_framework import status
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
+from rest_framework.response import Response
 from rest_framework_json_api.parsers import JSONParser as JSONAPIParser
 from rest_framework_json_api.renderers import JSONRenderer as JSONAPIRenderer
 from rest_framework_json_api.utils import get_included_resources
@@ -30,7 +33,7 @@ class PlainApiViewMixin:
     schema = AutoSchema()
 
 
-class EtagMixin:
+class ETagMixin:
     def get_select_related(self, include) -> Optional[List]:
         return getattr(self, "select_for_includes", {}).get(include, None)
 
@@ -231,3 +234,30 @@ class EtagMixin:
         if not hasattr(self, "_cached_object"):
             self._cached_object = super().get_object()
         return self._cached_object
+
+
+class ETagListModelMixin(ListModelMixin):
+    """
+    List a queryset.
+    """
+    def list(self, request, *args, **kwargs):
+        etag, is_matched = self.check_etag(many=True)
+        if is_matched:
+            return Response(status=status.HTTP_304_NOT_MODIFIED)
+
+        response = super().list(request, *args, **kwargs)
+        if response.status_code == 200:
+            response["ETag"] = etag
+        return response
+
+
+class ETagRetrieveModelMixin(RetrieveModelMixin):
+    def retrieve(self, request, *args, **kwargs):
+        etag, is_matched = self.check_etag()
+        if is_matched:
+            return Response(status=status.HTTP_304_NOT_MODIFIED)
+
+        response = super().retrieve(request, *args, **kwargs)
+        if response.status_code == 200:
+            response["ETag"] = etag
+        return response

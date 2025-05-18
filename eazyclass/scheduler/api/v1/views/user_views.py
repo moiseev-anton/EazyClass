@@ -12,7 +12,7 @@ from rest_framework_json_api.views import (
 )
 
 from scheduler.api.v1.serializers import UserSerializer, UserUpdateSerializer
-from scheduler.api.v1.views.mixins import JsonApiMixin
+from scheduler.api.mixins import JsonApiMixin
 from scheduler.models import User
 
 logger = logging.getLogger(__name__)

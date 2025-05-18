@@ -15,9 +15,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from scheduler.api.v1.serializers import (
     CustomTokenObtainPairSerializer,
     CustomTokenRefreshSerializer,
-    TokenResponseSerializer,
 )
-from scheduler.api.v1.views.mixins import PlainApiViewMixin
+from scheduler.api.mixins import PlainApiViewMixin
 
 
 class TokenCookieHandlerMixin:

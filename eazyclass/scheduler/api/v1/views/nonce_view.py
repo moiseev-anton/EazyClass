@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from scheduler.api.exceptions import custom_exception_handler
 from scheduler.api.v1.serializers import NonceSerializer
-from scheduler.api.v1.views.mixins import PlainApiViewMixin
+from scheduler.api.mixins import PlainApiViewMixin
 
 logger = logging.getLogger(__name__)
 

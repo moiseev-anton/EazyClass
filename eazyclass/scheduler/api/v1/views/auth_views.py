@@ -12,7 +12,7 @@ from scheduler.api.v1.serializers import (
     AuthResult,
     RegisterWithNonceSerializer,
 )
-from scheduler.api.v1.views.mixins import JsonApiMixin
+from scheduler.api.mixins import JsonApiMixin
 
 logger = logging.getLogger(__name__)
 
