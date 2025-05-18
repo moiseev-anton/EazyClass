@@ -14,11 +14,6 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework_json_api.parsers import JSONParser as JSONAPIParser
 from rest_framework_json_api.renderers import JSONRenderer as JSONAPIRenderer
 from rest_framework_json_api.utils import get_included_resources
-from rest_framework_json_api.views import (
-    AutoPrefetchMixin,
-    PreloadIncludesMixin,
-    RelatedMixin,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +28,6 @@ class PlainApiViewMixin:
     parser_classes = [JSONParser]
     renderer_classes = [JSONRenderer]
     schema = AutoSchema()
-
-
-class IncludeMixin(JsonApiMixin, AutoPrefetchMixin, PreloadIncludesMixin, RelatedMixin):
-    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
 
 class EtagMixin:
@@ -58,10 +49,7 @@ class EtagMixin:
     def get_relation_model_map(self, relations: set[str]) -> dict[str, Model]:
         """
         Извлекает все уникальные модели из отношений.
-
-        Пример:
-            Вход: {'author__bio', 'publisher'}
-            Выход: {'author': Author, 'bio': Bio, 'publisher': Publisher}
+        Пример: Вход: {'author__bio', 'publisher'} -> Выход: {'author': Author, 'bio': Bio, 'publisher': Publisher}
         """
         result = {}
         main_model = self.queryset.model
@@ -205,15 +193,16 @@ class EtagMixin:
             return self.collect_etag_metrics_for_list()
         return self.collect_etag_metrics_for_instance()
 
-    def generate_etag(self, many: bool):
+    def generate_etag(self, many: bool, weak: bool) -> str:
         """Генерация ETag на основе аккумулированных данных"""
         etag_data = self.get_etag_data(many)
         request_uri = self.request.build_absolute_uri()
-        return hashlib.md5(
+        etag = hashlib.md5(
             f"{request_uri}-{etag_data['max_updated']}-{etag_data['total_count']}".encode(
                 "utf-8"
             )
         ).hexdigest()
+        return f'W/"{etag}"' if weak else etag
 
     def check_etag(self, many: bool = False) -> Tuple[str, bool]:
         """
