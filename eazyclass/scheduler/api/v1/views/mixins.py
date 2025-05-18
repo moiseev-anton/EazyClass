@@ -220,8 +220,9 @@ class EtagMixin:
         Проверяет ETag из заголовка If-None-Match.
         Возвращает кортеж (etag, is_matched).
         """
-        new_etag = self.generate_etag(many)
-        client_etag = self.request.headers.get("If-None-Match", "").strip('"')
+        new_etag = self.generate_etag(many, weak=True)
+        client_etag = self.request.headers.get('If-None-Match')
+        logger.info(f"check_etag: Client ETag={client_etag}, New ETag={new_etag}")
         is_matched = client_etag is not None and client_etag == new_etag
         return new_etag, is_matched
 
