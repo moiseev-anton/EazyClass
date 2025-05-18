@@ -8,7 +8,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from scheduler.api.response_examples import SubscriptionSuccessResponse
 from scheduler.api.v1.serializers import SubscriptionSerializer
-from scheduler.api.v1.views.mixins import JsonApiViewMixin
+from scheduler.api.v1.views.mixins import JsonApiMixin
 from scheduler.models import Subscription
 from rest_framework import exceptions
 
@@ -21,7 +21,7 @@ class SubscriptionAlreadyExists(exceptions.APIException):
 
 
 class SubscriptionViewSet(
-    JsonApiViewMixin,
+    JsonApiMixin,
     mixins.CreateModelMixin,
     GenericViewSet
 ):

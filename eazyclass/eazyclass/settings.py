@@ -292,6 +292,8 @@ REST_FRAMEWORK = {
     "SEARCH_PARAM": "filter[search]",
 }
 
+JSON_API_FORMAT_FIELD_NAMES = 'camelize'
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "EazyClass API",
     "DESCRIPTION": "Документация API расписания",

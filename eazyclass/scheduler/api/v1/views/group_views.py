@@ -6,12 +6,18 @@ from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
 )
+from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
-from rest_framework_json_api.views import ReadOnlyModelViewSet
+from rest_framework.response import Response
+from rest_framework_json_api.views import (
+    AutoPrefetchMixin,
+    PreloadIncludesMixin,
+    RelatedMixin,
+)
 
 from scheduler.api.filters import GroupFilter
 from scheduler.api.v1.serializers import GroupSerializer
-from scheduler.api.v1.views.mixins import JsonApiViewMixin
+from scheduler.api.v1.views.mixins import JsonApiMixin, EtagMixin
 from scheduler.models import Group
 
 logger = logging.getLogger(__name__)
@@ -44,7 +50,14 @@ logger = logging.getLogger(__name__)
         },
     ),
 )
-class GroupViewSet(JsonApiViewMixin, ReadOnlyModelViewSet):
+class GroupViewSet(
+    JsonApiMixin,
+    AutoPrefetchMixin,
+    PreloadIncludesMixin,
+    RelatedMixin,
+    EtagMixin,
+    viewsets.ReadOnlyModelViewSet,
+):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     filterset_class = GroupFilter
@@ -58,3 +71,21 @@ class GroupViewSet(JsonApiViewMixin, ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return super().get_queryset().filter(is_active=True).order_by("title")
+
+    def list(self, request, *args, **kwargs):
+        etag, is_matched = self.check_etag(many=True)
+        if is_matched:
+            return Response(status=status.HTTP_304_NOT_MODIFIED)
+        response = super().list(request, *args, **kwargs)
+        if response.status_code == 200:
+            response["ETag"] = f'"{etag}"'
+        return response
+
+    def retrieve(self, request, *args, **kwargs):
+        etag, is_matched = self.check_etag()
+        if is_matched:
+            return Response(status=status.HTTP_304_NOT_MODIFIED)
+        response = super().retrieve(request, *args, **kwargs)
+        if response.status_code == 200:
+            response["ETag"] = etag
+        return response

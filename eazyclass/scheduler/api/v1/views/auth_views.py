@@ -12,12 +12,12 @@ from scheduler.api.v1.serializers import (
     AuthResult,
     RegisterWithNonceSerializer,
 )
-from scheduler.api.v1.views.mixins import JsonApiViewMixin
+from scheduler.api.v1.views.mixins import JsonApiMixin
 
 logger = logging.getLogger(__name__)
 
 
-class RegisterView(JsonApiViewMixin, views.APIView):
+class RegisterView(JsonApiMixin, views.APIView):
     permission_classes = [IsHMACAuthenticated]
     resource_name = "user"
 
