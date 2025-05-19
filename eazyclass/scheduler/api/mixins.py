@@ -205,7 +205,7 @@ class ETagMixin:
                 "utf-8"
             )
         ).hexdigest()
-        return f'W/"{etag}"' if weak else etag
+        return f'W/{etag}' if weak else etag
 
     def check_etag(self, many: bool = False) -> Tuple[str, bool]:
         """
