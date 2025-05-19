@@ -10,11 +10,11 @@ from drf_spectacular.utils import (
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_json_api.views import ReadOnlyModelViewSet
 
 from scheduler.api.filters import LessonFilter
 from scheduler.api.v1.serializers import LessonSerializer
 from scheduler.api.mixins import JsonApiMixin
+from scheduler.api.viewsets import ReadOnlyModelViewSet
 from scheduler.models import Lesson, Subscription, Group, Teacher
 
 logger = logging.getLogger(__name__)
