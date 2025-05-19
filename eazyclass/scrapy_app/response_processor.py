@@ -19,6 +19,7 @@ class ResponseProcessor:
     :param redis_client: (необязательно) Клиент Redis.
     """
     DATE_ROW_LENGTH = 1
+    HTML_SNIPPET_LIMIT = 200
     FIELD_ORDER = ('lesson_number', 'subject_title', 'classroom_title', 'teacher_fullname', 'subgroup',)
 
     def __init__(self, response: 'scrapy.http.Response', redis_client: Optional['redis.client.Redis'] = None):
@@ -42,6 +43,8 @@ class ResponseProcessor:
         """
         try:
             logger.debug('Начинается парсинг страницы')
+            self.validate_page()
+
             for row in self.response.xpath('//tr[@class="shadow"]'):
                 row_cells_texts = row.xpath('./td').xpath('string(.)').getall()
 
@@ -107,3 +110,9 @@ class ResponseProcessor:
         except Exception as e:
             logger.error(f"Неизвестная ошибка при проверке изменения контента для group_id  {self.group_id}: {e}")
         return False
+
+    def validate_page(self):
+        if self.response.xpath('//table//tr[@class="shadow"]').get() is None:
+            html_preview = self.response.text[:self.HTML_SNIPPET_LIMIT]
+            raise RuntimeError(f"Страница не соответствует ожидаемой структуре (group_id={self.group_id}). "
+                               f"Начало содержимого:\n{html_preview}...")
