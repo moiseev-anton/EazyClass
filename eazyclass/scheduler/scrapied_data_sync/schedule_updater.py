@@ -5,6 +5,7 @@ from typing import Optional, Dict, List, Any
 
 from bulk_sync import bulk_compare as original_bulk_compare
 from django.db import transaction
+from django.utils import timezone
 
 from scheduler.models import Subject, Lesson, Classroom, Teacher, Period
 from scheduler.scrapied_data_sync.related_objects_map import RelatedObjectsMap
@@ -20,7 +21,7 @@ class ScheduleSyncManager:
     PAGE_HASH_TIMEOUT: int = 86400  # 24 часа
     SCHEDULE_CHANGES_TIMEOUT: int = 3600  # 1 час
     COMPARISON_FIELDS: List[str] = ['group_id', 'period_id', 'subgroup']
-    UPDATE_FIELDS: List[str] = ['subject_id', 'classroom_id', 'teacher_id']
+    UPDATE_FIELDS: List[str] = ['subject_id', 'classroom_id', 'teacher_id', 'updated_at']
 
     def __init__(self):
         self.scraped_groups: Optional[Dict[int, str]] = None  # {group_id: page_hash, ...}
@@ -94,6 +95,7 @@ class ScheduleSyncManager:
 
     def _create_new_lessons(self) -> None:
         """Создает объекты уроков на основе полученных данных."""
+        update_time = timezone.now()
         for item in self.lesson_items:
             if item['group_id'] in self.scraped_groups and item['period']['date'] >= self.start_sync_day:
                 lesson_obj = Lesson(
@@ -102,7 +104,8 @@ class ScheduleSyncManager:
                     period_id=self.periods.get_or_map_id(item['period']),
                     teacher_id=self.teachers.get_or_map_id(item['teacher']),
                     classroom_id=self.classrooms.get_or_map_id(item['classroom']),
-                    subject_id=self.subjects.get_or_map_id(item['subject'])
+                    subject_id=self.subjects.get_or_map_id(item['subject']),
+                    updated_at=update_time
                 )
                 self.new_lessons.append(lesson_obj)
         logger.debug(f'Собрали {len(self.new_lessons)} объектов уроков')
