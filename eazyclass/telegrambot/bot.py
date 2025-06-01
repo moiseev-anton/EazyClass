@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 async def on_startup(deps: Container):
     api_client = deps.api_client()
     cache_service = deps.cache_service()
-    await api_client.start()
+    # await api_client.start()
     await cache_service.update_all()  # Первичное обновление клавиатур
     await setup_periodic_task_scheduler(deps=deps)  # Запуск планировщика
     logger.info("Bot started.")

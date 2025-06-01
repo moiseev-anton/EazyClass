@@ -4,7 +4,7 @@ import os
 from typing import Any, Optional, Dict
 from pathlib import Path
 
-from telegrambot.api_client import ApiClient
+from telegrambot.api_client import JsonApiClient
 from telegrambot.cache import CacheRepository
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class CacheService:
     def __init__(
         self,
-        api_client: ApiClient,
+        api_client: JsonApiClient,
         faculties_cache_file: str,
         teachers_cache_file: str,
         cache_repository: CacheRepository,

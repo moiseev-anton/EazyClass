@@ -1,0 +1,13 @@
+requests
+pytest-asyncio
+pytest-mock
+pytest
+pytest-aiohttp
+asynctest
+jsonschema
+aiohttp>=3.0
+aiodns
+sphinx
+sphinx-autodoc-annotation
+pytest-cov
+coveralls

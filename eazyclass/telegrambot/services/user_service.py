@@ -3,13 +3,13 @@ from typing import Optional, Dict, Any
 
 from aiogram.types import User
 
-from telegrambot.api_client import ApiClient
+from telegrambot.api_client import JsonApiClient
 
 logger = logging.getLogger(__name__)
 
 
 class UserService:
-    def __init__(self, api_client: ApiClient, user: User):
+    def __init__(self, api_client: JsonApiClient, user: User):
         self.api_client = api_client
         self.user = user
 
