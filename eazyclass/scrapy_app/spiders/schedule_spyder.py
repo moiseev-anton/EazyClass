@@ -88,14 +88,14 @@ class ScheduleSpider(scrapy.Spider):
             #  то скорее стоит прервать всю цепочку задач с помощью исключения, так предыдущий результат скрайпинга останется в redis,
             #  или можем сохранить пустой результат перезаписав предыдущий.
             #  Иначе следующие задачи повторят работу со старым результатом
-            if self.scraped_groups:
-                # Преобразуем список уроков в JSON
-                lessons_json = pickle.dumps(self.lessons)
-                group_ids_json = pickle.dumps(self.scraped_groups)
+            # if self.scraped_groups:
+            # Преобразуем список уроков в JSON
+            lessons_json = pickle.dumps(self.lessons)
+            group_ids_json = pickle.dumps(self.scraped_groups)
 
-                # Помещаем данные в Redis
-                self.redis_client.set(SCRAPED_LESSONS_KEY, lessons_json)
-                self.redis_client.set(SCRAPED_GROUPS_KEY, group_ids_json)
+            # Помещаем данные в Redis
+            self.redis_client.set(SCRAPED_LESSONS_KEY, lessons_json)
+            self.redis_client.set(SCRAPED_GROUPS_KEY, group_ids_json)
 
             self.logger.info(f"Сохранено {len(self.lessons)} уроков для {len(self.scraped_groups)} групп в Redis.")
             self.logger.info(f'Закрытие паука.')

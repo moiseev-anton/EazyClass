@@ -38,10 +38,13 @@ class ScheduleSyncManager:
     def update_schedule(self) -> None:
         """Обновляет расписание, получая данные, обрабатывая их и сохраняя результат."""
         self.fetch_data()
-        if self.scraped_groups:
-            if self.lesson_items:
-                self._process_lessons()
-            self.save_sync_result_to_redis()
+        if not self.scraped_groups:
+            logger.info("Перечень групп пуст.")
+            return
+
+        if self.lesson_items:
+            self._process_lessons()
+        self.save_sync_result_to_redis()
 
     def _process_lessons(self) -> None:
         """Обрабатывает уроки:
@@ -154,8 +157,8 @@ class ScheduleSyncManager:
         Сперва сохраняет изменения расписания.
         Затем сохраняет хеши содержимого веб-страниц данные которых синхронизированы с БД.
         """
-        if not self.comparison_result:
-            logger.warning("Нет данных для сохранения в Redis")
+        if self.comparison_result is None:
+            logger.warning("Синхронизация занятий не производилась")
             return
 
         serialized_result = pickle.dumps(self.comparison_result)
