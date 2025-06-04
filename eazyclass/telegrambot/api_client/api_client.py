@@ -1,109 +1,18 @@
 import asyncio
-import hashlib
-import hmac
-import json
 import logging
-import time
-import copy
-from typing import Optional, Dict, Any, List
-from jsonapi_client import Session as JsonApiSession, Filter, Inclusion
+from typing import Optional
+
+import aiohttp
+import jsonapi_client
+from cachetools import TTLCache
+from jsonapi_client import Filter, Inclusion
 from jsonapi_client.common import HttpStatus, error_from_response
 from jsonapi_client.document import Document
-from jsonapi_client import common
-
-from aiocache import SimpleMemoryCache
-import aiohttp
-
-import jsonapi_client
 from jsonapi_client.exceptions import DocumentError
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_fixed,
-    retry_if_exception_type,
-    wait_exponential,
-)
+
+from telegrambot.api_client.document_fetcher import DocFetcher
 
 logger = logging.getLogger(__name__)
-
-
-def camelize_name(name: str) -> str:
-    parts = name.split('_')
-    return parts[0] + ''.join(p.capitalize() for p in parts[1:])
-
-
-def decamelize_name(name: str) -> str:
-    import re
-    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
-
-
-# Monkey-патч для jsonapi_client:
-# По умолчанию библиотека превращает поля с подчеркиваниями (short_title) в JSON-ключи с дефисами (short-title).
-# Так как DRF JSON API настроен на camelCase (shortTitle), переопределяем функции сериализации,
-# чтобы атрибуты корректно отображались и были доступны как обычные свойства: faculty.short_title.
-common.jsonify_attribute_name = camelize_name
-common.dejsonify_attribute_name = decamelize_name
-
-
-class NotModifiedError(Exception):
-    """Raised when server responds with HTTP 304 Not Modified"""
-    pass
-
-
-class Document(jsonapi_client.document.Document):
-    def __init__(self, session: 'Session',
-                 json_data: dict,
-                 url: str,
-                 etag: str = None,
-                 no_cache: bool=False) -> None:
-        super().__init__(session, json_data, url, no_cache)
-        self._etag = etag
-
-    @property
-    def etag(self) -> str:
-        return self._etag
-
-    @property
-    def enable_async(self) -> bool:
-        return getattr(self.session, "enable_async", False)
-
-
-class HMACAuth:
-    """
-    Генератор HMAC-заголовков
-    для персонифицированных запросов (с пользовательским social_id).
-    """
-
-    def __init__(
-        self,
-        secret: str,
-        platform: str,
-    ):
-        self.secret = secret.encode("utf-8")
-        self.platform = platform
-
-    async def get_headers(
-        self,
-        method: str,
-        url: str,
-        social_id: str,
-        body: Optional[bytes] = None,
-    ) -> Dict[str, str]:
-        """Возвращает заголовки для запроса."""
-
-        timestamp = str(int(time.time()))
-        body_hash = hashlib.sha256(body or b"").hexdigest()
-        message = f"{method}\n{url}\n{timestamp}\n{self.platform}\n{social_id}\n{body_hash}".encode(
-            "utf-8"
-        )
-        signature = hmac.new(self.secret, message, hashlib.sha256).hexdigest()
-
-        return {
-            "X-Signature": signature,
-            "X-Timestamp": timestamp,
-            "X-Platform": self.platform,
-            "X-Social-ID": social_id,
-        }
 
 
 # class HmacJsonApiClient(jsonapi_client.Session):
@@ -188,10 +97,12 @@ class AsyncClientSession(jsonapi_client.Session):
         server_url: str = None,
         schema: dict = None,
         request_kwargs: dict = None,
-        loop: Optional['AbstractEventLoop'] = None,
+        loop: Optional["AbstractEventLoop"] = None,
         use_relationship_iterator: bool = False,
-        document_ttl: float = 900.0,  # TTL for documents in seconds (15 minutes)
-        resource_ttl: float = 930.0,  # TTL for resources in seconds (15.5 minutes)
+        document_ttl: float = 3600,  # TTL для документов (1 час)
+        resource_ttl: float = 3600,  # TTL для ресурсов (1 час)
+        max_document_size: int = 1000,  # Максимум документов
+        max_resource_size: int = 10000,  # Максимум ресурсов
         hmac_secret: Optional[str] = None,  # Secret key for HMAC authentication
         platform: str = None,
     ) -> None:
@@ -204,37 +115,37 @@ class AsyncClientSession(jsonapi_client.Session):
             use_relationship_iterator=use_relationship_iterator,
         )
 
-        # Initialize TTL-enabled caches using aiocache.SimpleMemoryCache
-        self.documents_cache = SimpleMemoryCache()  # Cache for documents by URL
-        self.resources_by_id_cache = SimpleMemoryCache()  # Cache for resources by (type, id)
-        self.resources_by_link_cache = SimpleMemoryCache()  # Cache for resources URL
+        self.documents_cache = TTLCache(maxsize=max_document_size, ttl=document_ttl)
+        self.resources_by_id_cache = TTLCache(maxsize=max_resource_size, ttl=resource_ttl)
+        self.resources_by_link_cache = TTLCache(maxsize=max_resource_size, ttl=resource_ttl)
 
         # Store TTL values for use in other methods
         self.document_ttl = document_ttl
         self.resource_ttl = resource_ttl
 
         # Store HMAC secret for authentication
-        self.hmac_secret = hmac_secret
+        self.hmac_secret = hmac_secret.encode("utf-8") if hmac_secret else None
         self.platform = platform
 
     @property
     def request_kwargs(self):
         return self._request_kwargs
 
-    async def cache_doc(self, url: str, document: Document, ttl: int = None) -> Optional[Document]:
-        return await self.documents_cache.set(key=url, value=document, ttl=ttl or self.document_ttl)
+    def cache_doc(self, url: str, document: Document) -> Optional[Document]:
+        self.documents_cache[url] = document
 
-    async def add_resources(self, *resources: 'ResourceObject') -> None:
+    def add_resources(self, *resources: "ResourceObject") -> None:
         """Add resources to session cache."""
         for res in resources:
-            await self.resources_by_id_cache.set(key=(res.type, res.id), value=res)
+            self.resources_by_id_cache[(res.type, res.id)] = res
             if link := res.links.self.url if res.links.self else res.url:
-                await self.resources_by_link_cache.set(key=link, value=res)
+                self.resources_by_link_cache[link] = res
 
-    async def remove_resource(self, res: 'ResourceObject') -> None:
-        """Add resources to session cache."""
-        await self.resources_by_id_cache.delete(key=(res.type, res.id))
-        await self.resources_by_link_cache.delete(key=res.url)
+    def remove_resource(self, res: "ResourceObject") -> None:
+        del self.resources_by_id_cache[(res.type, res.id)]
+        if link := res.links.self.url if res.links.self else res.url:
+            if link in self.resources_by_link_cache:
+                del self.resources_by_link_cache[link]
 
     async def fetch_document_by_url_async(self, url: str) -> Document:
         """Fetch a Document from cache or server by URL, with ETag validation for cached document"""
@@ -242,17 +153,18 @@ class AsyncClientSession(jsonapi_client.Session):
         return await fetcher.fetch()
 
     async def fetch_resource_by_resource_identifier_async(
-                self,
-                resource: 'Union[ResourceIdentifier, ResourceObject, ResourceTuple]',
-                cache_only=False,
-                force=False) -> 'Optional[ResourceObject]':
+        self,
+        resource: "Union[ResourceIdentifier, ResourceObject, ResourceTuple]",
+        cache_only=False,
+        force=False,
+    ) -> "Optional[ResourceObject]":
         """
         Internal use. Async version.
 
         Fetch resource from server by resource identifier.
         """
         type_, id_ = resource.type, resource.id
-        new_res = not force and await self.resources_by_id_cache.get((type_, id_))
+        new_res = not force and self.resources_by_id_cache.get((type_, id_))
         if new_res:
             return new_res
         elif cache_only:
@@ -263,13 +175,25 @@ class AsyncClientSession(jsonapi_client.Session):
             fetcher = DocFetcher(self, resource.url)
             return (await fetcher.ext_fetch_by_url_async()).resource
 
+    def expire_caches(self) -> None:
+        """Удаляет устаревшие записи из кэшей (для планировщика)."""
+        self.documents_cache.expire()
+        self.resources_by_id_cache.expire()
+        self.resources_by_link_cache.expire()
+
+    async def start(self) -> None:
+        """Инициализация сессии."""
+        if self._aiohttp_session is None or self._aiohttp_session.closed:
+            self._aiohttp_session = aiohttp.Session()
+            logger.info("API client session started.")
+
     async def close(self):
         """Close session and clean cache."""
-        await self.invalidate()
+        self.invalidate()
         if self.enable_async and self._aiohttp_session:
             await self._aiohttp_session.close()
 
-    async def invalidate(self):
+    def invalidate(self):
         """
         Invalidate resources and documents associated with this Session.
         """
@@ -277,9 +201,9 @@ class AsyncClientSession(jsonapi_client.Session):
         #  если в будущем понадобится, то можно рассмотреть вариант с флагом закрытия сессии
         #  и добавлением проверки этого флага во ресурсах и всех связанных с ними объектах.
         #  Так мы одним действием инвалидируем сразу всё.
-        await self.documents_cache.clear()
-        await self.resources_by_link_cache.clear()
-        await self.resources_by_id_cache.clear()
+        self.documents_cache.clear()
+        self.resources_by_link_cache.clear()
+        self.resources_by_id_cache.clear()
 
     # async def fetch_document_by_url_async(self, url: str) -> 'Document':
     #     """
@@ -328,11 +252,7 @@ class AsyncClientSession(jsonapi_client.Session):
     #             return document
     #         raise  # Re-raise other HTTP errors
 
-    async def start(self) -> None:
-        """Инициализация сессии."""
-        if self._aiohttp_session is None or self._aiohttp_session.closed:
-            self._aiohttp_session = aiohttp.Session()
-            logger.info("API client session started.")
+
 
     # async def close(self) -> None:
     #     """Закрытие сессии."""
@@ -414,84 +334,18 @@ class AsyncClientSession(jsonapi_client.Session):
     #         logger.error(f"Request failed after retries: {str(e)}")
     #         raise
 
-
-class DocFetcher:
-    def __init__(self, client: AsyncClientSession, url: str, no_cache: bool = False) -> None:
-        self.client = client
-        self.url = url
-        self.no_cache = no_cache
-        self._request_kwargs = copy.deepcopy(client.request_kwargs)
-        self.old_etag = None
-        self.new_etag = None
-        self.json = None
-        self.doc = None
-
-    async def fetch(self) -> 'Document':
-        if document := await self.client.documents_cache.get(self.url):
-            if not document.etag:
-                return document  # Без ETag, просто используем кешированный документ
-            self.old_etag = document.etag
-            self._request_kwargs.setdefault("headers", {})
-            self._request_kwargs["headers"]["If-None-Match"] = self.old_etag
-
-        try:
-            return await self.ext_fetch_by_url_async()
-        except NotModifiedError:
-            return document
-
-    async def ext_fetch_by_url_async(self) -> 'Document':
-        await self._fetch_json_async()
-        return await self.read()
-
-    async def _fetch_json_async(self):
-        from urllib.parse import urlparse
-        parsed_url = urlparse(self.url)
-        logger.info(f'Fetching document from url {parsed_url}')
-
-        async with self.client._aiohttp_session.get(parsed_url.geturl(), **self._request_kwargs) as response:
-            if response.status == 304:
-                raise NotModifiedError("Document not modified")
-
-            response_content = await response.json(content_type='application/vnd.api+json')
-
-            if response.status == HttpStatus.OK_200:
-                self.new_etag = response.headers.get("ETag")
-                self.json = response_content
-                return self.json
-
-            raise DocumentError(f'Error {response.status}: '
-                                f'{error_from_response(response_content)}',
-                                errors={'status_code': response.status},
-                                response=response)
-
-    async def read(self) -> 'Document':
-        self.doc = Document(self.client, self.json, self.url, etag=self.new_etag, no_cache=self.no_cache)
-        if not self.no_cache:
-            await self.client.cache_doc(self.url, self.doc)
-        return self.doc
-
-    # Perform request
-        # try:
-        #     json_data = await self.client._fetch_json_async(self.url, method='GET', headers=self.headers)
-        #     # Handle 200 response
-        #     document = self.client.read(json_data, self.url)
-        #     await self.client.documents_cache.set(self.url, document, ttl=self.client.document_ttl)
-        #     new_etag = json_data.get('headers', {}).get('ETag')
-        #     if new_etag:
-        #         await self.client.etag_cache.set(self.url, new_etag, ttl=self.client.etag_ttl)
-        #     return document
-        # except aiohttp.ClientResponseError as e:
-        #     if e.status == 304 and document:
-        #         return document  # Use cached document
-        #     raise  # Re-raise other errors
-
-
 async def check_client():
     s = AsyncClientSession(server_url="http://localhost:8010/api/v1/")
     document = await s.get("groups", Filter(grade=2) + Inclusion("faculty"))
     await s.get("groups", Filter(grade=2) + Inclusion("faculty"))
+    # document = await s.get("groups", 5,)
+    # await s.get("groups", 5)
+    print(s.resources_by_id_cache.values())
+    print(s.documents_cache.values())
     await s.close()
+    print(s.resources_by_id_cache.values())
+    print(s.documents_cache.values())
 
-if __name__ == '__main__':
-    # asyncio.run(check_client())
-    print(jsonapi_client.__file__)
+
+if __name__ == "__main__":
+    asyncio.run(check_client())
