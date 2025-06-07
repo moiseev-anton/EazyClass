@@ -60,3 +60,9 @@ class DocumentInvalid(JsonApiClientError):
 
 class AsyncError(JsonApiClientError):
     pass
+
+
+class NotModifiedError(Exception):
+    """Raised when server responds with HTTP 304 Not Modified"""
+
+    pass

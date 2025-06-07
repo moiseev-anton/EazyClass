@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
 from itertools import chain
-from typing import Optional, Union, Awaitable, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from .common import AbstractJsonObject, jsonify_attribute_name, ResourceTuple
@@ -95,19 +95,7 @@ class Link(AbstractJsonObject):
     def __str__(self):
         return self.url if self.href else ''
 
-    def fetch_sync(self) -> 'Optional[Document]':
-        self.session.assert_sync()
-        if self:
-            return self.session.fetch_document_by_url(self.url)
-
-    def fetch(self):
-        if self.session.enable_async:
-            return self.fetch_async()
-        else:
-            return self.fetch_sync()
-
-    async def fetch_async(self) -> 'Optional[Document]':
-        self.session.assert_async()
+    async def fetch(self) -> 'Optional[Document]':
         if self:
             return await self.session.fetch_document_by_url_async(self.url)
 
@@ -144,8 +132,8 @@ class ResourceIdentifier(AbstractJsonObject):
     http://jsonapi.org/format/#document-resource-identifier-objects
     """
     def _handle_data(self, data):
-        self.id:str = data.get('id')
-        self.type:str = data.get('type')
+        self.id: str = data.get('id')
+        self.type: str = data.get('type')
 
     @property
     def url(self):
@@ -154,25 +142,16 @@ class ResourceIdentifier(AbstractJsonObject):
     def __str__(self):
         return f'{self.type}: {self.id}'
 
-    def fetch_sync(self, cache_only=True) -> 'ResourceObject':
-        return self.session.fetch_resource_by_resource_identifier(self, cache_only)
-
-    async def fetch_async(self, cache_only=True) -> 'ResourceObject':
+    async def fetch(self, cache_only=True) -> 'ResourceObject':
         return await self.session.fetch_resource_by_resource_identifier_async(self,
                                                                               cache_only)
-
-    def fetch(self, cache_only=True) \
-            -> 'Union[Awaitable[ResourceObject], ResourceObject]':
-        if self.session.enable_async:
-            return self.fetch_async(cache_only)
-        else:
-            return self.fetch_sync(cache_only)
 
     def as_resource_identifier_dict(self) -> dict:
         return {'id': self.id, 'type': self.type} if self.id else None
 
     def __bool__(self):
         return self.id is not None
+
 
 RESOURCE_TYPES = (ResourceObject, ResourceIdentifier, ResourceTuple)
 ResourceTypes = Union[ResourceObject, ResourceIdentifier, ResourceTuple]

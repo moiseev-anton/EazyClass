@@ -273,7 +273,8 @@ class RelationshipDict(dict):
         """
         self._resource = new_resource
 
-    def _determine_class(self, data: dict, relation_type: str=None):
+    @staticmethod
+    def _determine_class(data: dict, relation_type: str = None):
         """
         From data and/or provided relation_type, determine Relationship class
         to be used.
@@ -395,17 +396,11 @@ class ResourceObject(AbstractJsonObject):
         If async enabled, proxy to relationship objects.
         If async disabled, proxy to resources behind relationships.
         """
+        # TODO: Разобраться, нужно ли избавиться от proxy
         class Proxy(AttributeProxy):
             def __getitem__(proxy, item):
-                rel = self.relationships[item]
-                if self.session.enable_async:
-                    # With async it's more convenient to access Relationship object
-                    return self.relationships[item]
-
-                if rel.is_single:
-                    return rel.resource
-                else:
-                    return rel.resources
+                # With async it's more convenient to access Relationship object
+                return self.relationships[item]
 
         return Proxy()
 
@@ -540,45 +535,25 @@ class ResourceObject(AbstractJsonObject):
         if status == HttpStatus.ACCEPTED_202:
             return self.session.read(result, location, no_cache=True).resource
 
-    async def _commit_async(self, url: str= '', meta=None) -> None:
-        self.session.assert_async()
-        if self._delete:
-            return await self._perform_delete_async(url)
-
-        url = self._pre_commit(url)
-        status, result, location = await self.session.http_request_async(
-                                                self._http_method, url,
-                                                self._commit_data(meta))
-        return self._post_commit(status, result, location)
-
-    def _commit_sync(self, url: str= '', meta: dict=None) -> 'None':
-        self.session.assert_sync()
-        if self._delete:
-            return self._perform_delete(url)
-
-        url = self._pre_commit(url)
-        status, result, location = self.session.http_request(self._http_method, url,
-                                                             self._commit_data(meta))
-        return self._post_commit(status, result, location)
-
-    def commit(self, custom_url: str = '', meta: dict = None) \
-            -> 'Union[None, ResourceObject, Awaitable[Optional[ResourceObject]]':
+    async def commit(self, custom_url: str = '', meta: dict = None) -> None:
         """
         Commit (PATCH/POST) this resource to server.
 
         :param custom_url: Use this url instead of automatically determined one.
         :param meta: Optional metadata that is passed to server in POST/PATCH request
-
-        If in async mode, this needs to be awaited.
         """
-        if self.session.enable_async:
-            return self._commit_async(custom_url, meta)
-        else:
-            return self._commit_sync(custom_url, meta)
+        if self._delete:
+            return await self._perform_delete_async(custom_url)
+
+        url = self._pre_commit(custom_url)
+        status, result, location = await self.session.http_request_async(
+            self._http_method, url,
+            self._commit_data(meta))
+        return self._post_commit(status, result, location)
 
     def _update_resource(self,
                          resource_dict: 'Union[dict, ResourceObject]',
-                         location: str=None) -> None:
+                         location: str = None) -> None:
         if isinstance(resource_dict, dict):
             new_res = self.session.read(resource_dict, location, no_cache=True).resource
         else:
@@ -595,39 +570,20 @@ class ResourceObject(AbstractJsonObject):
         self.links = new_res.links
         self.session.add_resources(self)
 
-    def _refresh_sync(self):
-        self.session.assert_sync()
-        new_res = self.session.fetch_resource_by_resource_identifier(self, force=True)
-        self._update_resource(new_res)
-
-    async def _refresh_async(self):
-        self.session.assert_async()
-        new_res = await self.session.fetch_resource_by_resource_identifier_async(
-                                                                            self,
-                                                                            force=True)
-        self._update_resource(new_res)
-
-    def refresh(self):
+    async def refresh(self):
         """
         Manual way to refresh the data contained in this ResourceObject from server.
-
-        If in async mode, this needs to be awaited.
         """
-        if self.session.enable_async:
-            return self._refresh_async()
-        else:
-            return self._refresh_sync()
+        new_res = await self.session.fetch_resource_by_resource_identifier_async(
+            self,
+            force=True)
+        self._update_resource(new_res)
 
     def delete(self):
         """
         Mark resource to be deleted. Resource will be deleted upon commit.
         """
         self._delete = True
-
-    def _perform_delete(self, url=''):
-        url = url or self.url
-        self.session.http_request(HttpMethod.DELETE, url, {})
-        self.session.remove_resource(self)
 
     async def _perform_delete_async(self, url=''):
         url = url or self.url

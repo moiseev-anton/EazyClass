@@ -1,5 +1,5 @@
 """
-JSON API Python client 
+JSON API Python client
 https://github.com/qvantel/jsonapi-client
 
 (see JSON API specification in http://jsonapi.org/)
@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import logging
-from typing import TYPE_CHECKING, Iterator, AsyncIterator, List
+from typing import TYPE_CHECKING, List
 
 from .common import AbstractJsonObject
 from .exceptions import ValidationError, DocumentError
@@ -53,33 +53,46 @@ class Document(AbstractJsonObject):
     http://jsonapi.org/format/#document-top-level
     """
 
+    # TODO: если resources атрибут класса, то ресурсы будут общие для всех экземпляров.
+    #  Надо разобраться зачем это было сделано, вероятно исправить
     #: List of ResourceObjects contained in this Document
-    resources: List['ResourceObject']
+    resources: List["ResourceObject"]
 
-    def __init__(self, session: 'Session',
-                 json_data: dict,
-                 url: str,
-                 no_cache: bool=False) -> None:
+    def __init__(
+        self,
+        session: "Session",
+        json_data: dict,
+        url: str,
+        no_cache: bool = False,
+        etag: str = None,
+    ) -> None:
         self._no_cache = no_cache  # if true, do not store resources to session cache
         self._url = url
+        self._etag = etag
         super().__init__(session, json_data)
+
+    @property
+    def etag(self) -> str:
+        return self._etag
 
     @property
     def url(self) -> str:
         return self._url
 
     @property
-    def resource(self) -> 'ResourceObject':
+    def resource(self) -> "ResourceObject":
         """
         If there is only 1 ResourceObject contained in this Document, return it.
         """
         if len(self.resources) > 1:
-            logger.warning('There are more than 1 item in document %s, please use '
-                           '.resources!', self)
+            logger.warning(
+                "There are more than 1 item in document %s, please use " ".resources!",
+                self,
+            )
         return self.resources[0]
 
     def _handle_data(self, json_data):
-        data = json_data.get('data')
+        data = json_data.get("data")
 
         self.resources = []
 
@@ -89,49 +102,42 @@ class Document(AbstractJsonObject):
             elif isinstance(data, dict):
                 self.resources.append(ResourceObject(self.session, data))
 
-        self.errors = json_data.get('errors')
-        if [data, self.errors] == [None]*2:
-            raise ValidationError('Data or errors is needed')
+        self.errors = json_data.get("errors")
+        if [data, self.errors] == [None] * 2:
+            raise ValidationError("Data or errors is needed")
         if data and self.errors:
-            logger.error('Data and errors can not both exist in the same document')
+            logger.error("Data and errors can not both exist in the same document")
 
-        self.meta = Meta(self.session, json_data.get('meta', {}))
+        self.meta = Meta(self.session, json_data.get("meta", {}))
 
-        self.jsonapi = json_data.get('jsonapi', {})
-        self.links = Links(self.session, json_data.get('links', {}))
+        self.jsonapi = json_data.get("jsonapi", {})
+        self.links = Links(self.session, json_data.get("links", {}))
         if self.errors:
-            raise DocumentError(f'Error document was fetched. Details: {self.errors}',
-                                errors=self.errors)
-        self.included = [ResourceObject(self.session, i)
-                         for i in json_data.get('included', [])]
+            raise DocumentError(
+                f"Error document was fetched. Details: {self.errors}",
+                errors=self.errors,
+            )
+        self.included = [
+            ResourceObject(self.session, i) for i in json_data.get("included", [])
+        ]
         if not self._no_cache:
             self.session.add_resources(*self.resources, *self.included)
 
     def __str__(self):
-        return f'{self.resources}' if self.resources else f'{self.errors}'
+        return f"{self.resources}" if self.resources else f"{self.errors}"
 
-    def _iterator_sync(self) -> 'Iterator[ResourceObject]':
+    async def iterator(self):
+        """
+        Iterate through all resources of this Document and follow pagination until
+        there's no more resources.
+        """
         # if we currently have no items on the page, then there's no need to yield items
         # and check the next page
-        # we do this because there are APIs that always have a 'next' link, even when 
+        # we do this because there are APIs that always have a 'next' link, even when
         # there are no items on the page
         if len(self.resources) == 0:
             return
-        
-        yield from self.resources
 
-        if self.links.next:
-            next_doc = self.links.next.fetch()
-            yield from next_doc.iterator()
-
-    async def _iterator_async(self) -> 'AsyncIterator[ResourceObject]':
-        # if we currently have no items on the page, then there's no need to yield items
-        # and check the next page
-        # we do this because there are APIs that always have a 'next' link, even when 
-        # there are no items on the page
-        if len(self.resources) == 0:
-            return
-        
         for res in self.resources:
             yield res
 
@@ -139,18 +145,6 @@ class Document(AbstractJsonObject):
             next_doc = await self.links.next.fetch()
             async for res in next_doc.iterator():
                 yield res
-
-    def iterator(self):
-        """
-        Iterate through all resources of this Document and follow pagination until
-        there's no more resources.
-
-        If Session is in async mode, this needs to be used with async for.
-        """
-        if self.session.enable_async:
-            return self._iterator_async()
-        else:
-            return self._iterator_sync()
 
     def mark_invalid(self):
         """

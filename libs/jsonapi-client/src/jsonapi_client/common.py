@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import asyncio
 import logging
+import re
 from typing import Union, TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
@@ -45,6 +46,7 @@ class HttpStatus:
     CREATED_201 = 201
     ACCEPTED_202 = 202
     NO_CONTENT_204 = 204
+    NOT_MODIFIED_304 = 304
     FORBIDDEN_403 = 403
     NOT_FOUND_404 = 404
     CONFLICT_409 = 409
@@ -104,13 +106,30 @@ def error_from_response(response_content):
         error_str = '?'
     return error_str
 
+# Cтандартная реализация в jsonapi-client (для )
+# def jsonify_attribute_name(name: str) -> str:
+#     return name.replace('__', '.').replace('_', '-')
 
-def jsonify_attribute_name(name):
-    return name.replace('__', '.').replace('_', '-')
+
+def jsonify_attribute_name(name: str) -> str:
+    """
+    Преобразует snake_case строку в camelCase.
+    Используется для преобразования python -> JSON:API
+    """
+    parts = name.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+
+# def dejsonify_attribute_name(name):
+#     return name.replace('.', '__').replace('-', '_')
 
 
 def dejsonify_attribute_name(name):
-    return name.replace('.', '__').replace('-', '_')
+    """
+    Преобразует camelCase строку в snake_case.
+    Используется для преобразования JSON:API -> python
+    """
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
 def jsonify_attribute_names(iterable):
