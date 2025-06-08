@@ -1,6 +1,8 @@
 import copy
 import logging
-from .document import CustomDocument
+from urllib.parse import parse_qsl, urlencode, urlunparse
+
+from jsonapi_client.document import Document
 
 from jsonapi_client.common import HttpStatus, error_from_response
 from jsonapi_client.exceptions import DocumentError
@@ -8,50 +10,59 @@ from jsonapi_client.exceptions import DocumentError
 logger = logging.getLogger(__name__)
 
 
-class NotModifiedError(Exception):
-    """Raised when server responds with HTTP 304 Not Modified"""
-
-    pass
+# class NotModifiedError(Exception):
+#     """Raised when server responds with HTTP 304 Not Modified"""
+#
+#     pass
 
 
 class DocFetcher:
     def __init__(
-        self, client: 'AsyncClientSession', url: str, no_cache: bool = False
+        self,
+        client: 'AsyncClientSession',
+        resource_type: str,
+        resource_id_or_filter: 'Union[Modifier, str]' = None,
+        social_id: str = None,
+        hmac: bool = False,
+        no_cache: bool = False,
     ) -> None:
         self.client = client
-        self.url = url
+        self.url = client.build_url(resource_type, resource_id_or_filter)
+        self.social_id = social_id
+        self.hmac_ = hmac
         self.no_cache = no_cache
-        self._request_kwargs = copy.deepcopy(client.request_kwargs)
-        self.old_etag = None
+        self._request_kwargs = {**client.request_kwargs}
         self.new_etag = None
         self.json = None
         self.doc = None
 
-    async def fetch(self) -> 'CustomDocument':
+    def _update_request_headers(self, new_headers: dict):
+        headers = self._request_kwargs.setdefault("headers", {})
+        headers.update(new_headers)
+
+    async def fetch(self) -> 'Document':
         if document := self.client.documents_cache.get(self.url):
             if not document.etag:
                 return document  # Без ETag, просто используем кешированный документ
-            self.old_etag = document.etag
-            self._request_kwargs.setdefault("headers", {})
-            self._request_kwargs["headers"]["If-None-Match"] = self.old_etag
+            self._update_request_headers({"If-None-Match": document.etag})
 
         try:
             return await self.ext_fetch_by_url_async()
         except NotModifiedError:
             return document
 
-    async def ext_fetch_by_url_async(self) -> "CustomDocument":
+    async def ext_fetch_by_url_async(self) -> "Document":
         await self._fetch_json_async()
         return await self.read()
 
     async def _fetch_json_async(self):
-        from urllib.parse import urlparse
+        logger.info(f"Fetching document from url {self.url}")
 
-        parsed_url = urlparse(self.url)
-        logger.info(f"Fetching document from url {parsed_url}")
+        auth_headers = self.client._get_hmac_headers("GET", self.url, self.social_id, hmac_=self.hmac_)
+        self._update_request_headers(auth_headers)
 
         async with self.client._aiohttp_session.get(
-            parsed_url.geturl(), **self._request_kwargs
+            self.url, **self._request_kwargs
         ) as response:
             if response.status == 304:
                 raise NotModifiedError("Document not modified")
@@ -71,8 +82,8 @@ class DocFetcher:
                 response=response,
             )
 
-    async def read(self) -> "CustomDocument":
-        self.doc = CustomDocument(
+    async def read(self) -> "Document":
+        self.doc = Document(
             self.client, self.json, self.url, etag=self.new_etag, no_cache=self.no_cache
         )
         if not self.no_cache:

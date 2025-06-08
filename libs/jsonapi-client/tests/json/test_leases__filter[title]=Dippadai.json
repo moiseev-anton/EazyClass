@@ -13,7 +13,7 @@
       "title": "Dippadai"
     },
     "relationships": {
-      "external-references": {
+      "externalReferences": {
         "links": {
           "self": "http://example.com/test_leases_links/1/external_references/links",
           "related": "http://example.com/external"

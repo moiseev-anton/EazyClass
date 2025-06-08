@@ -18,7 +18,7 @@ class HMACAuth:
         self.secret = secret.encode("utf-8")
         self.platform = platform
 
-    async def get_headers(
+    async def get_hmac_headers(
         self,
         method: str,
         url: str,

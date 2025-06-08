@@ -1,16 +1,16 @@
 {
   "data": [{
     "attributes": {
-      "reference-id": "0123015150",
-      "reference-type": "legacy-bss-contract-id",
-      "valid-for": {
-        "start-datetime": "2000-01-01T00:00:00.000Z",
-        "end-datetime": "2017-01-01T00:00:00.000Z",
+      "referenceId": "0123015150",
+      "referenceType": "legacy-bss-contract-id",
+      "validFor": {
+        "startDatetime": "2000-01-01T00:00:00.000Z",
+        "endDatetime": "2017-01-01T00:00:00.000Z",
         "meta": {
-          "type": "valid-for-datetime"
+          "type": "validForDatetime"
         }
       },
-      "null-field": null
+      "nullField": null
     },
     "relationships": {
       "target": {
@@ -27,7 +27,7 @@
       "self": "/api/external-references/qvantel-lease1-extref"
     },
     "id": "qvantel-lease1-extref",
-    "type": "external-references"
+    "type": "externalReferences"
   }],
   "links": {
     "self": "/api/leases/qvantel-lease1/external-references"

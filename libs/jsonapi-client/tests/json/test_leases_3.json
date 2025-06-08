@@ -15,7 +15,7 @@
       "title": "JSON API paints my bikeshed!"
     },
     "relationships": {
-      "external-references": {
+      "externalReferences": {
         "links": {
           "self": "http://example.com/test_leases/1/external_references/links",
           "related": "http://example.com/test_leases/1/external_references"
@@ -34,7 +34,7 @@
       "title": "JSON API paints my bikeshed!"
     },
     "relationships": {
-      "external-references": {
+      "externalReferences": {
         "links": {
           "self": "http://example.com/test_leases/2/external_references/links",
           "related": "http://example.com/test_leases/2/external_references"

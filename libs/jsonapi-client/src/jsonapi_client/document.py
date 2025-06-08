@@ -53,11 +53,6 @@ class Document(AbstractJsonObject):
     http://jsonapi.org/format/#document-top-level
     """
 
-    # TODO: если resources атрибут класса, то ресурсы будут общие для всех экземпляров.
-    #  Надо разобраться зачем это было сделано, вероятно исправить
-    #: List of ResourceObjects contained in this Document
-    resources: List["ResourceObject"]
-
     def __init__(
         self,
         session: "Session",
@@ -66,6 +61,7 @@ class Document(AbstractJsonObject):
         no_cache: bool = False,
         etag: str = None,
     ) -> None:
+        self.resources: List["ResourceObject"] = []
         self._no_cache = no_cache  # if true, do not store resources to session cache
         self._url = url
         self._etag = etag
@@ -94,7 +90,7 @@ class Document(AbstractJsonObject):
     def _handle_data(self, json_data):
         data = json_data.get("data")
 
-        self.resources = []
+        self.resources.clear()
 
         if data:
             if isinstance(data, list):

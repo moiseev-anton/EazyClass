@@ -1,18 +1,37 @@
 import asyncio
+import hashlib
+import hmac
+import json
 import logging
-from typing import Optional
+import time
+from typing import Optional, Dict, List, Tuple, Union
 
 import aiohttp
 import jsonapi_client
+import yarl
 from cachetools import TTLCache
+
+from telegrambot.api_client.common_patch import camelize_name, decamelize_name
+from telegrambot.api_client.document import CustomDocument
+from telegrambot.api_client.document_fetcher import DocFetcher
+
+import jsonapi_client.document
+
+# Monkey-патч для jsonapi_client
+jsonapi_client.common.jsonify_attribute_name = camelize_name
+jsonapi_client.common.dejsonify_attribute_name = decamelize_name
+jsonapi_client.document.Document = CustomDocument
+
 from jsonapi_client import Filter, Inclusion
-from jsonapi_client.common import HttpStatus, error_from_response
+from jsonapi_client.common import HttpStatus, error_from_response, HttpMethod
 from jsonapi_client.document import Document
 from jsonapi_client.exceptions import DocumentError
 
-from telegrambot.api_client.document_fetcher import DocFetcher
+
 
 logger = logging.getLogger(__name__)
+
+
 
 
 # class HmacJsonApiClient(jsonapi_client.Session):
@@ -104,7 +123,7 @@ class AsyncClientSession(jsonapi_client.Session):
         max_document_size: int = 1000,  # Максимум документов
         max_resource_size: int = 10000,  # Максимум ресурсов
         hmac_secret: Optional[str] = None,  # Secret key for HMAC authentication
-        platform: str = None,
+        platform: str = "",
     ) -> None:
         super().__init__(
             server_url=server_url,
@@ -116,8 +135,12 @@ class AsyncClientSession(jsonapi_client.Session):
         )
 
         self.documents_cache = TTLCache(maxsize=max_document_size, ttl=document_ttl)
-        self.resources_by_id_cache = TTLCache(maxsize=max_resource_size, ttl=resource_ttl)
-        self.resources_by_link_cache = TTLCache(maxsize=max_resource_size, ttl=resource_ttl)
+        self.resources_by_id_cache = TTLCache(
+            maxsize=max_resource_size, ttl=resource_ttl
+        )
+        self.resources_by_link_cache = TTLCache(
+            maxsize=max_resource_size, ttl=resource_ttl
+        )
 
         # Store TTL values for use in other methods
         self.document_ttl = document_ttl
@@ -126,6 +149,55 @@ class AsyncClientSession(jsonapi_client.Session):
         # Store HMAC secret for authentication
         self.hmac_secret = hmac_secret.encode("utf-8") if hmac_secret else None
         self.platform = platform
+
+    def build_url(
+        self, resource_type: str, resource_id_or_filter: "Union[Modifier, str]" = None
+    ) -> str:
+        resource_id, filter_ = self._resource_type_and_filter(resource_id_or_filter)
+        return self._url_for_resource(resource_type, resource_id, filter_)
+
+    def _url_for_resource(
+        self, resource_type: str, resource_id: str = None, filter: "Modifier" = None
+    ) -> str:
+        """
+        Формирует url по имени ресурса и id и/или фильтрам.
+        Адаптация метода. Добавляет / после id для избежания редиректа на сервере.
+        """
+        url = f"{self.url_prefix}/{resource_type}/"  # добавляем / в конце
+        if resource_id is not None:
+            url = f"{url}{resource_id}/"  # добавляем / в конце
+        if filter:
+            url = filter.url_with_modifiers(url)
+        return yarl.URL(url)
+
+    def _get_hmac_headers(
+        self,
+        method: str,
+        url: str,
+        social_id: str = "",
+        body: Optional[bytes] = None,
+        hmac_: bool = False,
+    ) -> Dict[str, str]:
+        headers = {"X-Platform": self.platform}
+        if not social_id:
+            return headers
+        headers["X-Social-ID"] = social_id
+        if hmac_ and self.hmac_secret:
+            timestamp = str(int(time.time()))
+            body_hash = hashlib.sha256(body or b"").hexdigest()
+
+            message = f"{method}\n{url}\n{timestamp}\n{self.platform}\n{social_id}\n{body_hash}".encode(
+                "utf-8"
+            )
+            signature = hmac.new(self.hmac_secret, message, hashlib.sha256).hexdigest()
+
+            headers.update(
+                {
+                    "X-Signature": signature,
+                    "X-Timestamp": timestamp,
+                }
+            )
+        return headers
 
     @property
     def request_kwargs(self):
@@ -147,17 +219,51 @@ class AsyncClientSession(jsonapi_client.Session):
             if link in self.resources_by_link_cache:
                 del self.resources_by_link_cache[link]
 
-    async def fetch_document_by_url_async(self, url: str) -> Document:
+    async def fetch_document_by_url_async(
+        self, url: str, social_id: str = "", hmac_: bool = False
+    ) -> Document:
         """Fetch a Document from cache or server by URL, with ETag validation for cached document"""
-        fetcher = DocFetcher(self, url)
+        fetcher = DocFetcher(self, url, social_id, hmac_)
         return await fetcher.fetch()
+
+    async def _get_async(
+        self,
+        resource_type: str,
+        resource_id_or_filter: "Union[Modifier, str]" = None,
+        social_id: str = "",
+        hmac_: bool = False,
+    ) -> "Document":
+        resource_id, filter_ = self._resource_type_and_filter(resource_id_or_filter)
+        url = self._url_for_resource(resource_type, resource_id, filter_)
+        return await self.fetch_document_by_url_async(url)
+
+    def get(
+        self,
+        resource_type: str,
+        resource_id_or_filter: "Union[Modifier, str]" = None,
+        social_id: str = "",
+        hmac_: bool = False,
+    ) -> "Union[Awaitable[Document], Document]":
+        """
+        Request (GET) Document from server.
+
+        If session is used with enable_async=True, this needs
+        to be awaited.
+        """
+        if self.enable_async:
+            fetcher = DocFetcher(
+                self, resource_type, resource_id_or_filter, social_id, hmac_
+            )
+            return fetcher.fetch()
+        else:
+            return self._get_sync(resource_type, resource_id_or_filter)
 
     async def fetch_resource_by_resource_identifier_async(
         self,
-        resource: "Union[ResourceIdentifier, ResourceObject, ResourceTuple]",
+        resource: Union["ResourceIdentifier", "ResourceObject", "ResourceTuple"],
         cache_only=False,
         force=False,
-    ) -> "Optional[ResourceObject]":
+    ) -> Optional["ResourceObject"]:
         """
         Internal use. Async version.
 
@@ -205,6 +311,58 @@ class AsyncClientSession(jsonapi_client.Session):
         self.resources_by_link_cache.clear()
         self.resources_by_id_cache.clear()
 
+    async def http_request_async(
+        self,
+        http_method: str,
+        url: str,
+        send_json: dict = None,
+        expected_statuses: List[str] = None,
+        social_id: str = "",
+        hmac_: bool = False,
+    ) -> Tuple[int, dict, str]:
+        """Method to make PATCH/POST requests to server using aiohttp library."""
+
+        self.assert_async()
+        logger.debug("%s request: %s", http_method.upper(), send_json)
+        body_json = (
+            json.dumps(send_json, ensure_ascii=False).encode("utf-8")
+            if send_json
+            else b""
+        )
+        expected_statuses = expected_statuses or HttpStatus.ALL_OK
+        content_type = (
+            "" if http_method == HttpMethod.DELETE else "application/vnd.api+json"
+        )
+
+        kwargs = {**self.request_kwargs}
+        headers = {"Content-Type": "application/vnd.api+json"}
+        headers.update(kwargs.pop("headers", {}))
+        auth_headers = self._get_hmac_headers(
+            http_method, url, social_id, body=body_json, hmac_=hmac_
+        )
+        headers.update(auth_headers)
+
+        async with self._aiohttp_session.request(
+            http_method, url, data=body_json, headers=headers, **kwargs
+        ) as response:
+
+            response_json = await response.json(content_type=content_type)
+            if response.status not in expected_statuses:
+                raise DocumentError(
+                    f"Could not {http_method.upper()} "
+                    f"({response.status}): "
+                    f"{error_from_response(response_json)}",
+                    errors={"status_code": response.status},
+                    response=response,
+                    json_data=send_json,
+                )
+
+            return (
+                response.status,
+                response_json or {},
+                response.headers.get("Location"),
+            )
+
     # async def fetch_document_by_url_async(self, url: str) -> 'Document':
     #     """
     #     Fetch a Document from the cache or server by URL, with ETag support.
@@ -251,8 +409,6 @@ class AsyncClientSession(jsonapi_client.Session):
     #                 await self.etag_cache.set(url, new_etag, ttl=self.etag_ttl)
     #             return document
     #         raise  # Re-raise other HTTP errors
-
-
 
     # async def close(self) -> None:
     #     """Закрытие сессии."""
@@ -334,17 +490,36 @@ class AsyncClientSession(jsonapi_client.Session):
     #         logger.error(f"Request failed after retries: {str(e)}")
     #         raise
 
+
 async def check_client():
-    s = AsyncClientSession(server_url="http://localhost:8010/api/v1/")
-    document = await s.get("groups", Filter(grade=2) + Inclusion("faculty"))
-    await s.get("groups", Filter(grade=2) + Inclusion("faculty"))
-    # document = await s.get("groups", 5,)
-    # await s.get("groups", 5)
-    print(s.resources_by_id_cache.values())
-    print(s.documents_cache.values())
-    await s.close()
-    print(s.resources_by_id_cache.values())
-    print(s.documents_cache.values())
+    s = AsyncClientSession(
+        server_url="http://localhost:8010/api/v1/",
+        hmac_secret="7zPMzWqOyA7xoGcez4ypqbZlHj70Kz6hGMPVVE3hMPc=",
+        platform="telegram",
+    )
+    try:
+        document = await s.get(
+            "groups",
+            Filter(grade=2) + Inclusion("faculty"),
+            social_id="859901449",
+            hmac_=False,
+        )
+        await s.get("groups", Filter(grade=2) + Inclusion("faculty"))
+        # document = await s.get("users", 'me', social_id='859901449', hmac_=True)
+        # user = document.resource
+        # print(user.id)
+        # print(user.username)
+        # user.username = 'test'
+        # user.commit(social_id='859901449', hmac_=True)
+        # await s.get("groups", 5, social_id='859901449', hmac_=True)
+        # print(s.resources_by_id_cache.values())
+        # print(s.documents_cache.values())
+    except Exception as e:
+        raise
+    finally:
+        await s.close()
+        print(s.resources_by_id_cache.values())
+        print(s.documents_cache.values())
 
 
 if __name__ == "__main__":

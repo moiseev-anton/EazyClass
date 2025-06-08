@@ -4,6 +4,7 @@
     "next": "http://example.com/articles?page[offset]=2",
     "last": "http://example.com/articles?page[offset]=10"
   },
+
   "data": [{
     "type": "articles",
     "id": "1",
@@ -11,6 +12,7 @@
       "title": "JSON API paints my bikeshed!",
       "nested1": {"nested": {"name": "test"}}
     },
+
     "relationships": {
       "author": {
         "links": {
@@ -22,6 +24,7 @@
           "id": "9"
         }
       },
+
       "comments": {
         "links": {
           "self": "http://example.com/articles/1/relationships/comments",
@@ -38,13 +41,14 @@
           }
         ]
       },
-      "comment-or-author": {
+
+      "commentOrAuthor": {
         "data": {
           "type": "comments",
           "id": "12"
         }
       },
-      "comments-or-authors": {
+      "commentsOrAuthors": {
         "data": [
           {
             "type": "people",
@@ -95,13 +99,13 @@
           }
         ]
       },
-      "comment-or-author": {
+      "commentOrAuthor": {
         "data": {
           "type": "people",
           "id": "9"
         }
       },
-      "comments-or-authors": {
+      "commentsOrAuthors": {
         "data": [
           {
             "type": "people",
@@ -136,10 +140,10 @@
         },
         "data": []
       },
-      "comment-or-author": {
+      "commentOrAuthor": {
         "data": null
       },
-      "comments-or-authors": {
+      "commentsOrAuthors": {
         "data": []
       }
     },
@@ -152,8 +156,8 @@
     "type": "people",
     "id": "9",
     "attributes": {
-      "first-name": "Dan",
-      "last-name": "Gebhardt",
+      "firstName": "Dan",
+      "lastName": "Gebhardt",
       "twitter": "dgeb"
     },
     "links": {

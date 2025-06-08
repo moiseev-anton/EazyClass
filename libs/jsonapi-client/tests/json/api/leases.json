@@ -1,36 +1,36 @@
 {
   "data": [{
     "attributes": {
-      "lease-id": null,
-      "active-status": "active",
-      "reference-number": "5373K5",
-      "valid-for": {
-        "start-datetime": "2015-07-06T12:23:26.000Z",
-        "end-datetime": null,
+      "leaseId": null,
+      "activeStatus": "active",
+      "referenceNumber": "5373K5",
+      "validFor": {
+        "startDatetime": "2015-07-06T12:23:26.000Z",
+        "endDatetime": null,
         "meta": {
-          "type": "valid-for-datetime",
+          "type": "validForDatetime",
           "with_underscore": "underscore",
-          "with-dash": "dash"
+          "withCamel": "camel"
         }
       }
     },
     "relationships": {
-      "external-references": {
+      "externalReferences": {
         "links": {
           "related": "/api/leases/qvantel-lease1/external-references"
         }
       },
-      "user-account": {
+      "userAccount": {
         "links": {
           "related": "/api/leases/qvantel-lease1/user-account"
         },
         "data": {
           "id": "qvantel-useraccount1",
-          "type": "user-accounts"
+          "type": "userAccounts"
         }
       },
 
-      "parent-lease": {
+      "parentLease": {
         "links": {
           "related": "/api/leases/qvantel-lease1/parent-lease"
         }
@@ -43,33 +43,33 @@
     "type": "leases"
   }, {
     "attributes": {
-      "lease-id": null,
-      "active-status": "active",
-      "reference-number": "5373K5",
-      "valid-for": {
-        "start-datetime": "2016-11-03T00:00:00.000Z",
-        "end-datetime": null,
+      "leaseId": null,
+      "activeStatus": "active",
+      "referenceNumber": "5373K5",
+      "validFor": {
+        "startDatetime": "2016-11-03T00:00:00.000Z",
+        "endDatetime": null,
         "meta": {
-          "type": "valid-for-datetime"
+          "type": "validForDatetime"
         }
       }
     },
     "relationships": {
-      "external-references": {
+      "externalReferences": {
         "links": {
           "related": "/api/leases/juanita-lease1/external-references"
         }
       },
-      "user-account": {
+      "userAccount": {
         "links": {
           "related": "/api/leases/juanita-lease1/user-account"
         },
         "data": {
           "id": "juanita-useraccount",
-          "type": "user-accounts"
+          "type": "userAccounts"
         }
       },
-      "parent-lease": {
+      "parentLease": {
         "links": {
           "related": "/api/leases/juanita-lease1/parent-lease"
         }
@@ -82,33 +82,33 @@
     "type": "leases"
   }, {
     "attributes": {
-      "lease-id": null,
-      "active-status": "active",
-      "reference-number": "5333B5",
-      "valid-for": {
-        "start-datetime": "2016-06-21T16:00:07.000Z",
-        "end-datetime": null,
+      "leaseId": null,
+      "activeStatus": "active",
+      "referenceNumber": "5333B5",
+      "validFor": {
+        "startDatetime": "2016-06-21T16:00:07.000Z",
+        "endDatetime": null,
         "meta": {
-          "type": "valid-for-datetime"
+          "type": "validForDatetime"
         }
       }
     },
     "relationships": {
-      "external-references": {
+      "externalReferences": {
         "links": {
-          "related": "/api/leases/timo-lease1/external-references"
+          "related": "/api/leases/timo-lease1/externalReferences"
         }
       },
-      "user-account": {
+      "userAccount": {
         "links": {
           "related": "/api/leases/timo-lease1/user-account"
         },
         "data": {
           "id": "timo-useraccount",
-          "type": "user-accounts"
+          "type": "userAccounts"
         }
       },
-      "parent-lease": {
+      "parentLease": {
         "links": {
           "related": "/api/leases/timo-lease1/parent-lease"
         }
@@ -121,33 +121,33 @@
     "type": "leases"
   }, {
     "attributes": {
-      "lease-id": "ext-doc-store-id-1",
-      "active-status": "active",
-      "reference-number": "M33B3F",
-      "valid-for": {
-        "start-datetime": "2015-10-06T16:21:07.000Z",
-        "end-datetime": null,
+      "leaseId": "ext-doc-store-id-1",
+      "activeStatus": "active",
+      "referenceNumber": "M33B3F",
+      "validFor": {
+        "startDatetime": "2015-10-06T16:21:07.000Z",
+        "endDatetime": null,
         "meta": {
-          "type": "valid-for-datetime"
+          "type": "validForDatetime"
         }
       }
     },
     "relationships": {
-      "external-references": {
+      "externalReferences": {
         "links": {
-          "related": "/api/leases/qvantel-lease2/external-references"
+          "related": "/api/leases/qvantel-lease2/externalReferences"
         }
       },
-      "user-account": {
+      "userAccount": {
         "links": {
           "related": "/api/leases/qvantel-lease2/user-account"
         },
         "data": {
           "id": "qvantel-useraccount1",
-          "type": "user-accounts"
+          "type": "userAccounts"
         }
       },
-      "parent-lease": {
+      "parentLease": {
         "links": {
           "related": "/api/leases/qvantel-lease2/parent-lease"
         },

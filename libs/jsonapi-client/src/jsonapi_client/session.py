@@ -155,7 +155,7 @@ class Session:
     def request_kwargs(self):
         return self._request_kwargs
 
-    def cache_doc(self, url: str, document: Document) -> None:
+    def cache_doc(self, url: str, document: "Document") -> None:
         self.documents_by_link[url] = document
 
     def add_resources(self, *resources: "ResourceObject") -> None:
@@ -328,8 +328,8 @@ class Session:
     async def get(
         self,
         resource_type: str,
-        resource_id_or_filter: Optional[Union[Modifier, str]] = None,
-    ) -> Document:
+        resource_id_or_filter: "Optional[Union[Modifier, str]]" = None,
+    ) -> "Document":
         """
         Request (GET) Document from server.
         """

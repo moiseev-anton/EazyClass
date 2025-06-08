@@ -45,6 +45,7 @@ from typing import (
 from .common import AbstractJsonObject, RelationType, ResourceTuple
 from .objects import Meta, Links, ResourceIdentifier, RESOURCE_TYPES
 from .resourceobject import ResourceObject
+from .exceptions import AsyncError
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +133,9 @@ class AbstractRelationship(AbstractJsonObject):
 
         Need to first await .fetch()
         """
-        return self._resources is not None and list(self._resources.values())
+        if self._resources is None:
+            raise AsyncError("Must call await .fetch() before accessing resources")
+        return list(self._resources.values())
 
     @property
     def resource(self) -> "ResourceObject":
@@ -141,9 +144,10 @@ class AbstractRelationship(AbstractJsonObject):
 
         Need to first await .fetch()
         """
-        if len(self.resources) > 1:
+        resources = self.resources  # Может выбросить AsyncError
+        if len(resources) > 1:
             logger.warning("More than 1 resource, use .resources instead!")
-        return self.resources[0]
+        return resources[0] if resources else None
 
     @property
     def as_json_resource_identifiers(self) -> dict:
@@ -210,15 +214,9 @@ class SingleRelationship(AbstractRelationship):
     server as ResourceIdentifiers.
     """
 
-    def __init__(
-            self,
-            session: "Session",
-            data: dict,
-            resource_types: List[str] = None,
-            relation_type: str = "",
-    ):
-        super().__init__(session, data, resource_types, relation_type)
-        self._resource_identifier = None
+    def __init__(self, *args, **kwargs):
+        self._resource_identifiers = None
+        super().__init__(*args, **kwargs)
 
     def _handle_data(self, data):
         super()._handle_data(data)
@@ -279,15 +277,9 @@ class MultiRelationship(AbstractRelationship):
     server as ResourceIdentifiers.
     """
 
-    def __init__(
-            self,
-            session: "Session",
-            data: dict,
-            resource_types: List[str] = None,
-            relation_type: str = "",
-    ):
-        super().__init__(session, data, resource_types, relation_type)
+    def __init__(self, *args, **kwargs):
         self._resource_identifiers = None
+        super().__init__(*args, **kwargs)
 
     def _handle_data(self, data):
         super()._handle_data(data)
