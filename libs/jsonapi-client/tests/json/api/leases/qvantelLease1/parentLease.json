@@ -15,31 +15,31 @@
     "relationships": {
       "externalReferences": {
         "links": {
-          "related": "/api/leases/qvantel-lease1/external-references"
+          "related": "/api/leases/qvantelLease1/externalReferences"
         }
       },
       "userAccount": {
         "links": {
-          "related": "/api/leases/qvantel-lease1/user-account"
+          "related": "/api/leases/qvantelLease1/user-account"
         },
         "data": {
-          "id": "qvantel-useraccount1",
+          "id": "qvantelUseraccount1",
           "type": "userAccounts"
         }
       },
       "parentLease": {
         "links": {
-          "related": "/api/leases/qvantel-lease1/parent-lease"
+          "related": "/api/leases/qvantelLease1/parentLease"
         }
       }
     },
     "links": {
-      "self": "/api/leases/qvantel-lease1"
+      "self": "/api/leases/qvantelLease1"
     },
-    "id": "qvantel-lease1",
+    "id": "qvantelLease1",
     "type": "leases"
   },
   "links": {
-    "self": "/api/leases/qvantel-lease1"
+    "self": "/api/leases/qvantelLease1"
   }
 }

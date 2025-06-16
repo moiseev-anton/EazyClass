@@ -19,17 +19,17 @@
     "relationships": {
       "partnerAccounts": {
         "links": {
-          "related": "/api/user-accounts/qvantel-useraccount1/partner-accounts"
+          "related": "/api/userAccounts/qvantelUseraccount1/partnerAccounts"
         }
       }
     },
     "links": {
-      "self": "/api/user-accounts/qvantel-useraccount1"
+      "self": "/api/userAccounts/qvantelUseraccount1"
     },
-    "id": "qvantel-useraccount1",
-    "type": "user-accounts"
+    "id": "qvantelUseraccount1",
+    "type": "userAccounts"
   },
   "links": {
-    "self": "/api/user-accounts/qvantel-useraccount1"
+    "self": "/api/userAccounts/qvantelUseraccount1"
   }
 }

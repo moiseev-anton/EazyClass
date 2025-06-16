@@ -15,21 +15,21 @@
     "relationships": {
       "target": {
         "links": {
-          "related": "/api/external-references/qvantel-lease1-extref/target"
+          "related": "/api/externalReferences/qvantelLease1Extref/target"
         },
         "data": {
-          "id": "qvantel-lease1",
+          "id": "qvantelLease1",
           "type": "leases"
         }
       }
     },
     "links": {
-      "self": "/api/external-references/qvantel-lease1-extref"
+      "self": "/api/externalReferences/qvantelLease1Extref"
     },
-    "id": "qvantel-lease1-extref",
+    "id": "qvantelLease1Extref",
     "type": "externalReferences"
   }],
   "links": {
-    "self": "/api/leases/qvantel-lease1/external-references"
+    "self": "/api/leases/qvantelLease1/externalReferences"
   }
 }

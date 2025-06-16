@@ -247,7 +247,6 @@ class Session:
             "attributes": attrs,
             "relationships": rels,
         }
-
         res = ResourceObject(self, data)
         return res
 

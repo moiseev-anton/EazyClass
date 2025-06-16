@@ -17,29 +17,29 @@
     "relationships": {
       "externalReferences": {
         "links": {
-          "related": "/api/leases/qvantel-lease1/external-references"
+          "related": "/api/leases/qvantelLease1/externalReferences"
         }
       },
       "userAccount": {
         "links": {
-          "related": "/api/leases/qvantel-lease1/user-account"
+          "related": "/api/leases/qvantelLease1/userAccount"
         },
         "data": {
-          "id": "qvantel-useraccount1",
+          "id": "qvantelUseraccount1",
           "type": "userAccounts"
         }
       },
 
       "parentLease": {
         "links": {
-          "related": "/api/leases/qvantel-lease1/parent-lease"
+          "related": "/api/leases/qvantelLease1/parentLease"
         }
       }
     },
     "links": {
-      "self": "/api/leases/qvantel-lease1"
+      "self": "/api/leases/qvantelLease1"
     },
-    "id": "qvantel-lease1",
+    "id": "qvantelLease1",
     "type": "leases"
   }, {
     "attributes": {
@@ -57,12 +57,12 @@
     "relationships": {
       "externalReferences": {
         "links": {
-          "related": "/api/leases/juanita-lease1/external-references"
+          "related": "/api/leases/juanitaLease1/externalReferences"
         }
       },
       "userAccount": {
         "links": {
-          "related": "/api/leases/juanita-lease1/user-account"
+          "related": "/api/leases/juanitaLease1/userAccount"
         },
         "data": {
           "id": "juanita-useraccount",
@@ -71,14 +71,14 @@
       },
       "parentLease": {
         "links": {
-          "related": "/api/leases/juanita-lease1/parent-lease"
+          "related": "/api/leases/juanitaLease1/parentLease"
         }
       }
     },
     "links": {
-      "self": "/api/leases/juanita-lease1"
+      "self": "/api/leases/juanitaLease1"
     },
-    "id": "juanita-lease1",
+    "id": "juanitaLease1",
     "type": "leases"
   }, {
     "attributes": {
@@ -110,7 +110,7 @@
       },
       "parentLease": {
         "links": {
-          "related": "/api/leases/timo-lease1/parent-lease"
+          "related": "/api/leases/timo-lease1/parentLease"
         }
       }
     },
@@ -143,13 +143,13 @@
           "related": "/api/leases/qvantel-lease2/user-account"
         },
         "data": {
-          "id": "qvantel-useraccount1",
+          "id": "qvantelUseraccount1",
           "type": "userAccounts"
         }
       },
       "parentLease": {
         "links": {
-          "related": "/api/leases/qvantel-lease2/parent-lease"
+          "related": "/api/leases/qvantel-lease2/parentLease"
         },
         "data": {
           "id": "qvantel-saleslease3",

@@ -78,7 +78,6 @@ class AbstractRelationship(AbstractJsonObject):
             or not specified (empty string).
         """
         self._resources: Optional[Dict[Tuple[str, str], ResourceObject]] = None
-        self._invalid = False
         self._is_dirty: bool = False
         self._resource_types = resource_types or []
         self._relation_type = relation_type

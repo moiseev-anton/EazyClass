@@ -355,7 +355,7 @@ class ResourceObject(AbstractJsonObject):
             def __getitem__(proxy, item):
                 rv = self._attributes.get(item, NOT_FOUND)
                 if rv is NOT_FOUND:
-                    return self.relationship_resource[item]
+                    return self.relationships[item]
                 else:
                     return rv
 
@@ -364,6 +364,10 @@ class ResourceObject(AbstractJsonObject):
                     return self._relationships[item].set(value)
                 else:
                     self._attributes[item] = value
+
+            # __getattr__ и __setattr__ наследуются от AttributeProxy
+            # и они просто вызовут новые __getitem__ и __setitem__ соответсвенно
+            # Так реализуется имитация ресурса как python объекта
 
             def __dir__(proxy):
                 return chain(super().__dir__(), self._attributes.keys_python(),
@@ -389,20 +393,6 @@ class ResourceObject(AbstractJsonObject):
                 rel.set(value)
 
         return Proxy(self._relationships)
-
-    @cached_property
-    def relationship_resource(self):
-        """
-        If async enabled, proxy to relationship objects.
-        If async disabled, proxy to resources behind relationships.
-        """
-        # TODO: Разобраться, нужно ли избавиться от proxy
-        class Proxy(AttributeProxy):
-            def __getitem__(proxy, item):
-                # With async it's more convenient to access Relationship object
-                return self.relationships[item]
-
-        return Proxy()
 
     def _handle_data(self, data):
         from .objects import Links, Meta

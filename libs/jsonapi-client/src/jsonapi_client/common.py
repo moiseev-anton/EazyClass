@@ -116,6 +116,7 @@ def jsonify_attribute_name(name: str) -> str:
     Преобразует snake_case строку в camelCase.
     Используется для преобразования python -> JSON:API
     """
+    name = name.replace('__', '.')
     parts = name.split("_")
     return parts[0] + "".join(p.capitalize() for p in parts[1:])
 
@@ -129,6 +130,7 @@ def dejsonify_attribute_name(name):
     Преобразует camelCase строку в snake_case.
     Используется для преобразования JSON:API -> python
     """
+    name = name.replace('.', '__')
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
