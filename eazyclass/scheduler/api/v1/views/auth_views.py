@@ -9,6 +9,7 @@ from scheduler.api.permissions import IsHMACAuthenticated
 from scheduler.api.v1.serializers import (
     RegisterSerializer,
     UserOutputSerializer,
+    UserOutputWithNonceSerializer,
     AuthResult,
     RegisterWithNonceSerializer,
 )
@@ -18,8 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class RegisterView(JsonApiMixin, views.APIView):
-    permission_classes = [IsHMACAuthenticated]
+    # permission_classes = [IsHMACAuthenticated]
     resource_name = "user"
+    serializer_class = UserOutputSerializer
 
     @extend_schema(
         tags=["Authentication"],
@@ -28,7 +30,7 @@ class RegisterView(JsonApiMixin, views.APIView):
         auth=[],
         request=RegisterSerializer,
         responses={
-            200: UserOutputSerializer(many=False),
+            200: serializer_class(many=False),
             # 201: UserOutputSerializer(many=False),
             # 400: OpenApiResponse(description="Bad Request"),
             # 403: OpenApiResponse(description="Forbidden (invalid HMAC)"),
@@ -47,15 +49,17 @@ class RegisterView(JsonApiMixin, views.APIView):
             )
             request.user = auth_result.user  # важно для обработки nonce
 
-        response_data = UserOutputSerializer(auth_result.user).data
-        response_data["meta"] = {"created": auth_result.created}
+        serializer = self.serializer_class(auth_result.user, context={"created": auth_result.created})
+        response_data = serializer.data
+        logger.info(response_data)
 
         return Response(response_data, status=auth_result.status_code)
 
 
-class RegisterWithNonceView(views.APIView):
-    permission_classes = [IsHMACAuthenticated]
+class RegisterWithNonceView(RegisterView):
+    # permission_classes = [IsHMACAuthenticated]
     resource_name = "user"
+    serializer_class = UserOutputWithNonceSerializer
 
     @extend_schema(
         tags=["Authentication"],
@@ -64,7 +68,7 @@ class RegisterWithNonceView(views.APIView):
         methods=["POST"],
         request=RegisterWithNonceSerializer,
         responses={
-            200: UserOutputSerializer(many=False),
+            200: UserOutputWithNonceSerializer(many=False),
             # 201: UserOutputSerializer(many=False),
             # 400: OpenApiResponse(description="Bad Request"),
             # 403: OpenApiResponse(description="Forbidden (invalid HMAC)"),
@@ -75,19 +79,18 @@ class RegisterWithNonceView(views.APIView):
         Register a new user and immediately bind a nonce.
         Used when both registration and nonce binding are needed in a single call.
         """
-        logger.info("Вызывается общий метод")
-        user_response = RegisterView().post(request)
+        user_response = super().post(request)
 
+        # Имитируем отдельный фейковый запрос к NonceView
         nonce_value = request.data.get("nonce")
         request._full_data = {"type": "nonce", "nonce": nonce_value}
 
         from .nonce_view import NonceView
-
-        logger.info("Закрепляем nonce")
         nonce_response = NonceView().post(request)
 
+        # Объединяем результаты Register и NonceView
+        # Далее на основании meta_fields сериализатора рендерер сам сформирует meta ресурса (не документа!)
         user_data: dict = user_response.data
-        meta = user_data.setdefault("meta", {})
-        meta.update(nonce_response.data)
+        user_data.update(nonce_response.data)
 
         return user_response

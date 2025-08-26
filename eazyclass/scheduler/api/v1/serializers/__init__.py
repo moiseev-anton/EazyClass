@@ -7,4 +7,4 @@ from .nonce_serializers import NonceSerializer
 from .subscription_serializer import SubscriptionSerializer
 from .teacher_serializers import TeacherSerializer, CompactTeacherSerializer
 from .token_serializers import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer, TokenResponseSerializer
-from .user_serializers import UserSerializer, UserUpdateSerializer, UserOutputSerializer
+from .user_serializers import UserSerializer, UserUpdateSerializer, UserOutputSerializer, UserOutputWithNonceSerializer
