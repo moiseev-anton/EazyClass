@@ -88,8 +88,9 @@ class AsyncClientSession(jsonapi_client.Session):
 
         timestamp = str(int(time.time()))
         body_hash = hashlib.sha256(body or b"").hexdigest()
-        message = f"{method}\n{url}\n{timestamp}\n{self.platform}\n{social_id}\n{body_hash}".encode("utf-8")
+        message = f"{method.upper()}\n{url}\n{timestamp}\n{self.platform}\n{social_id}\n{body_hash}".encode("utf-8")
         signature = hmac.new(self.hmac_secret, message, hashlib.sha256).hexdigest()
+        # logger.info(message)
 
         return {
             "X-Signature": signature,

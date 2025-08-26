@@ -17,6 +17,11 @@ from telegrambot.handlers import (
 from telegrambot.middleware import UserContextMiddleware
 from telegrambot.tasks import setup_periodic_task_scheduler
 
+import jsonapi_client
+from telegrambot.api_client.client_patch import camelize_attribute_name, decamelize_attribute_name
+from telegrambot.api_client.document import CustomDocument
+
+
 logging.basicConfig(level=getattr(logging, settings.log_level), stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
@@ -37,6 +42,11 @@ async def on_shutdown(deps: Container):
 
 
 async def main():
+    # Monkey-патч для jsonapi_client
+    jsonapi_client.common.jsonify_attribute_name = camelize_attribute_name
+    jsonapi_client.common.dejsonify_attribute_name = decamelize_attribute_name
+    jsonapi_client.document.Document = CustomDocument
+
     container = Container()
     container.config.from_pydantic(settings)
 

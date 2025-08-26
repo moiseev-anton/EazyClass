@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 
 from aiogram.types import User
 
-from telegrambot.api_client import JsonApiClient
+from telegrambot.api_client import AsyncClientSession
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class DateRange:
 
 
 class LessonService:
-    def __init__(self, api_client: JsonApiClient, user: User):
+    def __init__(self, api_client: AsyncClientSession, user: User):
         self.api_client = api_client
         self.user = user
 
