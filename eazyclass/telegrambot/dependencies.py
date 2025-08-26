@@ -5,7 +5,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dependency_injector import containers, providers
 
-from telegrambot.api_client import AsyncClientSession
+from telegrambot.api_client import AsyncClientSession, models_as_jsonschema
 from telegrambot.cache import CacheRepository
 from telegrambot.managers.keyboard_manager import KeyboardManager
 from telegrambot.managers.message_manager import MessageManager
@@ -21,6 +21,7 @@ class Container(containers.DeclarativeContainer):
         hmac_secret=config.hmac_secret,
         platform=config.platform,
         # bot_social_id=config.bot_social_id,
+        schema=models_as_jsonschema
     )
 
     bot = providers.Singleton(
