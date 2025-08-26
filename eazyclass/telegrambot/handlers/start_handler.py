@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from aiogram import Router, types
 from aiogram.filters import CommandStart, CommandObject
@@ -19,16 +20,9 @@ async def start_handler(
     nonce = command.args
 
     try:
-        response = await deps.user_service(user=tlg_user).register_or_login_user(nonce)
-
-        # Формируем ответ пользовател
-        reply = deps.message_manager().get_start_message(
-            user=response["user"],
-            created=response["created"],
-            nonce_status=response.get("nonce_status"),
-        )
-
-        await message.answer(text=reply, reply_markup=deps.keyboard_manager().home)
+        user_resource = await deps.user_service(user=tlg_user).register_user(nonce)
+        reply_text = deps.message_manager().get_start_message(user_resource)
+        await message.answer(text=reply_text, reply_markup=deps.keyboard_manager().home)
     except Exception as e:
-        logger.error(f"Error processing /start: {str(e)}")
+        logger.error(f"Error processing /start", exc_info=True)
         await message.answer("Произошла ошибка. Попробуйте позже.")

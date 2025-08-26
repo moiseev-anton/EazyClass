@@ -1,23 +1,27 @@
 import logging
 from typing import Optional, Dict, Any
 
-from aiogram.types import User
-
-from telegrambot.api_client import JsonApiClient
+from aiogram.types import User as TelegramUser
+from jsonapi_client.resourceobject import ResourceObject
+from telegrambot.api_client import AsyncClientSession
+from telegrambot.context import set_hmac
 
 logger = logging.getLogger(__name__)
 
 
 class UserService:
-    def __init__(self, api_client: JsonApiClient, user: User):
+    REGISTER_URL = "/register/"
+    REGISTER_WITH_NONCE_URL = "/register_with_nonce/"
+
+    def __init__(self, api_client: AsyncClientSession, user: TelegramUser):
         self.api_client = api_client
         self.user = user
 
-    async def register_or_login_user(
-        self, nonce: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def register_user(self, nonce: Optional[str] = None) -> ResourceObject:
         social_id = str(self.user.id)
-        payload = {
+
+        # Формируем атрибуты для ресурса
+        attrs = {
             "social_id": social_id,
             "platform": "telegram",
             "first_name": self.user.first_name or "",
@@ -29,22 +33,14 @@ class UserService:
                 "added_to_attachment_menu": self.user.added_to_attachment_menu,
             },
         }
-
+        url_suffix = self.REGISTER_URL
         if nonce:
-            payload["nonce"] = nonce
-        try:
-            response = await self.api_client.request(
-                social_id=social_id, endpoint="bot/", method="POST", payload=payload
-            )
-            if response.get("success"):
-                return response.get("data")
+            attrs["nonce"] = nonce
+            url_suffix = self.REGISTER_WITH_NONCE_URL
 
-            error = response.get("errors", {})
-            logger.error(f"API error: {error.get('code', 'unknown')} - {error.get('message', 'No message')}")
-            raise Exception(f"API error: {error.get('message', 'Unknown error')}")
-        except Exception as e:
-            logger.error(f"Failed to register/login user {social_id}: {str(e)}")
-            raise
-
+        user_resource = self.api_client.create(_type="user", **attrs)  # Используем **attrs вместо fields
+        with set_hmac(True):
+            await user_resource.commit(custom_url=f'{self.api_client.url_prefix}{url_suffix}')
+        return user_resource
 
 

@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Any
 
+from jsonapi_client.resourceobject import ResourceObject
+
 from telegrambot.cache import CacheRepository
 
 logger = logging.getLogger(__name__)
@@ -153,22 +155,26 @@ class MessageManager:
         self.cache_repository = cache_repository
 
     @classmethod
-    def get_start_message(
-        cls, user: Dict[str, Any], created: bool, nonce_status: str | None
-    ) -> str:
-        """Собирает финальное сообщение в зависимости от условий"""
+    def get_start_message(cls, user_resource: ResourceObject) -> str:
+        """Формирует стартовое сообщение для пользователя."""
+
+        user_meta = getattr(user_resource, "meta", {})
+        created = getattr(user_meta, "created", False)
+        nonce_status = getattr(user_meta, "nonceStatus")
+
         auth_message = cls.AUTH_MESSAGES.get(nonce_status, "")
 
         if not created and auth_message:
             return auth_message
 
-        name = user.get("first_name", "")
+        name = getattr(user_resource, "first_name", "Anonymous")
         welcome = (
             cls.WELCOME_NEW.format(name=name)
             if created
             else cls.WELCOME_BACK.format(name=name)
         )
-        return welcome + (f"\n\n{auth_message}" if auth_message else "")
+
+        return f"{welcome}\n\n{auth_message}" if auth_message else welcome
 
     @classmethod
     def get_faculties_message(cls) -> str:
