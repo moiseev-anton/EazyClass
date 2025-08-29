@@ -1,5 +1,5 @@
 from scheduler.tasks.schedule_parser import update_schedule
-from scheduler.tasks.group_parser import update_groups
+from scheduler.tasks.group_scraper import update_groups
 from scheduler.tasks.db_queries import synchronize_lessons
 from scheduler.tasks.update_last_active import update_last_active_records, delete_inactive_records
 from scheduler.tasks.run_schedule_spider import run_schedule_spider
