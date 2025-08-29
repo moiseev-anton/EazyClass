@@ -13,9 +13,8 @@ async def setup_periodic_task_scheduler(deps: Container) -> AsyncIOScheduler:
     scheduler = deps.scheduler()
 
     async def update_keyboards():
-        service = deps.cache_service()
         try:
-            await service.update_all()
+            await deps.cache_service().update_all()
         except Exception as e:
             logger.error(f"Scheduled update failed: {e}")
 

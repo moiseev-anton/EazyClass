@@ -1,8 +1,10 @@
+import asyncio
 import json
 import logging
 import os
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Callable
 from pathlib import Path
+
 
 from telegrambot.api_client import AsyncClientSession
 from telegrambot.cache import CacheRepository
@@ -11,23 +13,25 @@ logger = logging.getLogger(__name__)
 
 
 class CacheService:
-    def __init__(
-        self,
-        api_client: AsyncClientSession,
-        faculties_cache_file: str,
-        teachers_cache_file: str,
-        cache_repository: CacheRepository,
-    ):
-        self.api_client = api_client
-        self.faculties_cache_file = Path(faculties_cache_file)
-        self.teachers_cache_file = Path(teachers_cache_file)
-        self.cache_repository = cache_repository
-
     class DataFetchError(Exception):
         pass
 
+    def __init__(
+        self,
+        api_client: AsyncClientSession,
+        cache_repository: CacheRepository,
+        faculties_cache_file: str,
+        teachers_cache_file: str,
+    ):
+        self.api_client = api_client
+        self.cache_repository = cache_repository
+        self.cache_files = {
+            "faculties": Path(faculties_cache_file),
+            "teachers": Path(teachers_cache_file),
+        }
+
     @staticmethod
-    def load_from_file(file_path: Path) -> Optional[Dict[str, Any]]:
+    def _load_from_file(file_path: Path) -> Optional[Dict[str, Any]]:
         """Загружает данные из файла или выбрасывает исключение."""
         try:
             if file_path.exists():
@@ -42,7 +46,7 @@ class CacheService:
             return None
 
     @staticmethod
-    def save_to_file(file_path: Path, data: dict[str, Any]) -> bool:
+    def _save_to_file(file_path: Path, data: dict[str, Any]) -> bool:
         """Атомарно сохраняет данные в файл, возвращает статус успеха"""
         try:
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,39 +62,95 @@ class CacheService:
             logger.error(f"Failed to save data to {file_path}: {str(e)}")
             return False
 
-    async def _fetch_api_data(self, endpoint: str) -> Optional[Dict[str, Any]]:
-        """Получает данные из API или выбрасывает исключение."""
-        try:
-            response = await self.api_client.bot_request(endpoint=endpoint, method="GET")
-            if isinstance(response, dict) and response.get("success", False):
-                return response.get("data")
-            logger.info(f"API returned error: {response.get('error', {})}")
-            return None
-        except Exception as e:
-            logger.info(f"API request failed for {endpoint}: {str(e)}")
-            return None
+    @staticmethod
+    async def _build_faculties_dict(doc) -> dict:
+        """Формирует словарь факультетов с группами, сгруппированными по курсам."""
+        faculty_map = {
+            f.id: {
+                "id": int(f.id),
+                "title": f.title,
+                "short_title": f.shortTitle,
+                "courses": {},
+            }
+            for f in doc.included if f.type == "faculty"
+        }
 
-    async def update_data(self, endpoint: str, file_path: Path) -> Optional[dict[str, Any]]:
-        """Основной метод обновления данных"""
+        # Раскладываем группы по факультетам и курсам
+        for group in doc.resources:
+            await group.faculty.fetch()
+            faculty_id = group.faculty.resource.id
+            grade = group.grade
+            faculty = faculty_map.setdefault(
+                faculty_id,
+                {"id": int(faculty_id), "title": "", "short_title": "", "courses": {}},
+            )
+
+            faculty["courses"].setdefault(grade, {})
+            faculty["courses"][grade][group.id] = {
+                "id": int(group.id),
+                "title": group.title,
+                "link": group.link,
+            }
+
+        return faculty_map
+
+    @staticmethod
+    async def _build_teachers_dict(doc) -> dict:
+        """Формирует словарь преподавателей, сгруппированных по первой букве фамилии."""
+        teachers: dict[str, Any] = {}
+
+        for teacher in doc.resources:
+            first_letter = teacher.full_name[0].upper()
+            bucket = teachers.setdefault(first_letter, {})
+            bucket[teacher.id] = {
+                "id": int(teacher.id),
+                "full_name": teacher.full_name,
+                "short_name": teacher.short_name,
+            }
+
+        return teachers
+
+    async def _fetch_data(
+            self,
+            file_path: Path,
+            fetch_args: tuple,
+            parser: Callable[[Any], dict]
+    ) -> Optional[dict[str, Any]]:
+        """Обновляет данные из API или файла.
+
+        Сначала пытается получить данные из API, парсит их и сохраняет в файл.
+        Если API недоступно, загружает данные из файла кеша.
+        Если оба источника недоступны, возвращает None."""
         # Пробуем API
-        api_data  = await self._fetch_api_data(endpoint)
-        if isinstance(api_data , dict):
-            self.save_to_file(file_path, api_data )
-            return api_data
+        try:
+            doc = await self.api_client.get(*fetch_args)
+            parsed = await parser(doc)
+            if isinstance(parsed, dict):
+                self._save_to_file(file_path, parsed)
+                return parsed
+            logger.warning(f"Parser returned invalid format for {file_path}")
+        except Exception as e:
+            logger.info(f"API request failed: {str(e)}")
 
-        # Пробуем файл
-        file_data = self.load_from_file(file_path)
+        # Пробуем взять последний успешный вариант из файла
+        file_data = self._load_from_file(file_path)
         if file_data is not None:
             logger.info(f"Using cached data from {file_path}")
             return file_data
 
         # Все источники недоступны
-        logger.error(f"No valid data obtained for {endpoint}")
+        logger.error(f"No valid data obtained for {file_path}")
         return None
 
     async def update_faculties(self) -> bool:
-        """Обновляет кэш факультетов при успешном получении данных"""
-        data = await self.update_data("bot-faculties/", self.faculties_cache_file)
+        """Обновляет кеш факультетов."""
+        from jsonapi_client import Inclusion
+
+        data = await self._fetch_data(
+            file_path=self.cache_files["faculties"],
+            fetch_args=("groups", Inclusion("faculty")),
+            parser=self._build_faculties_dict,
+        )
         if data is not None:
             self.cache_repository.faculties = data
             logger.info("Faculties cache updated successfully.")
@@ -99,8 +159,12 @@ class CacheService:
         return False
 
     async def update_teachers(self) -> bool:
-        """Обновляет кэш преподавателей при успешном получении данных"""
-        data = await self.update_data("bot-teachers/", self.teachers_cache_file)
+        """Обновляет кеш преподавателей."""
+        data = await self._fetch_data(
+            file_path=self.cache_files["teachers"],
+            fetch_args=("teachers", ),
+            parser=self._build_teachers_dict,
+        )
         if data is not None:
             self.cache_repository.teachers = data
             logger.info("Teachers cache updated successfully.")
@@ -109,7 +173,11 @@ class CacheService:
         return False
 
     async def update_all(self) -> bool:
-        """Обновляет все данные."""
-        faculties_updated = await self.update_faculties()
-        teachers_updated = await self.update_teachers()
-        return faculties_updated and teachers_updated
+        """Обновляет все кеши параллельно.
+        True, если успешно обновлены все, иначе False."""
+        results = await asyncio.gather(
+            self.update_faculties(),
+            self.update_teachers(),
+            return_exceptions=True
+        )
+        return all(isinstance(r, bool) and r for r in results)

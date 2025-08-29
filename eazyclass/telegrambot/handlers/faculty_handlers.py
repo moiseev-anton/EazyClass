@@ -12,6 +12,8 @@ from telegrambot.managers.keyboard_manager import (
 from telegrambot.states import FacultyStates
 
 logger = logging.getLogger(__name__)
+
+
 router = Router()
 
 
