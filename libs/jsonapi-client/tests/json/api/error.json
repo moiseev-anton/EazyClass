@@ -1,8 +1,0 @@
-{
-  "errors": [{
-    "id": "hostname",
-    "status": "404",
-    "title": "The requested resource could not be found but may be available again in the future.",
-    "detail": ""
-  }]
-}
