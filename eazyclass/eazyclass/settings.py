@@ -221,11 +221,6 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-        "telegrambot": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
     },
 }
 

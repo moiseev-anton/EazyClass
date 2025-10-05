@@ -23,7 +23,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('scheduler.api.v1.urls')),
     path('scheduler/', include('scheduler.urls')),
-    path('telegrambot/', include('telegrambot.urls')),
 ]
 
 
