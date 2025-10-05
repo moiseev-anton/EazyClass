@@ -48,6 +48,7 @@ INTERNAL_IPS = [
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
+    'polymorphic',
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -295,6 +296,9 @@ REST_FRAMEWORK = {
 }
 
 JSON_API_FORMAT_FIELD_NAMES = 'camelize'
+JSON_API_FORMAT_TYPES = 'dasherize'
+JSON_API_FORMAT_RELATED_LINKS = 'camelize'
+JSON_API_PLURALIZE_TYPES = True
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "EazyClass API",

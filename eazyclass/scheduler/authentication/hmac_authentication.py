@@ -73,7 +73,6 @@ class HMACAuthentication(BaseAuthentication):
             )
             logger.info("HMAC Success")
             return social_account.user, "hmac"
-            # return social_account.user, "user-hmac"
 
         except SocialAccount.DoesNotExist:
             logger.info("HMAC Failed: Пользователь не получен из БД.")

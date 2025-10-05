@@ -12,8 +12,8 @@ from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from scheduler.api.filters import LessonFilter
-from scheduler.api.v1.serializers import LessonSerializer
 from scheduler.api.mixins import JsonApiMixin
+from scheduler.api.v1.serializers import LessonSerializer
 from scheduler.api.viewsets import ReadOnlyModelViewSet
 from scheduler.models import Lesson, Subscription, Group, Teacher
 
@@ -79,7 +79,7 @@ class LessonViewSet(JsonApiMixin, ReadOnlyModelViewSet):
     serializer_class = LessonSerializer
     filterset_class = LessonFilter
     permission_classes = [AllowAny]
-    resource_name = "lesson"
+    resource_name = "lessons"
 
     select_for_includes = {
         "__all__": [],

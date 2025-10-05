@@ -6,12 +6,13 @@ from scheduler.models.abstract_models import TimestampedModel
 
 class Group(TimestampedModel):
     title = models.CharField(max_length=255)
-    link = models.URLField()
+    link = models.URLField() # эндпоинт на сайте скрайпинга
     faculty = models.ForeignKey(
         "scheduler.Faculty", related_name="groups", on_delete=models.CASCADE, null=True
     )
     grade = models.CharField(max_length=1)
     is_active = models.BooleanField(default=True)
+    # + created_at из TimestampedModel
     # + updated_at из TimestampedModel
 
     objects = GroupManager()

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AuthResult:
     user: User
+    social_account: SocialAccount
     created: bool
 
     @property
@@ -24,7 +25,7 @@ class AuthResult:
         return status.HTTP_201_CREATED if self.created else status.HTTP_200_OK
 
 
-class RegisterSerializer(json_api_serializers.Serializer):
+class AuthSerializer(json_api_serializers.Serializer):
     social_id = json_api_serializers.CharField(
         max_length=SOCIAL_ID_MAX_LENGTH,
     )
@@ -46,22 +47,42 @@ class RegisterSerializer(json_api_serializers.Serializer):
     extra_data = json_api_serializers.JSONField(required=False, allow_null=True)
 
     class Meta:
-        resource_name = "user"
+        resource_name = "social-accounts"
 
     def create(self, validated_data) -> AuthResult:
+        social_id = validated_data["social_id"]
+        platform = validated_data["platform"]
+
         user, created = User.objects.get_or_create_user(
-            social_id=validated_data["social_id"],
-            platform=validated_data["platform"],
-            first_name=validated_data.get("first_name") or "",
+            platform=platform,
+            social_id=social_id,
+            first_name=validated_data.get("first_name") or "Anonymous",
             last_name=validated_data.get("last_name") or "",
             extra_data=validated_data.get("extra_data") or {},
         )
-        return AuthResult(user=user, created=created)
+
+        social_account = user.accounts.get(
+            platform=platform,
+            social_id=social_id,
+        )
+
+        return AuthResult(user=user, social_account=social_account, created=created)
 
     def save(self, **kwargs) -> AuthResult:
-        """Save and return AuthResult with user instance and creation flag."""
+        """Save and return SocialAccount instance."""
         return self.create(self.validated_data)
 
+    def update(self, instance):
+        new_extra = self.validated_data.get("extra_data") or {}
+        current_extra = instance.extra_data or {}
 
-class RegisterWithNonceSerializer(RegisterSerializer):
-    nonce = json_api_serializers.UUIDField()
+        if new_extra != current_extra:
+            instance.extra_data = new_extra
+            instance.save(update_fields=["extra_data"])
+
+        return instance
+
+
+class AuthWithNonceSerializer(AuthSerializer):
+    # Не участвует в сериализации. Нужен для автоматической документации API
+    nonce = json_api_serializers.UUIDField(write_only=True)

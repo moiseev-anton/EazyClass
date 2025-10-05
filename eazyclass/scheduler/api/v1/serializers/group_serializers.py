@@ -1,25 +1,10 @@
-from rest_framework_json_api import serializers
+from rest_framework_json_api import serializers as json_api_serializers
 
 from scheduler.models import Group, Faculty
 
 
-class ShortGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ["title"]
-        read_only_fields = fields
-
-
-class CompactGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ["id", "title", "grade", "link"]
-        read_only_fields = fields
-        resource_name = "group"
-
-
-class GroupSerializer(serializers.ModelSerializer):
-    faculty = serializers.ResourceRelatedField(
+class GroupSerializer(json_api_serializers.ModelSerializer):
+    faculty = json_api_serializers.ResourceRelatedField(
         queryset=Faculty.objects.filter(is_active=True), required=False
     )
 
@@ -30,4 +15,4 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ["id", "title", "grade", "link", "faculty"]
-        resource_name = "group"
+        resource_name = "groups"

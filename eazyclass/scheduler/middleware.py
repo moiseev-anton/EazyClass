@@ -23,7 +23,7 @@ class RequestLoggingMiddleware:
     def __call__(self, request):
         headers = '\n'.join([f'{k}: {v}' for k, v in request.headers.items()])
 
-        msg = ('=== Incoming Request ===\n'
+        msg = ('\n=== Incoming Request ===\n'
                f"Method: {request.method}\n"
                f"Path: {request.get_full_path()}\n"
                "Headers:\n") + headers

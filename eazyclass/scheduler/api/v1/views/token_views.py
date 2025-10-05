@@ -12,11 +12,11 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from scheduler.api.mixins import PlainApiViewMixin
 from scheduler.api.v1.serializers import (
     CustomTokenObtainPairSerializer,
     CustomTokenRefreshSerializer,
 )
-from scheduler.api.mixins import PlainApiViewMixin
 
 
 class TokenCookieHandlerMixin:
@@ -64,11 +64,13 @@ class CustomTokenObtainPairView(
                 response=inline_serializer(
                     name="TokenObtainResponse",
                     fields={
-                        "success": serializers.BooleanField(help_text="Authentication status"),
+                        "success": serializers.BooleanField(
+                            help_text="Authentication status"
+                        ),
                         "access": serializers.CharField(help_text="Access token"),
                         "refresh": serializers.CharField(
                             required=False,
-                            help_text="Refresh token (only for browser clients)"
+                            help_text="Refresh token (only for browser clients)",
                         ),
                     },
                 ),

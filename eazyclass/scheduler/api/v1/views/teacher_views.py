@@ -10,8 +10,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework_json_api.views import ReadOnlyModelViewSet
 
 from scheduler.api.filters import TeacherFilter
-from scheduler.api.v1.serializers import TeacherSerializer
 from scheduler.api.mixins import JsonApiMixin
+from scheduler.api.v1.serializers import TeacherSerializer
 from scheduler.models import Teacher
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class TeacherViewSet(JsonApiMixin, ReadOnlyModelViewSet):
     serializer_class = TeacherSerializer
     permission_classes = [AllowAny]
     filterset_class = TeacherFilter
-    resource_name = "teacher"
+    resource_name = "teachers"
 
     def get_queryset(self):
         return super().get_queryset().filter(is_active=True).order_by("full_name")

@@ -6,13 +6,11 @@ from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
 )
-from rest_framework import status
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
 
 from scheduler.api.filters import GroupFilter
+from scheduler.api.mixins import JsonApiMixin
 from scheduler.api.v1.serializers import GroupSerializer
-from scheduler.api.mixins import JsonApiMixin, ETagMixin
 from scheduler.api.viewsets import ReadOnlyModelViewSet
 from scheduler.models import Group
 
@@ -54,7 +52,7 @@ class GroupViewSet(
     serializer_class = GroupSerializer
     filterset_class = GroupFilter
     permission_classes = [AllowAny]
-    resource_name = "group"
+    resource_name = "groups"
 
     select_for_includes = {
         "__all__": [],

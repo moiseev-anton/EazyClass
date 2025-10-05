@@ -1,10 +1,23 @@
-from .auth_serializers import RegisterSerializer, RegisterWithNonceSerializer, AuthResult
+from .auth_serializers import AuthSerializer, AuthWithNonceSerializer, AuthResult
 from .deeplink_serializators import DeeplinkParamsSerializer, DeeplinkOutputSerializer
 from .faculty_serialiazer import FacultySerializer
-from .group_serializers import CompactGroupSerializer, ShortGroupSerializer, GroupSerializer
+from .group_serializers import GroupSerializer
 from .lesson_serializer import LessonSerializer
 from .nonce_serializers import NonceSerializer
-from .subscription_serializer import SubscriptionSerializer
-from .teacher_serializers import TeacherSerializer, CompactTeacherSerializer
-from .token_serializers import CustomTokenRefreshSerializer, CustomTokenObtainPairSerializer, TokenResponseSerializer
-from .user_serializers import UserSerializer, UserUpdateSerializer, UserOutputSerializer, UserOutputWithNonceSerializer
+from .social_account_serializer import (
+    SocialAccountSerializer,
+    SocialAccountAuthSerializer,
+    SocialAccountAuthWithNonceSerializer,
+)
+from .subscription_serializer import (
+    SubscriptionSerializer,
+    GroupSubscriptionSerializer,
+    TeacherSubscriptionSerializer,
+)
+from .teacher_serializers import TeacherSerializer
+from .token_serializers import (
+    CustomTokenRefreshSerializer,
+    CustomTokenObtainPairSerializer,
+    TokenResponseSerializer,
+)
+from .user_serializers import UserSerializer

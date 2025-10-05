@@ -1,23 +1,23 @@
+import logging
 from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from django.core.cache import caches
 from django.utils.translation import gettext_lazy as _
-from rest_framework_json_api import serializers
 from rest_framework.exceptions import APIException
+from rest_framework_json_api import serializers as json_api_serializers
 from rest_framework_simplejwt.exceptions import TokenError, AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings
 
 from scheduler.authentication import CustomRefreshToken
-import logging
 
 logger = logging.getLogger(__name__)
-cache = caches['auth']
+cache = caches["auth"]
 
 
-class BaseTokenSerializer(serializers.Serializer):
+class BaseTokenSerializer(json_api_serializers.Serializer):
     """Базовый сериализатор токенов"""
 
     default_error_messages = {
@@ -36,19 +36,15 @@ class BaseTokenSerializer(serializers.Serializer):
     def _validate_user(self, user_id: str):
         """Проверка существования и активности пользователя"""
         try:
-            user = get_user_model().objects.get(
-                **{api_settings.USER_ID_FIELD: user_id}
-            )
+            user = get_user_model().objects.get(**{api_settings.USER_ID_FIELD: user_id})
             if not api_settings.USER_AUTHENTICATION_RULE(user):
                 raise AuthenticationFailed(
-                    self.error_messages["no_active_account"],
-                    "no_active_account"
+                    self.error_messages["no_active_account"], "no_active_account"
                 )
             return user
         except get_user_model().DoesNotExist:
             raise AuthenticationFailed(
-                self.error_messages["no_active_account"],
-                "no_active_account"
+                self.error_messages["no_active_account"], "no_active_account"
             )
         except Exception as e:
             self._handle_service_exception(e)
@@ -57,7 +53,7 @@ class BaseTokenSerializer(serializers.Serializer):
 class CustomTokenObtainPairSerializer(BaseTokenSerializer):
     NONCE_TTL_REDUCTION = 10
 
-    nonce = serializers.UUIDField(write_only=True)
+    nonce = json_api_serializers.UUIDField(write_only=True)
     token_class = CustomRefreshToken
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, str]:
@@ -66,7 +62,10 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
         try:
             user_id = cache.get(nonce)
             if not user_id:
-                return {"success": False, "message": self.error_messages["auth_in_progress"]}
+                return {
+                    "success": False,
+                    "message": self.error_messages["auth_in_progress"],
+                }
 
             user = self._validate_user(user_id)
             refresh = self.token_class.for_user(user)
@@ -79,7 +78,7 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
             return {
                 "success": True,
                 "refresh": str(refresh),
-                "access": str(refresh.access_token)
+                "access": str(refresh.access_token),
             }
         except Exception as e:
             self._handle_service_exception(e)
@@ -103,7 +102,7 @@ class CustomTokenRefreshSerializer(BaseTokenSerializer, TokenRefreshSerializer):
             if user_id:
                 self._validate_user(user_id)
 
-            data = {'access': str(refresh.access_token)}
+            data = {"access": str(refresh.access_token)}
 
             if api_settings.ROTATE_REFRESH_TOKENS:
                 data.update(self._rotate_refresh_token(refresh))
@@ -126,13 +125,12 @@ class CustomTokenRefreshSerializer(BaseTokenSerializer, TokenRefreshSerializer):
         refresh.add_to_whitelist()
         refresh.remove_from_whitelist(old_jti)
 
-        return {'refresh': str(refresh)}
+        return {"refresh": str(refresh)}
 
 
-class TokenResponseSerializer(serializers.Serializer):
-    access = serializers.CharField(help_text="Access token")
-    refresh = serializers.CharField(
-        required=False,
-        help_text="Refresh token (only for browser clients)"
+class TokenResponseSerializer(json_api_serializers.Serializer):
+    access = json_api_serializers.CharField(help_text="Access token")
+    refresh = json_api_serializers.CharField(
+        required=False, help_text="Refresh token (only for browser clients)"
     )
-    success = serializers.BooleanField(help_text="Authentication status")
+    success = json_api_serializers.BooleanField(help_text="Authentication status")

@@ -1,14 +1,9 @@
 from django.db import models
-from django.utils import timezone
 
 
 class TimestampedModel(models.Model):
-    updated_at = models.DateTimeField(default=timezone.now)
-
-    def save(self, *args, **kwargs):
-        """Обновляет updated_at при каждом сохранении."""
-        self.updated_at = timezone.now()
-        super().save(*args, **kwargs)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True

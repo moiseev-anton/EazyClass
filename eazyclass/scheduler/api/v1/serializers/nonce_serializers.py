@@ -20,10 +20,3 @@ class NonceSerializer(serializers.Serializer):
         except Exception as e:
             logger.error(f"Failed to bind nonce {nonce} for user {user_id}: {str(e)}")
             return "failed"
-
-
-# class NonceBindOutputSerializer(json_api_serializers.Serializer):
-#     nonce_status = json_api_serializers.CharField()
-#
-#     class Meta:
-#         resource_name = "nonce"

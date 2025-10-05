@@ -1,27 +1,29 @@
-from rest_framework_json_api import serializers
+from rest_framework_json_api import serializers as json_api_serializers
 
 from scheduler.models import Lesson, Group, Teacher
-from .group_serializers import CompactGroupSerializer
+from .group_serializers import GroupSerializer
 from .teacher_serializers import TeacherSerializer
 
 
-class LessonSerializer(serializers.ModelSerializer):
+class LessonSerializer(json_api_serializers.ModelSerializer):
     """Сериализатор для уроков, предоставляющий информацию о расписании занятий."""
 
-    date = serializers.DateField(
+    date = json_api_serializers.DateField(
         source="period.date",
         read_only=True,
     )
-    number = serializers.IntegerField(source="period.lesson_number", read_only=True)
-    start_time = serializers.TimeField(
+    number = json_api_serializers.IntegerField(
+        source="period.lesson_number", read_only=True
+    )
+    start_time = json_api_serializers.TimeField(
         source="period.start_time",
         read_only=True,
     )
-    end_time = serializers.TimeField(source="period.end_time", read_only=True)
-    subject = serializers.CharField(source="subject.title", read_only=True)
-    classroom = serializers.CharField(source="classroom.title", read_only=True)
-    group = serializers.ResourceRelatedField(queryset=Group.objects.all())
-    teacher = serializers.ResourceRelatedField(queryset=Teacher.objects.all())
+    end_time = json_api_serializers.TimeField(source="period.end_time", read_only=True)
+    subject = json_api_serializers.CharField(source="subject.title", read_only=True)
+    classroom = json_api_serializers.CharField(source="classroom.title", read_only=True)
+    group = json_api_serializers.ResourceRelatedField(queryset=Group.objects.all())
+    teacher = json_api_serializers.ResourceRelatedField(queryset=Teacher.objects.all())
 
     class Meta:
         model = Lesson
@@ -37,9 +39,9 @@ class LessonSerializer(serializers.ModelSerializer):
             "group",
             "teacher",
         ]
-        resource_name = "lesson"
+        resource_name = "lessons"
 
     included_serializers = {
-        "group": CompactGroupSerializer,
+        "group": GroupSerializer,
         "teacher": TeacherSerializer,
     }

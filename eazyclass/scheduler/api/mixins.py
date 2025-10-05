@@ -78,7 +78,7 @@ class ETagMixin:
         Фильтрует отношения, оставляя только те, где модели содержат нужные поля.
 
         Пример:
-            Вход: {'author': Author, 'bio': Bio}, ['updated_at']
+            Вход: relation_map={'author': Author, 'bio': Bio}, required_fields=['updated_at']
             Выход: ['author', 'bio'] (если обе модели имеют updated_at)
         """
         return [

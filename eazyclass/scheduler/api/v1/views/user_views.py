@@ -11,8 +11,8 @@ from rest_framework_json_api.views import (
     RelatedMixin,
 )
 
-from scheduler.api.v1.serializers import UserSerializer, UserUpdateSerializer
 from scheduler.api.mixins import JsonApiMixin
+from scheduler.api.v1.serializers import UserSerializer
 from scheduler.models import User
 
 logger = logging.getLogger(__name__)
@@ -29,18 +29,19 @@ class UserViewSet(
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
-    select_for_includes = {
+    # select_for_includes = {
+    #     "__all__": [],
+    #     "accounts": ["accounts"],
+    # }
+
+    prefetch_for_includes = {
         "__all__": [],
+        "subscriptions": ["subscriptions"],
         "accounts": ["accounts"],
     }
 
     def get_queryset(self):
         return self.queryset.filter(is_active=True)
-
-    def get_serializer_class(self):
-        if self.action in ["me"] and self.request.method in ("PATCH", "PUT"):
-            return UserUpdateSerializer
-        return UserSerializer
 
     @extend_schema(
         tags=["User"],
@@ -54,7 +55,7 @@ class UserViewSet(
         methods=["PATCH"],
         summary="Update current user",
         description="Update user profile (username, first_name, last_name).",
-        request=UserUpdateSerializer,
+        request=UserSerializer,
         responses={200: OpenApiResponse(UserSerializer(many=True))},
     )
     # @extend_schema(
@@ -66,20 +67,24 @@ class UserViewSet(
     # )
     @action(detail=False, methods=["get", "patch"], url_path="me")
     def me(self, request):
-        self.kwargs["pk"] = request.user.pk
+        try:
+            self.kwargs["pk"] = request.user.pk
 
-        if request.method == "GET":
-            serializer = self.get_serializer(request.user)
-            return Response(serializer.data)
+            if request.method == "GET":
+                serializer = self.get_serializer(request.user)
+                return Response(serializer.data)
 
-        elif request.method == "PATCH":
-            serializer = self.get_serializer(
-                request.user, data=request.data, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            logger.info(f"User {request.user.id} updated profile")
-            return Response(serializer.data)
+            elif request.method == "PATCH":
+                serializer = self.get_serializer(
+                    request.user, data=request.data, partial=True
+                )
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                logger.info(f"User {request.user.id} updated profile")
+                return Response(serializer.data)
+        except Exception as e:
+            logger.error(e)
+            raise
 
         # elif request.method == "DELETE":
         #     request.user.is_active = False

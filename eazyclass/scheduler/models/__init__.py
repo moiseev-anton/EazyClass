@@ -6,6 +6,6 @@ from .period_model import Period
 from .period_template_models import PeriodTemplate, Timing, TimingWeekDay
 from .social_account_model import SocialAccount, Platform
 from .subject_model import Subject
-from .subscription_model import Subscription
+from .subscription_model import Subscription, TeacherSubscription, GroupSubscription
 from .teacher_model import Teacher
 from .user_model import User

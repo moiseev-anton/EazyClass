@@ -46,19 +46,19 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 
-  celery-worker-bot:
-    build:
-      context: .
-      dockerfile: eazyclass/Dockerfile.celery
-    container_name: celery_worker_bot
-    command: celery -A eazyclass worker -Q bot_tasks --loglevel=debug # заменить потом на info
-    volumes:
-      - ./eazyclass:/app:delegated
-    env_file:
-      - ./.env
-    depends_on:
-      - redis
-      - pgdb
+#  celery-worker-bot:
+#    build:
+#      context: .
+#      dockerfile: eazyclass/Dockerfile.celery
+#    container_name: celery_worker_bot
+#    command: celery -A eazyclass worker -Q bot_tasks --loglevel=debug # заменить потом на info
+#    volumes:
+#      - ./eazyclass:/app:delegated
+#    env_file:
+#      - ./.env
+#    depends_on:
+#      - redis
+#      - pgdb
 
   celery-worker-periodic:
     build:
