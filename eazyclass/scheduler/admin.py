@@ -84,14 +84,14 @@ class LessonAdmin(admin.ModelAdmin):
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = (
-        'username', 'first_name', 'last_name', 'is_active', 'date_joined')
+        'username', 'first_name', 'last_name', 'is_active', 'created_at')
     list_filter = ('is_active', )
     search_fields = ('username', 'first_name', 'last_name')
-    readonly_fields = ('date_joined',)
+    readonly_fields = ('created_at',)
 
     fieldsets = (
         (None, {
-            'fields': ('username', 'first_name', 'last_name', 'is_active', 'date_joined')
+            'fields': ('username', 'first_name', 'last_name', 'is_active', 'created_at')
         }),
         ('Permissions', {
             'fields': ('groups', 'user_permissions', 'is_staff', 'is_superuser'),

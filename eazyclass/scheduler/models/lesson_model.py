@@ -12,6 +12,7 @@ class Lesson(TimestampedModel):
     subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
     # + updated_at из TimestampedModel
+    # + created_at из TimestampedModel
 
     def __str__(self):
         return f"{self.group.title}({self.subgroup})-{self.period}-{self.subject}"
