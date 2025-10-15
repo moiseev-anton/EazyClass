@@ -5,10 +5,10 @@ from scheduler.models import User
 
 class UserSerializer(json_api_serializers.ModelSerializer):
 
-    included_serializers = {
-        "accounts": "scheduler.api.v1.serializers.SocialAccountSerializer",
-        "subscriptions": "scheduler.api.v1.serializers.SubscriptionSerializer",
-    }
+    # included_serializers = {
+    #     "accounts": "scheduler.api.v1.serializers.SocialAccountSerializer",
+    #     "subscriptions": "scheduler.api.v1.serializers.SubscriptionSerializer",
+    # }
 
     class Meta:
         model = User
@@ -20,5 +20,5 @@ class UserSerializer(json_api_serializers.ModelSerializer):
             "accounts",
             "subscriptions",
         )
-        read_only_fields = ("id", "username", "accounts", "subscriptions")
+        read_only_fields = ("id", "username", "accounts")
         resource_name = "users"
