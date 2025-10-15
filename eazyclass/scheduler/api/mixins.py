@@ -1,12 +1,14 @@
-import datetime
 import hashlib
+import json
 import logging
-from typing import Optional, List, Dict, Iterable, Tuple
+from datetime import datetime
+from typing import Dict, Set, Tuple
+from django.utils import timezone
 
-from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
-from django.db.models import Max, Count
-from django.db.models import Model, ForeignKey, ManyToManyField, OneToOneField
-from django.http import Http404
+from django.db import models
+from django.db.models import Max, Count, Value
+from django.db.models.functions import Coalesce
+from django.utils.module_loading import import_string
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular_jsonapi.schemas.openapi import JsonApiAutoSchema
 from rest_framework import status
@@ -19,6 +21,9 @@ from rest_framework_json_api.renderers import JSONRenderer as JSONAPIRenderer
 from rest_framework_json_api.utils import get_included_resources
 
 logger = logging.getLogger(__name__)
+
+
+MIN_AWARE_DATETIME = timezone.make_aware(datetime(1970, 1, 1))
 
 
 class JsonApiMixin:
@@ -34,189 +39,22 @@ class PlainApiViewMixin:
 
 
 class ETagMixin:
-    def get_select_related(self, include) -> Optional[List]:
-        return getattr(self, "select_for_includes", {}).get(include, None)
+    """
+    Миксин для поддержки ETag в DRF с drf-jsonapi.
+    Генерирует weak/strong ETag на основе агрегации (MAX(updated_at) + COUNT(id)) для main и relations.
+    - Reverse relations (обратные связи) агрегируются всегда (для catch изменений в relationships IDs).
+    - Forward relations (прямые связи) — только если в ?include (для catch изменений в included data).
+    Использование: Наследуйте в ViewSet, e.g., class MyViewSet(ModelViewSet, ETagListModelMixin, ETagRetrieveModelMixin).
+    Настройка: self.use_id_hash = True для stronger ETag (hash IDs, если qs small).
+    """
 
-    def get_prefetch_related(self, include) -> Optional[List]:
-        return getattr(self, "prefetch_for_includes", {}).get(include, None)
+    use_id_hash = False
+    weak_etag = True
 
-    @staticmethod
-    def has_field(model_class: Model, field_name: str) -> bool:
-        """Проверяет, есть ли поле в модели."""
-        try:
-            model_class._meta.get_field(field_name)
-            return True
-        except FieldDoesNotExist:
-            return False
-
-    def get_relation_model_map(self, relations: set[str]) -> dict[str, Model]:
-        """
-        Извлекает все уникальные модели из отношений.
-        Пример: Вход: {'author__bio', 'publisher'} -> Выход: {'author': Author, 'bio': Bio, 'publisher': Publisher}
-        """
-        result = {}
-        main_model = self.queryset.model
-
-        for relation in relations:
-            current_model = main_model
-            for part in relation.split("__"):
-                try:
-                    field = current_model._meta.get_field(part)
-                    if isinstance(field, (ForeignKey, ManyToManyField, OneToOneField)):
-                        current_model = field.related_model
-                        result[part] = current_model
-                    else:
-                        break
-                except FieldDoesNotExist:
-                    break
-        return result
-
-    def filter_relations_by_fields(
-        self, relation_map: Dict[str, Model], required_fields: Iterable[str]
-    ) -> List[str]:
-        """
-        Фильтрует отношения, оставляя только те, где модели содержат нужные поля.
-
-        Пример:
-            Вход: relation_map={'author': Author, 'bio': Bio}, required_fields=['updated_at']
-            Выход: ['author', 'bio'] (если обе модели имеют updated_at)
-        """
-        return [
-            relation
-            for relation, model in relation_map.items()
-            if all(self.has_field(model, field) for field in required_fields)
-        ]
-
-    def get_all_relations(self) -> set[str]:
-        """Собирает все уникальные отношения из include-правил"""
-        relations = set()
-        included_resources = get_included_resources(
-            self.request, self.get_serializer_class()
-        )
-
-        for include in included_resources + ["__all__"]:
-            if select_relations := self.get_select_related(include):
-                relations.update(select_relations)
-            if prefetch_relations := self.get_prefetch_related(include):
-                relations.update(
-                    rel for rel in prefetch_relations if isinstance(rel, str)
-                )
-
-        return relations
-
-    def get_aggregates(self, relations: list[str]) -> dict[str, object]:
-        aggregates = {}
-        for relation in relations:
-            aggregates[f"{relation}_max"] = Max(f"{relation}__updated_at")
-            aggregates[f"{relation}_count"] = Count(f"{relation}__id")
-        return aggregates
-
-    @staticmethod
-    def update_counts_and_max(valid_relations, stats, total_count, max_updated):
-        for relation in valid_relations:
-            total_count += stats.get(f"{relation}_count", 0)
-            rel_max = stats.get(f"{relation}_max")
-            if rel_max and rel_max > max_updated:
-                max_updated = rel_max
-        return total_count, max_updated
-
-    def collect_etag_metrics_for_list(self):
-        """
-        Собирает данные для ETag:
-        - Максимальный updated_at среди всех связанных моделей
-        - Общее количество записей во всех связанных моделях
-        """
-        # 1. Получаем финальный QuerySet
-        qs = self.filter_queryset(self.get_queryset())
-        qs = self.paginate_queryset(qs) or qs
-
-        if not qs.exists():
-            return {"max_updated": 0, "total_count": 0}
-
-        # Собираем все отношения
-        relations = self.get_all_relations()
-        relation_map = self.get_relation_model_map(relations)
-        valid_relations = self.filter_relations_by_fields(relation_map, ("updated_at",))
-
-        aggregates = {
-            "main_max": Max("updated_at"),
-            "main_count": Count("id"),
-            **self.get_aggregates(valid_relations),
-        }
-        stats = qs.aggregate(**aggregates)
-
-        total_count = stats.get("main_count", 0)
-        max_updated = stats.get("main_max") or datetime.datetime.min
-        total_count, max_updated = self.update_counts_and_max(
-            valid_relations, stats, total_count, max_updated
-        )
-
-        return {
-            "max_updated": (
-                max_updated.timestamp() if max_updated != datetime.datetime.min else 0
-            ),
-            "total_count": total_count,
-        }
-
-    def collect_etag_metrics_for_instance(self):
-        """
-        Собирает данные для ETag:
-        - Максимальный updated_at среди всех связанных моделей
-        - Общее количество записей во всех связанных моделях
-        """
-        try:
-            instance = self.get_object()
-        except (Http404, ObjectDoesNotExist):
-            return {"max_updated": 0, "total_count": 0}
-
-        max_updated = instance.updated_at or datetime.datetime.min
-        total_count = 1
-
-        relations = self.get_all_relations()
-        relation_map = self.get_relation_model_map(relations)
-        valid_relations = self.filter_relations_by_fields(relation_map, ("updated_at",))
-
-        if valid_relations:
-            qs = self.filter_queryset(self.get_queryset()).filter(pk=instance.pk)
-            aggregates = self.get_aggregates(valid_relations)
-            stats = qs.aggregate(**aggregates)
-            total_count, max_updated = self.update_counts_and_max(
-                valid_relations, stats, total_count, max_updated
-            )
-
-        return {
-            "max_updated": (
-                max_updated.timestamp() if max_updated != datetime.datetime.min else 0
-            ),
-            "total_count": total_count,
-        }
-
-    def get_etag_data(self, many: bool):
-        if many:
-            return self.collect_etag_metrics_for_list()
-        return self.collect_etag_metrics_for_instance()
-
-    def generate_etag(self, many: bool, weak: bool) -> str:
-        """Генерация ETag на основе аккумулированных данных"""
-        etag_data = self.get_etag_data(many)
-        request_uri = self.request.build_absolute_uri()
-        etag = hashlib.md5(
-            f"{request_uri}-{etag_data['max_updated']}-{etag_data['total_count']}".encode(
-                "utf-8"
-            )
-        ).hexdigest()
-        return f'W/{etag}' if weak else etag
-
-    def check_etag(self, many: bool = False) -> Tuple[str, bool]:
-        """
-        Проверяет ETag из заголовка If-None-Match.
-        Возвращает кортеж (etag, is_matched).
-        """
-        new_etag = self.generate_etag(many, weak=True)
-        client_etag = self.request.headers.get('If-None-Match')
-        logger.info(f"check_etag: Client ETag={client_etag}, New ETag={new_etag}")
-        is_matched = client_etag is not None and client_etag == new_etag
-        return new_etag, is_matched
+    def get_object(self):
+        if not hasattr(self, "_cached_object"):
+            self._cached_object = super().get_object()
+        return self._cached_object
 
     def filter_queryset(self, queryset):
         """Переопределяет filter_queryset для использования кэшированного результата."""
@@ -230,10 +68,245 @@ class ETagMixin:
             self._cached_paginate_queryset = super().paginate_queryset(queryset)
         return self._cached_paginate_queryset
 
-    def get_object(self):
-        if not hasattr(self, "_cached_object"):
-            self._cached_object = super().get_object()
-        return self._cached_object
+    def get_reverse_relations_from_serializer(self) -> dict[str, str]:
+        """
+        Возвращает обратные связи модели, которые реально объявлены в сериализаторе
+        и имеют updated_at. Формат: {accessor_name: accessor_name}
+        """
+        reverse_rels: dict[str, str] = {}
+        serializer_class = self.get_serializer_class()
+
+        # Берём все поля сериализатора, исключая write_only
+        declared_fields = {
+            name
+            for name, field in serializer_class().get_fields().items()
+            if not getattr(field, "write_only", False)
+        }
+
+        try:
+            # Определяем основную модель
+            model = getattr(
+                serializer_class.Meta, "model", getattr(self.queryset, "model", None)
+            )
+            if model is None:
+                logger.warning("No model found for reverse relations extraction")
+                return set()
+
+            # Перебираем все связанные reverse-объекты модели
+            for rel in model._meta.related_objects:
+                accessor = rel.get_accessor_name()
+                related_model = rel.related_model
+
+                # Отбираем те, что реально отображаются в сериализаторе и имеют updated_at
+                if accessor in declared_fields and hasattr(related_model, "updated_at"):
+                    reverse_rels[accessor] = accessor
+
+        except Exception as e:
+            logger.warning(f"Error extracting reverse relations: {e}")
+
+        logger.info(f"[ETagMixin] Reverse_relations fields: {reverse_rels}")
+        return reverse_rels
+
+    def get_valid_included_fields(self) -> dict[str, str]:
+        serializer_class = self.get_serializer_class()
+        included_serializers = getattr(serializer_class, "included_serializers", {})
+
+        # include из запроса
+        included_paths: Set[str] = set(
+            get_included_resources(self.request, serializer_class)
+        )
+        included_paths = {part for path in included_paths for part in path.split(".")}
+
+        model = getattr(
+            serializer_class.Meta, "model", getattr(self.queryset, "model", None)
+        )
+
+        valid_included: dict[str, str] = {}
+
+        for name, serializer_ref in included_serializers.items():
+            if name not in included_paths:
+                continue
+
+            try:
+                serializer_cls = (
+                    import_string(serializer_ref)
+                    if isinstance(serializer_ref, str)
+                    else serializer_ref
+                )
+                related_model = serializer_cls.Meta.model
+            except Exception as e:
+                logger.warning(f"[ETagMixin] Failed to load serializer '{name}': {e}")
+                continue
+
+            if related_model is None or not hasattr(related_model, "updated_at"):
+                continue
+
+            # --- пытаемся найти путь от base_model к related_model ---
+            relation_path = None
+            try:
+                # если прямое поле (FK/OneToOne)
+                field = model._meta.get_field(name)
+                if isinstance(
+                    field,
+                    (
+                        models.ForeignKey,
+                        models.OneToOneField,
+                        models.ManyToManyField,
+                    ),
+                ):
+                    relation_path = name
+            except Exception:
+                # если это не прямое поле, возможно, это связано через подтип (полиморфную модель)
+                for rel in model._meta.related_objects:
+                    accessor = rel.get_accessor_name()
+                    rel_model = rel.related_model
+                    if any(
+                        f.name == name
+                        for f in rel_model._meta.get_fields()
+                        if isinstance(f, (models.ForeignKey, models.OneToOneField))
+                    ):
+                        relation_path = f"{accessor}__{name}"
+                        break
+
+            if relation_path:
+                valid_included[name] = relation_path
+
+        logger.info(f"[ETagMixin] Valid included fields: {valid_included}")
+        return valid_included
+
+    def get_aggregates(self, relations: dict[str, str]) -> Dict:
+        """
+        Генерирует агрегаты (MAX(updated_at), COUNT(id)) по relations paths.
+        - Coalesce для fallback (min datetime, если null/empty).
+        - Distinct COUNT для 1:N (избегает дубликатов).
+        Возврат: Dict[str, Expression] для qs.aggregate(**this).
+        """
+        aggregates = {}
+        for name, path in relations.items():
+            aggregates[f"{name}_max"] = Max(f"{path}__updated_at")
+            aggregates[f"{name}_count"] = Count(f"{path}__id")
+        return aggregates
+
+    @staticmethod
+    def update_counts_and_max(
+        relations: dict[str, str], stats: Dict, total_count: int, max_updated: datetime
+    ) -> Tuple[int, datetime]:
+        """
+        Обновляет total_count (сумма counts) и max_updated (max из rel_max) из aggregate stats.
+        Помогает аккумулировать метрики для ETag.
+        """
+        for rel in relations.keys():
+            total_count += stats.get(f"{rel}_count", 0)
+            rel_max = stats.get(f"{rel}_max")
+            if rel_max > max_updated:
+                max_updated = rel_max
+        logger.info(f"Добавляем total_count={total_count}, max_updated={max_updated}")
+        return total_count, max_updated
+
+    def _get_id_hash(self, qs):
+        """
+        Hash sorted IDs queryset для stronger ETag (catch delete/add точно).
+        - Только если self.use_id_hash=True (heavy для large qs).
+        """
+        if not self.use_id_hash:
+            return ""
+        ids = sorted(qs.values_list("id", flat=True))  # Fast list IDs
+        return hashlib.md5(json.dumps(list(ids)).encode()).hexdigest()
+
+    def collect_etag_metrics(self, many: bool = False) -> Dict:
+        """
+        Собирает метрики для ETag в list (коллекция).
+        - Main aggregate всегда.
+        - Forward: Только если in ?include (экономия, catch included changes).
+        - Reverse: Всегда (catch relationships IDs changes).
+        - На filtered qs (до paginate, full коллекция).
+        Возврат: Dict с max_updated (timestamp), total_count, id_hash.
+        """
+        qs = self.filter_queryset(self.get_queryset())
+
+        if not many:
+            pk = self.kwargs.get(self.lookup_field)
+            if pk is not None:
+                qs = qs.filter(pk=pk)
+
+        if not qs.exists():
+            return {"max_updated": 0, "total_count": 0, "id_hash": ""}
+
+        # Main всегда
+        main_stats = qs.aggregate(
+            max_updated=Coalesce(Max("updated_at"), Value(MIN_AWARE_DATETIME)),
+            count=Count("id"),
+        )
+
+        max_updated = main_stats["max_updated"]
+        total_count = main_stats["count"]
+        logger.info(f"Main stats: max_updated={max_updated}, total_count={total_count}")
+
+        # === Reverse relations ===
+        reverse_rels = self.get_reverse_relations_from_serializer()
+
+        # === Forward relations ===
+        included_fields = self.get_valid_included_fields()
+
+        forward_rels = {
+            k: v for k, v in included_fields.items() if k not in reverse_rels
+        } # Исключаем reverse из include
+
+        # Forward: агрегируем только если есть в include
+        if forward_rels:
+            fwd_aggregates = self.get_aggregates(forward_rels)
+            fwd_stats = qs.aggregate(**fwd_aggregates)
+            logger.info(f"Forward stats: {fwd_stats}")
+            total_count, max_updated = self.update_counts_and_max(
+                forward_rels, fwd_stats, total_count, max_updated
+            )
+
+        # Reverse: добавляем если есть независимо от include
+        if reverse_rels:
+            rev_aggregates = self.get_aggregates(reverse_rels)
+            rev_stats = qs.aggregate(**rev_aggregates)
+            logger.info(f"Reverse stats: {rev_stats}")
+            total_count, max_updated = self.update_counts_and_max(
+                reverse_rels, rev_stats, total_count, max_updated
+            )
+
+        id_hash = self._get_id_hash(qs)
+
+        return {
+            "max_updated": (
+                max_updated.timestamp()
+                if max_updated != Value(MIN_AWARE_DATETIME)
+                else 0
+            ),
+            "total_count": total_count,
+            "id_hash": id_hash,
+        }
+
+    def generate_etag(self, many: bool, weak: bool) -> str:
+        """Генерация ETag на основе аккумулированных данных"""
+        etag_metrics = self.collect_etag_metrics(many)
+        request_uri = self.request.build_absolute_uri()
+        data_str = (
+            f"{request_uri}-"
+            f"{etag_metrics['max_updated']}-"
+            f"{etag_metrics['total_count']}-"
+            f"{etag_metrics['id_hash']}"
+        )
+        etag = hashlib.md5(data_str.encode("utf-8")).hexdigest()
+        return f"W/{etag}" if weak else etag
+
+    def check_etag(self, many: bool = False) -> Tuple[str, bool]:
+        """
+        Проверяет ETag из заголовка If-None-Match.
+        Возвращает кортеж (etag, is_matched).
+        """
+        new_etag = self.generate_etag(many, weak=True)
+        client_etag = self.request.META.get("HTTP_IF_NONE_MATCH", "").strip('"')
+        is_matched = client_etag == new_etag
+        logger.info(
+            f"ETag ({'list' if many else 'retrieve'}): Client={client_etag}, New={new_etag}, Matched={is_matched}"
+        )
+        return new_etag, is_matched
 
 
 class ETagListModelMixin(ListModelMixin):
