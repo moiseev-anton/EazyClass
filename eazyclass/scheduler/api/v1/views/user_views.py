@@ -1,17 +1,17 @@
 import logging
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework_json_api.views import (
     AutoPrefetchMixin,
     PreloadIncludesMixin,
     RelatedMixin,
 )
 
-from scheduler.api.mixins import JsonApiMixin
+from scheduler.api.mixins import ETagMixin, ETagRetrieveModelMixin, JsonApiMixin
+from scheduler.api.permissions import IsSelf
 from scheduler.api.v1.serializers import UserSerializer
 from scheduler.models import User
 
@@ -20,73 +20,54 @@ logger = logging.getLogger(__name__)
 
 class UserViewSet(
     JsonApiMixin,
+    ETagMixin,
     AutoPrefetchMixin,
     PreloadIncludesMixin,
-    RelatedMixin,
+    # RelatedMixin,
+    ETagRetrieveModelMixin,
+    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = User.objects.all()
+    """
+    Представление для работы с пользователями.
+    Поддерживает получение и частичное обновление текущего пользователя.
+    """
+
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSelf]
+    http_method_names = ["get", "patch"]
 
-    # select_for_includes = {
-    #     "__all__": [],
-    #     "accounts": ["accounts"],
-    # }
+    queryset = User.objects.filter(is_active=True).prefetch_related(
+        "accounts", "subscriptions"
+    )
 
-    prefetch_for_includes = {
-        "__all__": [],
-        "subscriptions": ["subscriptions"],
-        "accounts": ["accounts"],
-    }
+    @extend_schema(
+        tags=["User"],
+        summary="Get user (self only)",
+        description="Retrieve your own user profile.",
+        responses={200: OpenApiResponse(UserSerializer)},
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
-    def get_queryset(self):
-        return self.queryset.filter(is_active=True)
+    @extend_schema(
+        tags=["User"],
+        summary="Update user (self only)",
+        description="Update your own user profile (username, first_name, last_name, subscriptions).",
+        request=UserSerializer,
+        responses={200: OpenApiResponse(UserSerializer)},
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
 
     @extend_schema(
         tags=["User"],
         methods=["GET"],
         summary="Get current user",
         description="Retrieve the authenticated user’s profile.",
-        responses={200: OpenApiResponse(UserSerializer(many=True))},
+        responses={200: OpenApiResponse(UserSerializer(many=False))},
     )
-    @extend_schema(
-        tags=["User"],
-        methods=["PATCH"],
-        summary="Update current user",
-        description="Update user profile (username, first_name, last_name).",
-        request=UserSerializer,
-        responses={200: OpenApiResponse(UserSerializer(many=True))},
-    )
-    # @extend_schema(
-    #     tags=['User'],
-    #     methods=['DELETE'],
-    #     summary="Deactivate current user",
-    #     description='Deactivate user account instead of deleting.',
-    #     responses={204: None}
-    # )
-    @action(detail=False, methods=["get", "patch"], url_path="me")
-    def me(self, request):
-        try:
-            self.kwargs["pk"] = request.user.pk
-
-            if request.method == "GET":
-                serializer = self.get_serializer(request.user)
-                return Response(serializer.data)
-
-            elif request.method == "PATCH":
-                serializer = self.get_serializer(
-                    request.user, data=request.data, partial=True
-                )
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-                logger.info(f"User {request.user.id} updated profile")
-                return Response(serializer.data)
-        except Exception as e:
-            logger.error(e)
-            raise
-
-        # elif request.method == "DELETE":
-        #     request.user.is_active = False
-        #     request.user.save()
-        #     return Response(status=status.HTTP_204_NO_CONTENT)
+    @action(detail=False, methods=["get"], url_path="me")
+    def me(self, request, *args, **kwargs):
+        self.kwargs[self.lookup_field] = request.user.pk
+        return self.retrieve(request, *args, **kwargs)

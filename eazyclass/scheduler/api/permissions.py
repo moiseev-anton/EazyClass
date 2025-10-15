@@ -1,9 +1,16 @@
+import logging
+
 from rest_framework.permissions import BasePermission
 
+logger = logging.getLogger(__name__)
 
 class IsOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.user == request.user
+
+class IsSelf(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return request.user == obj
 
 
 class IsAdminOrReadOnly(BasePermission):
@@ -15,3 +22,4 @@ class IsAdminOrReadOnly(BasePermission):
 class IsHMACAuthenticated(BasePermission):
     def has_permission(self, request, view):
         return request.auth == "hmac"
+
