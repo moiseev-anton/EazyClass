@@ -183,7 +183,7 @@ class ETagMixin:
         """
         aggregates = {}
         for name, path in relations.items():
-            aggregates[f"{name}_max"] = Max(f"{path}__updated_at")
+            aggregates[f"{name}_max"] = Coalesce(Max(f"{path}__updated_at"), Value(MIN_AWARE_DATETIME))
             aggregates[f"{name}_count"] = Count(f"{path}__id")
         return aggregates
 
