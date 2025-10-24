@@ -1,5 +1,6 @@
 import logging
 
+from django.db import transaction
 from rest_framework_json_api import serializers as json_api_serializers
 
 from scheduler.models import Subscription
@@ -25,6 +26,16 @@ class BaseSubscriptionSerializer(json_api_serializers.ModelSerializer):
         resource_name = "subscriptions"
         read_only_fields = ["created_at", "updated_at"]
         exclude = ("polymorphic_ctype",)
+
+    @transaction.atomic
+    def create(self, validated_data):
+        user = validated_data.get("user")
+        if user:
+            # УДАЛЯЕМ ВСЕ СТАРЫЕ ПОДПИСКИ. (ОГРАНИЧЕНИЕ НА ОДНУ ПОДПИСКУ)
+            for sub in user.subscriptions.all():
+                sub.delete()
+
+        return super().create(validated_data)
 
 
 class TeacherSubscriptionSerializer(BaseSubscriptionSerializer):
