@@ -5,6 +5,8 @@ from rest_framework import exceptions
 from rest_framework import mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
+
+from scheduler.api.filters import SubscriptionFilter
 from scheduler.api.viewsets import ReadOnlyModelViewSet
 
 from scheduler.api.mixins import JsonApiMixin
@@ -123,6 +125,7 @@ class SubscriptionViewSet(
 ):
     permission_classes = [IsAuthenticated]
     serializer_class = SubscriptionSerializer
+    filterset_class = SubscriptionFilter
     queryset = Subscription.objects.all()
 
     http_method_names = ["get"]
@@ -132,7 +135,6 @@ class SubscriptionViewSet(
         "group": ["group"],
         "teacher": ["teacher"],
     }
-
 
     def get_queryset(self):
         queryset = super().get_queryset()

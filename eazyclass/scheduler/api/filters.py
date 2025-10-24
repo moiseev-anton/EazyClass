@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from rest_framework.exceptions import ValidationError
 
-from scheduler.models import Lesson, Group, Faculty, Teacher
+from scheduler.models import Lesson, Group, Faculty, Subscription, Teacher
 
 
 class LessonFilter(filters.FilterSet):
@@ -107,3 +107,25 @@ class TeacherFilter(filters.FilterSet):
                 detail=_("Filter 'starts_with' must be a single alphabetic character."),
             )
         return queryset.filter(full_name__istartswith=value)
+
+
+class SubscriptionFilter(filters.FilterSet):
+    # фильтры для целевого объекта
+    group = filters.ModelChoiceFilter(
+        field_name="groupsubscription__group",  # reverse relation для GroupSubscription
+        queryset=Group.objects.filter(is_active=True),
+        to_field_name="id",
+        help_text="Filter by group ID",
+        distinct=True,
+    )
+    teacher = filters.ModelChoiceFilter(
+        field_name="teachersubscription__teacher",  # reverse relation для TeacherSubscription
+        queryset=Teacher.objects.filter(is_active=True),
+        to_field_name="id",
+        help_text="Filter by teacher ID",
+        distinct=True,
+    )
+
+    class Meta:
+        model = Subscription
+        fields = ["group", "teacher"]
