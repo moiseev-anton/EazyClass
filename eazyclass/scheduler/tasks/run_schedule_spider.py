@@ -11,32 +11,20 @@ logger = logging.getLogger(__name__)
 
 
 class SpiderRunner:
-    """
-    Класс для запуска Scrapy паука в отдельном процессе.
-    """
+    """ Класс для запуска Scrapy паука в отдельном процессе. """
 
     def __init__(self, spider_cls, **spider_kwargs):
-        """
-        Инициализация объекта.
-
-        :param spider_cls: Класс паука (наследник scrapy.Spider)
-        :param spider_kwargs: Аргументы, передаваемые в паука
-        """
         self.spider_cls = spider_cls
         self.spider_kwargs = spider_kwargs
 
     def _crawl(self):
-        """
-        Запуск паука.
-        """
+        """ Запуск паука. """
         process = CrawlerProcess(get_project_settings())
         process.crawl(self.spider_cls, **self.spider_kwargs)
         process.start()
 
     def run(self):
-        """
-        Запуск отдельного процесса для работы паука.
-        """
+        """ Запуск отдельного процесса для работы паука. """
         process = Process(target=self._crawl)
         process.start()
         process.join()

@@ -18,7 +18,11 @@ class SocialAccount(models.Model):
 
     class Meta:
         unique_together = ('platform', 'social_id')
-        indexes = [models.Index(fields=['platform', 'social_id'])]
+        indexes = [
+            models.Index(fields=['platform', 'social_id']),
+            models.Index(fields=["platform", "user"]),
+        ]
+
 
     def __str__(self):
         return f"{self.user} - {self.platform} ({self.social_id})"
