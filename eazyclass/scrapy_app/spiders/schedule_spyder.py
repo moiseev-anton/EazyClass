@@ -89,7 +89,7 @@ class ScheduleSpider(scrapy.Spider):
             #  или можем сохранить пустой результат перезаписав предыдущий.
             #  Иначе следующие задачи повторят работу со старым результатом
             # if self.scraped_groups:
-            # Преобразуем список уроков в JSON
+            # Сериализуем список уроков
             lessons_json = pickle.dumps(self.lessons)
             group_ids_json = pickle.dumps(self.scraped_groups)
 

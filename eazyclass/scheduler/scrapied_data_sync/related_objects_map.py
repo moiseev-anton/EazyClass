@@ -12,13 +12,13 @@ class RelatedObjectsMap:
     """Класс для управления маппингом значений на связанные объекты из базы данных."""
     __slots__ = ('model', 'fields', 'existing_mappings', 'pending_keys')
 
-    def __init__(self, model: Model, fields: tuple[str]):
+    def __init__(self, model: Model, fields: tuple[str, ...]):
         """
         Инициализирует объект маппера.
 
         Args:
             model (Type[Model]): Модель, для которой создается маппинг.
-            fields (list[str]): Список полей для создания ключей.
+            fields (tuple[str, ...]): Перечень полей для создания ключей.
         """
         self.model: django.db.models.Model = model
         self.fields = fields

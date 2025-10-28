@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.db import models
 
 from scheduler.models.abstract_models import TimestampedModel
@@ -22,3 +24,15 @@ class Lesson(TimestampedModel):
             models.Index(fields=['period', 'group']),
             models.Index(fields=['group', 'period', 'subgroup']),
         ]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Сериализация урока для JSON/Redis без лишних запросов."""
+        return {
+            "id": self.id,
+            "group_id": self.group_id,
+            "period_id": self.period_id,
+            "subject_id": self.subject_id,
+            "teacher_id": self.teacher_id,
+            "classroom_id": self.classroom_id,
+            "subgroup": self.subgroup,
+        }
