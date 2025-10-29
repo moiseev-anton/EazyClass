@@ -26,7 +26,7 @@ class TelegramNotifier:
         self._interval = 1 / self.RATE_LIMIT
         self.delete_markup = InlineKeyboardMarkup()
         self.delete_markup.add(
-            InlineKeyboardButton(text="🗑Удалить уведомление", callback_data="delete")
+            InlineKeyboardButton(text="Скрыть", callback_data="delete")
         )
         # counters
         self.blocked_chats = []

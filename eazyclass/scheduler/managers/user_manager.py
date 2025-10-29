@@ -16,7 +16,7 @@ class UserManager(BaseUserManager):
                 return username
 
     @transaction.atomic
-    def _create_user(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def _create_user(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
         from scheduler.models import SocialAccount, Platform
 
         if platform not in [p.value for p in Platform]:
@@ -38,18 +38,19 @@ class UserManager(BaseUserManager):
         SocialAccount.objects.create(
             user=user,
             platform=platform,
+            chat_id=chat_id,
             social_id=social_id,
             extra_data=extra_data
         )
         return user
 
-    def create_user(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def create_user(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
         extra_fields.setdefault("is_staff", False)
         extra_fields.setdefault("is_superuser", False)
 
-        return self._create_user(social_id, platform, first_name, last_name, extra_data, **extra_fields)
+        return self._create_user(social_id, platform, chat_id, first_name, last_name, extra_data, **extra_fields)
 
-    def create_superuser(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def create_superuser(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -58,10 +59,13 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self._create_user(social_id, platform, first_name, last_name, extra_data, **extra_fields)
+        if chat_id is None:
+            chat_id = social_id
+
+        return self._create_user(social_id, platform, chat_id,  first_name, last_name, extra_data, **extra_fields)
 
     @transaction.atomic
-    def get_or_create_user(self, social_id, platform, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def get_or_create_user(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
         from scheduler.models import SocialAccount
 
         try:
@@ -71,6 +75,7 @@ class UserManager(BaseUserManager):
             user = self.create_user(
                 social_id=social_id,
                 platform=platform,
+                chat_id=chat_id,
                 first_name=first_name,
                 last_name=last_name,
                 extra_data=extra_data,

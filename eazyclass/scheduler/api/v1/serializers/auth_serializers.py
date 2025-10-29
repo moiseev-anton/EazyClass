@@ -7,6 +7,7 @@ from rest_framework_json_api import serializers as json_api_serializers
 from scheduler.models import User, SocialAccount, Platform
 
 SOCIAL_ID_MAX_LENGTH = SocialAccount._meta.get_field("social_id").max_length
+CHAT_ID_MAX_LENGTH = SocialAccount._meta.get_field("chat_id").max_length
 PLATFORM_MAX_LENGTH = SocialAccount._meta.get_field("platform").max_length
 FIRST_NAME_MAX_LENGTH = User._meta.get_field("first_name").max_length
 LAST_NAME_MAX_LENGTH = User._meta.get_field("last_name").max_length
@@ -32,6 +33,9 @@ class AuthSerializer(json_api_serializers.Serializer):
     platform = json_api_serializers.ChoiceField(
         choices=Platform.choices,
     )
+    chat_id = json_api_serializers.CharField(
+        max_length=CHAT_ID_MAX_LENGTH,
+    )
     first_name = json_api_serializers.CharField(
         max_length=FIRST_NAME_MAX_LENGTH,
         required=False,
@@ -56,6 +60,7 @@ class AuthSerializer(json_api_serializers.Serializer):
         user, created = User.objects.get_or_create_user(
             platform=platform,
             social_id=social_id,
+            chat_id=validated_data.get("chat_id") or social_id,
             first_name=validated_data.get("first_name") or "Anonymous",
             last_name=validated_data.get("last_name") or "",
             extra_data=validated_data.get("extra_data") or {},
@@ -75,10 +80,20 @@ class AuthSerializer(json_api_serializers.Serializer):
     def update(self, instance):
         new_extra = self.validated_data.get("extra_data") or {}
         current_extra = instance.extra_data or {}
+        updated_fields = []
 
+        # Проверяем, нужно ли обновить extra_data
         if new_extra != current_extra:
             instance.extra_data = new_extra
-            instance.save(update_fields=["extra_data"])
+            updated_fields.append("extra_data")
+
+        # Если аккаунт был заблокирован — разблокируем
+        if instance.is_blocked:
+            instance.is_blocked = False
+            updated_fields.append("is_blocked")
+
+        if updated_fields:
+            instance.save(update_fields=updated_fields)
 
         return instance
 

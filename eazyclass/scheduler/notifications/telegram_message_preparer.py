@@ -94,12 +94,12 @@ class TelegramMessagePreparer:
             if not telegram_accounts:
                 continue
 
-            telegram_id = telegram_accounts[0].social_id
+            telegram_chat_id = telegram_accounts[0].chat_id
             obj = getattr(sub, obj_field)
             obj_name = getattr(obj, name_attr)
             data = entity_map[obj.id]
             data["message"] = message_template.format(name=obj_name)
-            data["destinations"].append(telegram_id)
+            data["destinations"].append(telegram_chat_id)
 
         logger.info(
             f"Получено {len(subs_qs)} подписок для {subscription_model.__name__}"
@@ -111,9 +111,9 @@ class TelegramMessagePreparer:
         """Сборка QS для подписок."""
         telegram_prefetch = Prefetch(
             "user__accounts",
-            queryset=SocialAccount.objects.filter(platform=Platform.TELEGRAM).only(
-                "social_id"
-            ),
+            queryset=SocialAccount.objects.filter(
+                platform=Platform.TELEGRAM, is_blocked=False
+            ).only("chat_id"),
             to_attr="telegram_accounts",
         )
 

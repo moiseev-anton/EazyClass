@@ -6,7 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from scheduler.api.mixins import JsonApiMixin
-# from scheduler.api.permissions import IsHMACAuthenticated
+from scheduler.api.permissions import IsHMACAuthenticated
 from scheduler.api.v1.serializers import (
     AuthResult,
     AuthSerializer,
@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class AuthView(JsonApiMixin, views.APIView):
-    # TODO: Не забыть вернуть пермишены!
-    # permission_classes = [IsHMACAuthenticated]
+    permission_classes = [IsHMACAuthenticated]
     resource_name = "social-accounts"
     serializer_class = SocialAccountAuthSerializer
 
@@ -56,9 +55,8 @@ class AuthView(JsonApiMixin, views.APIView):
             )
         else:
             auth_result = serializer.save()
-            request.user = (
-                auth_result.user
-            )  # важно для возможной обработки nonce в RegisterWithNonceView
+            # важно для возможной обработки nonce в RegisterWithNonceView
+            request.user = auth_result.user
 
         logger.info(
             f"User {auth_result.user.id} {'created' if auth_result.created else 'retrieved'} via bot auth"
@@ -77,8 +75,6 @@ class AuthView(JsonApiMixin, views.APIView):
 
 
 class AuthWithNonceView(AuthView):
-    # TODO: Не забыть вернуть пермишены!
-    #  Скорее всего тут не нужен пермишен, т.к. он наследуется
     # permission_classes = [IsHMACAuthenticated]
     serializer_class = SocialAccountAuthWithNonceSerializer
 

@@ -2,3 +2,4 @@ from scheduler.tasks.group_scraper import update_groups
 from scheduler.tasks.run_schedule_spider import run_schedule_spider
 from scheduler.tasks.sync_schedule import sync_schedule
 from scheduler.tasks.update_schedule import update_schedule_pipeline
+from scheduler.tasks.telegram_notification import bulk_notification_telegram
