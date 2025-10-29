@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from scheduler.activities import fill_default_period_template, execute_trigger_action
+from scheduler.activities import fill_default_period_template
 
 
 class Command(BaseCommand):
@@ -12,11 +12,6 @@ class Command(BaseCommand):
             self.stdout.write('Заполнение шаблона времени уроков...')
             fill_default_period_template()
             self.stdout.write(self.style.SUCCESS('Шаблон времени уроков успешно заполнен.'))
-
-            self.stdout.write('Создание триггера в БД...')
-            execute_trigger_action(action='create')
-            self.stdout.write(self.style.SUCCESS('Триггер в БД успешно заполнен.'))
-            # Место для других начальных настоек
 
             self.stdout.write(self.style.SUCCESS("Все стартовые настройки выполнены успешно!"))
         except Exception as e:

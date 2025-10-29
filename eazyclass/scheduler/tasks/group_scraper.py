@@ -124,19 +124,3 @@ def update_groups(self):
 
         logger.error(f"Ошибка при обновлении факультетов и групп: {e}")
         raise self.retry(exc=e)
-
-
-def deactivate_all_records(model: Model):
-    """Деактивирует все записи в таблице."""
-    try:
-        model.objects.filter(is_active=True).update(is_active=False)
-    except DatabaseError as e:
-        logger.error(f"Ошибка при деактивации всех записей {model.__name__}: {e}")
-        raise
-
-
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue="periodic_tasks")
-def deactivate_all_groups():
-    with transaction.atomic():
-        deactivate_all_records(Group)
-        deactivate_all_records(Faculty)

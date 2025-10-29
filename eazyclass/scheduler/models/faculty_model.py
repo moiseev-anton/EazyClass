@@ -7,6 +7,7 @@ class Faculty(TimestampedModel):
     title = models.CharField(max_length=255)
     short_title = models.CharField(max_length=10, blank=True)
     is_active = models.BooleanField(default=True)
+    # + created_at из TimestampedModel
     # + updated_at из TimestampedModel
 
     class Meta:

@@ -1,7 +1,5 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
-from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 
 from scheduler.managers import UserManager
 from scheduler.models.abstract_models import TimestampedModel
