@@ -42,6 +42,9 @@ class LessonsSyncManager:
         self.redis_client = redis_client or RedisClientManager.get_client("scrapy")
         self.start_sync_day = start_sync_day or date.today()
 
+        self._last_scraped_groups: dict[int, str] | None = None
+        self._last_scraped_lessons: list[dict[str, Any]] | None = None
+
     def update_schedule(self) -> ComparisonSummary:
         """Основной пайплайн: fetch → process → apply → serialize."""
         scraped_groups, lesson_items = self._fetch_data()
@@ -68,6 +71,10 @@ class LessonsSyncManager:
         lesson_items = pickle.loads(lessons_pickle)  # [{lesson_dict},...]
         scraped_groups = pickle.loads(groups_pickle)  # {group_id: last_content_hash}
         logger.info("Данные скрайпинга загружены из Redis")
+
+        self._last_scraped_groups = scraped_groups
+        self._last_lessons = lesson_items
+
         return scraped_groups, lesson_items
 
     def _process_lessons(
@@ -207,3 +214,13 @@ class LessonsSyncManager:
             for key, lessons in comparison_result.items()
         }
         return serialized
+
+    @property
+    def fetched_data_summary(self):
+        lessons_count = len(self._last_scraped_lessons) if self._last_scraped_lessons else 0
+        groups_count = len(self._last_scraped_groups) if self._last_scraped_groups else 0
+
+        return {
+            "lessons_count": lessons_count,
+            "groups_count": groups_count,
+        }

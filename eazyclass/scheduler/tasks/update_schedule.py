@@ -2,7 +2,10 @@ import logging
 
 from celery import chain, shared_task
 
-from scheduler.tasks.telegram_notification import bulk_notification_telegram
+from scheduler.tasks.telegram_notification import (
+    send_admin_report,
+    send_telegram_notifications,
+)
 from scheduler.tasks.run_schedule_spider import run_schedule_spider
 from scheduler.tasks.sync_schedule import sync_schedule
 
@@ -15,5 +18,6 @@ def update_schedule_pipeline(self):
     chain(
         run_schedule_spider.s(),
         sync_schedule.s(),
-        bulk_notification_telegram.s()
+        send_telegram_notifications.s(),
+        send_admin_report.s(),
     ).apply_async()

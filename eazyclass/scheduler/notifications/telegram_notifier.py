@@ -92,12 +92,9 @@ class TelegramNotifier:
             logger.info("Пустая коллекция уведомлений — отправка пропущена.")
             return summary
 
-        logger.info(notifications)
         for item in notifications:
             text = item.message
             for chat_id in item.destinations:
-                start_time = time.perf_counter()
-
                 try:
                     self.send_message(text=text, chat_id=chat_id)
                     summary.success_count += 1
@@ -106,9 +103,7 @@ class TelegramNotifier:
                     summary.blocked_chat_ids.add(chat_id)
                 except Exception:
                     summary.failed_count += 1
-
-                elapsed = time.perf_counter() - start_time
-                time.sleep(max(0, self._interval - elapsed))
+                time.sleep(self._interval)
 
         return summary
 
