@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 from itertools import chain
 from typing import Any, Dict, Iterable, Set
 
@@ -11,51 +10,48 @@ from scheduler.models import (
     SocialAccount,
     TeacherSubscription,
 )
+from scheduler.notifications.types import NotificationItem
 
 logger = logging.getLogger(__name__)
 
 
 class TelegramMessagePreparer:
     @classmethod
-    def prepare_notifications(cls, update_summary: Dict[str, Any]) -> list:
+    def prepare_notifications(cls, update_summary: Dict[str, Any]) -> list[NotificationItem]:
         """Подготовка списка уведомлений на основе сводки изменений."""
-        try:
-            fields_map = cls._extract_fields_sets(
-                chain.from_iterable(update_summary.values()),
-                ("group_id", "teacher_id"),
-            )
+        all_items = chain.from_iterable(update_summary.values())
+        fields_map = cls._extract_fields_sets(all_items,("group_id", "teacher_id"))
 
-            group_ids = fields_map.get("group_id", set())
-            teacher_ids = fields_map.get("teacher_id", set())
+        group_ids = fields_map.get("group_id", set())
+        teacher_ids = fields_map.get("teacher_id", set())
 
-            logger.info(
-                f"Изменения затронули группы: {group_ids}, преподавателей: {teacher_ids}"
-            )
+        logger.debug(
+            f"Изменения затронули "
+            f"группы: {group_ids}, "
+            f"преподавателей: {teacher_ids}"
+        )
 
-            groups_map = cls._collect_notifications(
-                GroupSubscription,
-                "group",
-                group_ids,
-                "Расписание для группы {name} изменено",
-                "title",
-            )
-            teachers_map = cls._collect_notifications(
-                TeacherSubscription,
-                "teacher",
-                teacher_ids,
-                "Расписание для преподавателя {name} изменено",
-                "short_name",
-            )
+        groups_map = cls._collect_notifications(
+            subscription_model=GroupSubscription,
+            obj_field="group",
+            obj_ids=group_ids,
+            name_attr="title",
+            message_text_template="Расписание для группы {name} изменено",
+        )
+        teachers_map = cls._collect_notifications(
+            subscription_model=TeacherSubscription,
+            obj_field="teacher",
+            obj_ids=teacher_ids,
+            name_attr="short_name",
+            message_text_template="Расписание для преподавателя {name} изменено",
+        )
 
-            return list(
-                chain.from_iterable(
-                    m.values() for m in (groups_map, teachers_map) if m
-                )
+        return list(
+            chain.from_iterable(
+                m.values() for m in (groups_map, teachers_map) if m
             )
+        )
 
-        except Exception as e:
-            logger.error(f"Ошибка при формировании уведомлений")
-            raise
 
     @staticmethod
     def _extract_fields_sets(
@@ -65,23 +61,23 @@ class TelegramMessagePreparer:
         result = {field: set() for field in fields}
         for item in items:
             for field in fields:
-                if field in item:
-                    result[field].add(item[field])
+                if (value := item.get(field)) is not None:
+                    result[field].add(value)
         return result
 
     @classmethod
     def _collect_notifications(
         cls,
-        subscription_model: Model,
+        subscription_model: type[Model],
         obj_field: str,
         obj_ids: Set[int],
-        message_template: str,
         name_attr: str,
-    ) -> dict:
+        message_text_template: str,
+    ) -> dict[int, NotificationItem]:
         """Общая логика получения подписчиков и формирования уведомлений."""
-        entity_map = defaultdict(lambda: {"message": "", "destinations": []})
+        entity_map = {}
         if not obj_ids:
-            return dict(entity_map)
+            return entity_map
 
         subs_qs: QuerySet = cls._build_query(subscription_model, obj_field, obj_ids)
 
@@ -94,20 +90,25 @@ class TelegramMessagePreparer:
             if not telegram_accounts:
                 continue
 
-            telegram_chat_id = telegram_accounts[0].chat_id
             obj = getattr(sub, obj_field)
-            obj_name = getattr(obj, name_attr)
-            data = entity_map[obj.id]
-            data["message"] = message_template.format(name=obj_name)
-            data["destinations"].append(telegram_chat_id)
+            if obj.id not in entity_map:
+                obj_name = getattr(obj, name_attr)
+                entity_map[obj.id] = NotificationItem(
+                    message=message_text_template.format(name=obj_name),
+                    destinations=[]
+                )
 
-        logger.info(
-            f"Получено {len(subs_qs)} подписок для {subscription_model.__name__}"
+            chat_id = telegram_accounts[0].chat_id
+            entity_map[obj.id].destinations.append(chat_id)
+
+        logger.debug(
+            f"Получено {len(subs_qs)} подписок"
+            f" для {subscription_model.__name__}"
         )
-        return dict(entity_map)
+        return entity_map
 
     @staticmethod
-    def _build_query(sub_model: Model, obj_field: str, obj_ids: Set[int]) -> QuerySet:
+    def _build_query(sub_model: type[Model], obj_field: str, obj_ids: Set[int]) -> QuerySet:
         """Сборка QS для подписок."""
         telegram_prefetch = Prefetch(
             "user__accounts",
@@ -118,7 +119,7 @@ class TelegramMessagePreparer:
         )
 
         filter_kwargs = {
-            f"{obj_field}_id__in": list(obj_ids),
+            f"{obj_field}_id__in": obj_ids,
             "user__is_active": True,
         }
 
