@@ -330,9 +330,6 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
-# Параметры для управления задачами
-CELERYD_POOL = "prefork"  # Использование пула процессов
-CELERYD_CONCURRENCY = 4  # 4 рабочих процесса
 
 BASE_SCRAPING_URL = os.getenv("BASE_SCRAPING_URL")
 

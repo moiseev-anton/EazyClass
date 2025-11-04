@@ -26,7 +26,7 @@ services:
     depends_on:
       - pgdb
       - redis
-      - rabbitmq
+#      - rabbitmq
 
   redis:
     image: redis:7-alpine
@@ -34,17 +34,17 @@ services:
     ports:
       - "6379:6379"
 
-  rabbitmq:
-    image: rabbitmq:management
-    hostname: rabbitmqhost
-#    restart: always
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    env_file:
-      - .env
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+#  rabbitmq:
+#    image: rabbitmq:management
+#    hostname: rabbitmqhost
+##    restart: always
+#    ports:
+#      - "5672:5672"
+#      - "15672:15672"
+#    env_file:
+#      - .env
+#    volumes:
+#      - rabbitmq_data:/var/lib/rabbitmq
 
 #  celery-worker-bot:
 #    build:
@@ -60,12 +60,12 @@ services:
 #      - redis
 #      - pgdb
 
-  celery-worker-periodic:
+  celery-worker:
     build:
       context: .
       dockerfile: eazyclass/Dockerfile.celery
-    container_name: celery_worker_periodic
-    command: celery -A eazyclass worker -Q periodic_tasks --loglevel=debug # заменить потом на info
+    container_name: celery_worker
+    command: celery -A eazyclass worker --pool=prefork --concurrency=1 --loglevel=debug # заменить потом на info
     volumes:
       - ./eazyclass:/app:delegated
     env_file:
@@ -73,7 +73,7 @@ services:
     depends_on:
       - pgdb
       - redis
-      - rabbitmq
+#      - rabbitmq
 
   celery-beat:
     build:
@@ -88,7 +88,7 @@ services:
     depends_on:
       - pgdb
       - redis
-      - rabbitmq
+#      - rabbitmq
 
   flower:
     build:
@@ -105,7 +105,7 @@ services:
     depends_on:
       - pgdb
       - redis
-      - rabbitmq
+#      - rabbitmq
 
 #  telegram-bot:
 #    build:
