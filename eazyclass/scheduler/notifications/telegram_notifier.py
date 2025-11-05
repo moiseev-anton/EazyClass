@@ -34,6 +34,7 @@ class TelegramNotifier:
     управляются библиотекой TeleBot автоматически.
     """
 
+    _PLATFORM = Platform.TELEGRAM
     RATE_LIMIT = 25  # лимит Telegram API (до 30 msg/sec)
 
     def __init__(self, bot_token: str, rate_limit: int = RATE_LIMIT):
@@ -139,3 +140,7 @@ class TelegramNotifier:
     @classmethod
     def create_summary(cls) -> NotificationSummary:
         return NotificationSummary()
+
+    @property
+    def platform(self) -> str:
+        return self._PLATFORM
