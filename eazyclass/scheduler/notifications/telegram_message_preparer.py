@@ -20,15 +20,13 @@ class TelegramMessagePreparer:
     def prepare_notifications(cls, update_summary: Dict[str, Any]) -> list[NotificationItem]:
         """Подготовка списка уведомлений на основе сводки изменений."""
         all_items = chain.from_iterable(update_summary.values())
-        fields_map = cls._extract_fields_sets(all_items,("group_id", "teacher_id"))
+        fields_map = cls._extract_fields_sets(all_items, ("group_id", "teacher_id"))
 
         group_ids = fields_map.get("group_id", set())
         teacher_ids = fields_map.get("teacher_id", set())
 
         logger.debug(
-            f"Изменения затронули "
-            f"группы: {group_ids}, "
-            f"преподавателей: {teacher_ids}"
+            f"Изменения затронули группы: {group_ids}, преподавателей: {teacher_ids}"
         )
 
         groups_map = cls._collect_notifications(
@@ -46,17 +44,10 @@ class TelegramMessagePreparer:
             message_text_template="Расписание для преподавателя {name} изменено",
         )
 
-        return list(
-            chain.from_iterable(
-                m.values() for m in (groups_map, teachers_map) if m
-            )
-        )
-
+        return list(chain.from_iterable(m.values() for m in (groups_map, teachers_map) if m))
 
     @staticmethod
-    def _extract_fields_sets(
-        items: Iterable[Dict], fields: Iterable[str]
-    ) -> Dict[str, Set]:
+    def _extract_fields_sets(items: Iterable[Dict], fields: Iterable[str]) -> Dict[str, Set]:
         """Извлекает уникальные значения указанных полей из списка словарей."""
         result = {field: set() for field in fields}
         for item in items:
@@ -94,17 +85,13 @@ class TelegramMessagePreparer:
             if obj.id not in entity_map:
                 obj_name = getattr(obj, name_attr)
                 entity_map[obj.id] = NotificationItem(
-                    message=message_text_template.format(name=obj_name),
-                    destinations=[]
+                    message=message_text_template.format(name=obj_name), destinations=[]
                 )
 
             chat_id = telegram_accounts[0].chat_id
             entity_map[obj.id].destinations.append(chat_id)
 
-        logger.debug(
-            f"Получено {len(subs_qs)} подписок"
-            f" для {subscription_model.__name__}"
-        )
+        logger.debug(f"Получено {len(subs_qs)} подписок для {subscription_model.__name__}")
         return entity_map
 
     @staticmethod

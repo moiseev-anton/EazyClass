@@ -13,9 +13,9 @@ class Period(models.Model):
     objects = PeriodManager()
 
     class Meta:
-        unique_together = ('date', 'lesson_number')
+        unique_together = ("date", "lesson_number")
         indexes = [
-            models.Index(fields=['date', 'lesson_number']),
+            models.Index(fields=["date", "lesson_number"]),
         ]
 
     def save(self, *args, **kwargs) -> None:
@@ -28,7 +28,9 @@ class Period(models.Model):
         Если шаблон отсутствует, start_time и end_time остаются None.
         """
         if not self.start_time or not self.end_time:
-            template = PeriodTemplate.objects.get_template_for_day(date=self.date, lesson_number=self.lesson_number)
+            template = PeriodTemplate.objects.get_template_for_day(
+                date=self.date, lesson_number=self.lesson_number
+            )
             if template and template.timings.exists():
                 timing = template.timings.first()
                 self.start_time = timing.start_time

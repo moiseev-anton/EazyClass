@@ -133,9 +133,7 @@ class TelegramNotifier:
     def _create_message_markup() -> InlineKeyboardMarkup:
         """Создаёт стандартную клавиатуру для сообщений."""
         markup = InlineKeyboardMarkup()
-        markup.add(
-            InlineKeyboardButton(text="Скрыть", callback_data="delete")
-        )
+        markup.add(InlineKeyboardButton(text="Скрыть", callback_data="delete"))
         return markup
 
     @classmethod
