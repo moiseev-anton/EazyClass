@@ -16,8 +16,9 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
+from scheduler.dtos import NotificationItem, NotificationSummary
+from scheduler.models import Platform
 from scheduler.notifications.exceptions import ChatBlocked, should_retry
-from scheduler.notifications.types import NotificationItem, NotificationSummary
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class TelegramNotifier:
                     summary.success_count += 1
                 except ChatBlocked:
                     summary.failed_count += 1
-                    summary.blocked_chat_ids.add(chat_id)
+                    summary.blocked_chat_ids.append(chat_id)
                 except Exception:
                     summary.failed_count += 1
                 time.sleep(self._interval)

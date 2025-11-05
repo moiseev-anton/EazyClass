@@ -4,13 +4,13 @@ from typing import Any, Dict, Iterable, Set
 
 from django.db.models import Model, Prefetch, QuerySet
 
+from scheduler.dtos import NotificationItem
 from scheduler.models import (
     GroupSubscription,
     Platform,
     SocialAccount,
     TeacherSubscription,
 )
-from scheduler.notifications.types import NotificationItem
 
 logger = logging.getLogger(__name__)
 

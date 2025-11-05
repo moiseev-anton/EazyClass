@@ -1,15 +1,15 @@
 import logging
-from dataclasses import asdict
 
 from celery import shared_task
 from django.conf import settings
 
+from scheduler.dtos import NotificationItem, PipelineSummary
+from scheduler.dtos.summary_dtos.base_summary_dto import BaseSummary
 from scheduler.models import Platform, SocialAccount
 from scheduler.notifications import TelegramMessagePreparer, TelegramNotifier
-from scheduler.notifications.types import NotificationItem
-from scheduler.tasks.types import UpdatePipelineContext
 
 logger = logging.getLogger(__name__)
+
 
 update_summary_test = {
                     "added": [
@@ -27,9 +27,9 @@ update_summary_test = {
                 }
 
 @shared_task(bind=True, max_retries=0, default_retry_delay=60, queue="periodic_tasks")
-def send_telegram_notifications(self, context_dict: dict) -> dict:
-    context = UpdatePipelineContext(**context_dict)
-    notifications = TelegramMessagePreparer.prepare_notifications(context.sync_summary)
+def send_telegram_notifications(self, summary_dict: dict) -> dict:
+    pipeline_summary = PipelineSummary.deserialize(summary_dict)
+    notifications = TelegramMessagePreparer.prepare_notifications(pipeline_summary.sync_summary)
 
     if not notifications:
         logger.info("Нет уведомлений для рассылки — TelegramNotifier не создаётся.")
@@ -44,23 +44,23 @@ def send_telegram_notifications(self, context_dict: dict) -> dict:
         )
 
     logger.info(f"Итоги рассылки: {summary}")
-    context.notification_summary = summary.as_dict()
-    return asdict(context)
+    pipeline_summary.notification_summary = summary
+    return pipeline_summary.model_dump()
 
 
 @shared_task(bind=True, max_retries=0, queue="periodic_tasks")
-def send_admin_report(self, context_dict: dict):
+def send_admin_report(self, summary_dict: dict):
     """Финальная задача — отправка отчёта админу."""
     try:
         logger.info("Отправка отчёта админу...")
-        context = UpdatePipelineContext(**context_dict)
+        summary = BaseSummary.deserialize(summary_dict)
 
-        report_text =context.format_report()
+        report_text = summary.format_report()
         staff_chat_ids = SocialAccount.objects.get_staff_chat_ids(platform=Platform.TELEGRAM)
         notification = NotificationItem(message=report_text, destinations=staff_chat_ids)
 
         notifier = TelegramNotifier(settings.TELEGRAM_BOT_TOKEN)
         notifier.send_notification(notification)
-        return context_dict
+        return summary_dict
     except Exception as e:
         logger.error(e, exc_info=True)
