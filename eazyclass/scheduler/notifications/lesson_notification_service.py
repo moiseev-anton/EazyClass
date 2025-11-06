@@ -129,6 +129,7 @@ class LessonNotificationService:
             logger.info(f"Нет подписчиков для уведомлений для периода {period}")
             return summary
 
+        summary.notifications_count = len(notifications)
         notify_summary = self.notifier.send_notifications(notifications)
         summary.merge_from(notify_summary)
 
