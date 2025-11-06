@@ -37,4 +37,6 @@ class Period(models.Model):
                 self.end_time = timing.end_time
 
     def __str__(self) -> str:
-        return f"{self.date} - {self.lesson_number} пара: {self.start_time} - {self.end_time}"
+        start = self.start_time.strftime("%H:%M") if self.start_time else "—"
+        end = self.end_time.strftime("%H:%M") if self.end_time else "—"
+        return f"{self.date:%d.%m.%Y} — {self.lesson_number}: {start}–{end}"
