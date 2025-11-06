@@ -34,14 +34,14 @@ class TelegramMessagePreparer:
             obj_field="group",
             obj_ids=group_ids,
             name_attr="title",
-            message_text_template="Расписание для группы {name} изменено",
+            message_text_template="🗓️ Расписание для группы {name} изменено.",
         )
         teachers_map = cls._collect_notifications(
             subscription_model=TeacherSubscription,
             obj_field="teacher",
             obj_ids=teacher_ids,
             name_attr="short_name",
-            message_text_template="Расписание для преподавателя {name} изменено",
+            message_text_template="🗓️ Расписание для преподавателя {name} изменено",
         )
 
         return list(chain.from_iterable(m.values() for m in (groups_map, teachers_map) if m))
