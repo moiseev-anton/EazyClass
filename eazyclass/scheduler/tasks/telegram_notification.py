@@ -26,8 +26,8 @@ update_summary_test = {
                     ],
                 }
 
-@shared_task(bind=True, max_retries=0, default_retry_delay=60, queue="periodic_tasks")
-def send_telegram_notifications(self, summary_dict: dict) -> dict:
+@shared_task(queue="periodic_tasks")
+def send_telegram_notifications(summary_dict: dict) -> dict:
     pipeline_summary = PipelineSummary.deserialize(summary_dict)
     notifications = TelegramMessagePreparer.prepare_notifications(pipeline_summary.sync_summary)
 
@@ -48,8 +48,8 @@ def send_telegram_notifications(self, summary_dict: dict) -> dict:
     return pipeline_summary.model_dump()
 
 
-@shared_task(bind=True, max_retries=0, queue="periodic_tasks")
-def send_admin_report(self, summary_dict: dict):
+@shared_task(queue="periodic_tasks")
+def send_admin_report(summary_dict: dict):
     """Финальная задача — отправка отчёта админу."""
     try:
         logger.info("Отправка отчёта админу...")

@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 # Цепочка: spider -> sync -> telegram_notifications
-@shared_task(bind=True, max_retries=0, default_retry_delay=60, queue="periodic_tasks")
-def update_schedule_pipeline(self):
+@shared_task(queue="periodic_tasks")
+def update_schedule_pipeline():
     chain(
         run_schedule_spider.s(),
         sync_schedule.s(),
