@@ -62,7 +62,7 @@ class TelegramNotifier:
             self.bot.send_message(
                 chat_id=chat_id,
                 text=text,
-                reply_markup=self.markup
+                # reply_markup=self.markup
             )
             logger.debug(f"✅ Сообщение отправлено пользователю {chat_id}")
 
