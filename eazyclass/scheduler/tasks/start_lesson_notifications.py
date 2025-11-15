@@ -97,5 +97,7 @@ def schedule_lesson_notifications():
 
         if task_created:
             logger.info(f'Создана одноразовая задача "{task_name}"')
+            tasks_count += 1
 
-    logger.info(f"Сформировано {tasks_count} задач для Telegram-рассылки")
+
+    logger.info(f"Создано {tasks_count} задач для Telegram-рассылки")
