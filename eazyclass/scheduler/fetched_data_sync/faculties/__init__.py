@@ -1,0 +1,1 @@
+from .updater import update_faculties_and_groups
