@@ -29,7 +29,7 @@ class Timing(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=models.Q(end_time__gt=models.F('start_time')),
+                condition=models.Q(end_time__gt=models.F('start_time')),
                 name='check_timing_start_before_end',
             ),
         ]
