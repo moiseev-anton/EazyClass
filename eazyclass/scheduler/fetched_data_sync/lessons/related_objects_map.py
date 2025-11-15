@@ -12,7 +12,7 @@ class RelatedObjectsMap:
     """Класс для управления маппингом значений на связанные объекты из базы данных."""
     __slots__ = ('model', 'fields', 'existing_mappings', 'pending_keys')
 
-    def __init__(self, model: Model, fields: tuple[str, ...]):
+    def __init__(self, model: type[Model], fields: tuple[str, ...]):
         """
         Инициализирует объект маппера.
 

@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from scheduler.models import Classroom, Lesson, Period, Subject, Teacher
-from scheduler.scrapied_data_sync.related_objects_map import RelatedObjectsMap
+from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
 from scrapy_app.spiders import (
     PAGE_HASH_KEY_PREFIX,
     SCRAPED_GROUPS_KEY,

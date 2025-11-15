@@ -4,7 +4,7 @@ from typing import Any
 from celery import shared_task
 
 from scheduler.dtos import PipelineSummary
-from scheduler.scrapied_data_sync import LessonsSyncManager
+from scheduler.fetched_data_sync import LessonsSyncManager
 
 logger = logging.getLogger(__name__)
 
