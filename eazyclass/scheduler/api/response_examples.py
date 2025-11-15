@@ -12,7 +12,7 @@ group_example = {
                             "attributes": {
                                 "title": "4-GROUP-42",
                                 "grade": "4",
-                                "link": "view.php?id=00042"
+                                "endpoint": "view.php?id=00042"
                             }
                         }
                     }

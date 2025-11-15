@@ -1,8 +1,10 @@
 import pickle
+from typing import Any, Generator
 from urllib.parse import urljoin
 
 import scrapy
 from django.conf import settings
+from scrapy import Request
 
 from scheduler.models import Group
 from scrapy_app.response_processor import ResponseProcessor
@@ -39,15 +41,15 @@ class ScheduleSpider(scrapy.Spider):
         self.lessons = []
         self.scraped_groups = {}
 
-    def start_requests(self) -> scrapy.Request:
+    def start_requests(self) -> Generator[Request, Any, None]:
         """Генерирует начальные запросы для всех групп."""
         # Получаем список групп и ссылок из БД
-        group_links = Group.objects.link_map()  # Получаем список кортежей (group_id, link)
-        # group_links = [(5, 'view.php?id=00312')]
+        group_endpoints = Group.objects.get_endpoint_map()  # Получаем список кортежей (group_id, endpoint)
+        # group_endpoints = [(5, 'view.php?id=00312')]
 
         # Проходим по всем ссылкам и отправляем запросы
-        for group_id, link in group_links:
-            url = urljoin(self.base_url, link.lstrip('/'))
+        for group_id, endpoint in group_endpoints:
+            url = urljoin(self.base_url, endpoint.lstrip('/'))
             self.logger.info(f'Делаем запрос к {url} (group_id:{group_id})')
             yield scrapy.Request(url=url, callback=self.process_page, meta={'group_id': group_id})
 

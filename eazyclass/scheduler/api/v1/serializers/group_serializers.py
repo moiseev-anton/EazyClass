@@ -14,5 +14,5 @@ class GroupSerializer(json_api_serializers.ModelSerializer):
 
     class Meta:
         model = Group
-        fields = ["id", "title", "grade", "link", "faculty"]
+        fields = ["id", "title", "grade", "endpoint", "faculty"]
         resource_name = "groups"
