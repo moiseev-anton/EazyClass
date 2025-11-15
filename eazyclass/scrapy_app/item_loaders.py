@@ -191,7 +191,7 @@ class LessonLoader(ItemLoader):
     classroom_title_in = build_string_processor(CLASSROOM_DEFAULT_VALUE, MAX_CLASSROOM_TITLE_LENGTH)
     teacher_fullname_in = build_string_processor(TEACHER_DEFAULT_VALUE, MAX_TEACHER_FULLNAME_LENGTH)
     subgroup_in = build_subgroup_processor(default=0, min_value=0, max_value=9)
-    lesson_number_in = build_integer_processor(min_value=1, max_value=9)
+    lesson_number_in = build_integer_processor(min_value=0, max_value=9)
 
     def load_item_dict(self) -> dict:
         """Возвращает данные в целевой структуре словаря."""
