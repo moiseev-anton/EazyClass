@@ -4,3 +4,4 @@ from scheduler.tasks.sync_schedule import sync_schedule
 from scheduler.tasks.telegram_notification import send_telegram_notifications
 from scheduler.tasks.update_groups import update_groups
 from scheduler.tasks.update_schedule import update_schedule_pipeline
+from scheduler.tasks.update_teachers import update_teachers
