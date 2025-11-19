@@ -1,2 +1,2 @@
-from .telegram_message_preparer import TelegramMessagePreparer
+from .telegram_message_preparer import prepare_notifications
 from .telegram_notifier import TelegramNotifier

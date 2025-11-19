@@ -5,32 +5,31 @@ from django.conf import settings
 
 from scheduler.dtos import NotificationItem, PipelineSummary
 from scheduler.dtos.summary_dtos.base_summary_dto import BaseSummary
-from scheduler.models import Platform, SocialAccount
-from scheduler.notifications import TelegramMessagePreparer, TelegramNotifier
 from scheduler.models.social_account_model import Platform, SocialAccount
+from scheduler.notifications import prepare_notifications, TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
 
 update_summary_test = {
                     "added": [
-                        {"group_id": 5, "teacher_id": 7, "period_id": 321, "subject_id": 10,},
-                        {"group_id": 7, "teacher_id": 5, "period_id": 322, "subject_id": 7,},
+                        {"group_id": 5, "teacher_id": 7, "period_id": 934, "subject_id": 10,},
+                        {"group_id": 6, "teacher_id": 5, "period_id": 945, "subject_id": 7,},
                     ],
                     "updated": [
-                        {"group_id": 6,"teacher_id": 15,"period_id": 321,"subject_id": 10,},
-                        {"group_id": 2,"teacher_id": 6, "period_id": 322,"subject_id": 7,},
+                        {"group_id": 5,"teacher_id": 15,"period_id": 933,"subject_id": 10,},
+                        {"group_id": 7,"teacher_id": 6, "period_id": 921,"subject_id": 7,},
                     ],
                     "removed": [
-                        {"group_id": 7,"teacher_id": 15,"period_id": 321,"subject_id": 10,},
-                        {"group_id": 2,"teacher_id": 11,"period_id": 322,"subject_id": 7,},
+                        {"group_id": 5,"teacher_id": 15,"period_id": 923,"subject_id": 10,},
+                        {"group_id": 5,"teacher_id": 11,"period_id": 913,"subject_id": 7,},
                     ],
                 }
 
 @shared_task(queue="periodic_tasks")
 def send_telegram_notifications(summary_dict: dict) -> dict:
     pipeline_summary = PipelineSummary.deserialize(summary_dict)
-    notifications = TelegramMessagePreparer.prepare_notifications(pipeline_summary.sync_summary)
+    notifications = prepare_notifications(pipeline_summary.sync_summary)
 
     if not notifications:
         logger.info("Нет уведомлений для рассылки — TelegramNotifier не создаётся.")
