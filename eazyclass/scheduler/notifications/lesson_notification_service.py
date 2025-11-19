@@ -12,11 +12,11 @@ from scheduler.models import (
     SocialAccount,
     TeacherSubscription,
 )
-from scheduler.notifications import TelegramNotifier
-from scheduler.notifications.utils import (
-    format_group_lesson_message,
-    format_teacher_lesson_message,
+from scheduler.notifications.messages import (
+    format_start_lesson_message_for_group,
+    format_start_lesson_message_for_teacher
 )
+from scheduler.notifications.telegram_notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class LessonNotificationService:
                     chat_ids.add(acc.chat_id)
 
             if chat_ids:
-                message = format_group_lesson_message(group_lessons)
+                message = format_start_lesson_message_for_group(group_lessons)
                 notifications.append(NotificationItem(message, list(chat_ids)))
                 logger.debug(f"Собрано {len(chat_ids)} чатов для группы {group.title}")
 
@@ -102,7 +102,7 @@ class LessonNotificationService:
                     chat_ids.add(acc.chat_id)
 
             if chat_ids:
-                message = format_teacher_lesson_message(lesson)
+                message = format_start_lesson_message_for_teacher(lesson)
                 notifications.append(NotificationItem(message, list(chat_ids)))
                 logger.debug(
                     f"Собрано {len(chat_ids)} чатов для преподавателя {lesson.teacher.short_name}"
