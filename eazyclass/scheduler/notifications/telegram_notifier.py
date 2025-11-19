@@ -17,7 +17,7 @@ from tenacity import (
 )
 
 from scheduler.dtos import NotificationItem, NotificationSummary
-from scheduler.models import Platform
+from scheduler.models.social_account_model import Platform
 from scheduler.notifications.exceptions import ChatBlocked, should_retry
 
 logger = logging.getLogger(__name__)

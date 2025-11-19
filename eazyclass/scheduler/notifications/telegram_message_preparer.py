@@ -7,10 +7,11 @@ from django.db.models import Model, Prefetch, QuerySet
 from scheduler.dtos import NotificationItem
 from scheduler.models import (
     GroupSubscription,
-    Platform,
-    SocialAccount,
+    Period,
+    Teacher,
     TeacherSubscription,
 )
+from scheduler.notifications.messages import format_lessons_updated_message
 
 logger = logging.getLogger(__name__)
 

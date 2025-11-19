@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
-from scheduler.models import User, Platform
+from scheduler.models import User
+from scheduler.models.social_account_model import Platform
 import os
 from dotenv import load_dotenv
 import logging

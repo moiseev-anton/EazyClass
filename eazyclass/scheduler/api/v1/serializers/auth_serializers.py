@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from rest_framework import status
 from rest_framework_json_api import serializers as json_api_serializers
 
-from scheduler.models import User, SocialAccount, Platform
+from scheduler.models import User, SocialAccount
+from scheduler.models.social_account_model import Platform
 
 SOCIAL_ID_MAX_LENGTH = SocialAccount._meta.get_field("social_id").max_length
 CHAT_ID_MAX_LENGTH = SocialAccount._meta.get_field("chat_id").max_length

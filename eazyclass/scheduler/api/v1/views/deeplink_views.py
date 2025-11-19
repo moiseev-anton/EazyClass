@@ -16,7 +16,7 @@ from scheduler.api.v1.serializers import (
     DeeplinkParamsSerializer,
 )
 from scheduler.api.mixins import PlainApiViewMixin
-from scheduler.models import Platform
+from scheduler.models.social_account_model import Platform
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_json_api import serializers as json_api_serializers
 
-from scheduler.models import Platform
+from scheduler.models.social_account_model import Platform
 
 
 class DeeplinkParamsSerializer(serializers.Serializer):

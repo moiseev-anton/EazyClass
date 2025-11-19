@@ -7,6 +7,7 @@ from scheduler.dtos import NotificationItem, PipelineSummary
 from scheduler.dtos.summary_dtos.base_summary_dto import BaseSummary
 from scheduler.models import Platform, SocialAccount
 from scheduler.notifications import TelegramMessagePreparer, TelegramNotifier
+from scheduler.models.social_account_model import Platform, SocialAccount
 
 logger = logging.getLogger(__name__)
 

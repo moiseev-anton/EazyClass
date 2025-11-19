@@ -17,7 +17,7 @@ class UserManager(BaseUserManager):
 
     @transaction.atomic
     def _create_user(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
-        from scheduler.models import SocialAccount, Platform
+        from scheduler.models.social_account_model import Platform, SocialAccount
 
         if platform not in [p.value for p in Platform]:
             raise ValueError(f"Недопустимая платформа: {platform}. Допустимые значения: {[p.value for p in Platform]}")
