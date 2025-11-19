@@ -6,3 +6,4 @@ from .period_template_manager import PeriodTemplateManager
 from .subject_manager import SubjectManager
 from .social_account_manager import SocialAccountManager
 from .teacher_manager import TeacherManager
+from .subscription_manager import SubscriptionManager
