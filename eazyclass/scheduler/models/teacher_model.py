@@ -45,6 +45,3 @@ class Teacher(models.Model):
             short_name += f"{names[2][0]}."
 
         return short_name
-
-    def get_display_name(self):
-        return self.short_name

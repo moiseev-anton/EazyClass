@@ -27,6 +27,3 @@ class Group(TimestampedModel):
 
     def __str__(self):
         return f"{self.title}"
-
-    def get_display_name(self):
-        return self.title
