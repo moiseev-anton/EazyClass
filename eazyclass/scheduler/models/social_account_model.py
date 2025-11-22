@@ -1,3 +1,5 @@
+from typing import Literal
+
 from django.db import models
 
 from scheduler.managers.social_account_manager import SocialAccountManager
@@ -6,6 +8,9 @@ from scheduler.managers.social_account_manager import SocialAccountManager
 class Platform(models.TextChoices):
     TELEGRAM = 'telegram', 'Telegram'
     VK = 'vk', 'VKontakte'
+
+
+PlatformValue = Literal['telegram', 'vk']
 
 
 class SocialAccount(models.Model):

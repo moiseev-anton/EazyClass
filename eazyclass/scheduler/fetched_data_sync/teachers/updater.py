@@ -7,7 +7,7 @@ from scheduler.models import Teacher
 logger = logging.getLogger(__name__)
 
 
-def update_teachers_endpoints(base_url: str, page_path: str):
+def refresh_teachers_endpoints(base_url: str, page_path: str):
     """Главная функция обновления факультетов и групп."""
     html = fetch_page_content(f"{base_url}{page_path}")
     teachers_map = parse_teachers_page(html, page_path)

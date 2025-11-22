@@ -31,7 +31,7 @@ def format_date_lines(dates: Iterable[Date], limit: int = 0) -> str:
     return "\n".join(lines)
 
 
-def format_lessons_updated_message(name: str, dates: list[Date]) -> str:
+def format_refresh_lessons_message(name: str, dates: list[Date]) -> str:
     """
     Формирует текст уведомления об изменении расписания.
 
@@ -45,8 +45,8 @@ def format_lessons_updated_message(name: str, dates: list[Date]) -> str:
     """
     date_lines = format_date_lines(dates, limit=MAX_VISIBLE_DATES)
     return (
-        f"🗓️ {name}"
+        f"🗓️ {name}\n"
         f"<b><u>РАСПИСАНИЕ ОБНОВЛЕНО</u></b>\n"
         f"Обновленные дни:\n"
-        f"<i>{date_lines}</i>\n"
+        f"<i>{date_lines}</i>"
     )

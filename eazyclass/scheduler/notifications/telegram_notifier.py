@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Iterable
+from typing import Iterable, Literal
 
 import requests
 from telebot import TeleBot
@@ -17,7 +17,7 @@ from tenacity import (
 )
 
 from scheduler.dtos import NotificationItem, NotificationSummary
-from scheduler.models.social_account_model import Platform
+from scheduler.models.social_account_model import Platform, PlatformValue
 from scheduler.notifications.exceptions import ChatBlocked, should_retry
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class TelegramNotifier:
     управляются библиотекой TeleBot автоматически.
     """
 
-    _PLATFORM = Platform.TELEGRAM
+    _PLATFORM: PlatformValue = Platform.TELEGRAM.value
     RATE_LIMIT = 25  # лимит Telegram API (до 30 msg/sec)
 
     def __init__(self, bot_token: str, rate_limit: int = RATE_LIMIT):
@@ -89,7 +89,7 @@ class TelegramNotifier:
         Отправляет коллекцию NotificationItem — каждый элемент может содержать
         одно сообщение и несколько получателей.
         """
-        summary = self.create_summary()
+        summary = self.create_empty_summary()
         if not notifications:
             logger.info("Пустая коллекция уведомлений — отправка пропущена.")
             return summary
@@ -137,9 +137,9 @@ class TelegramNotifier:
         return markup
 
     @classmethod
-    def create_summary(cls) -> NotificationSummary:
+    def create_empty_summary(cls) -> NotificationSummary:
         return NotificationSummary()
 
     @property
-    def platform(self) -> str:
+    def platform(self) -> PlatformValue:
         return self._PLATFORM

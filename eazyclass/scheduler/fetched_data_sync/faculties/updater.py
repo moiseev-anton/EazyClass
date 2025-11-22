@@ -11,7 +11,7 @@ from scheduler.models import Faculty, Group
 logger = logging.getLogger(__name__)
 
 
-def update_faculties_and_groups(base_url: str, endpoint: str):
+def refresh_faculties_and_groups(base_url: str, endpoint: str):
     """Главная функция обновления факультетов и групп."""
     html = fetch_page_content(f"{base_url}{endpoint}")
     faculties: list[FacultyData] = parse_faculties_page(html)

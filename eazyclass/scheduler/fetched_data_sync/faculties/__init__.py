@@ -1,1 +1,1 @@
-from .updater import update_faculties_and_groups
+from .updater import refresh_faculties_and_groups

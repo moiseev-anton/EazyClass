@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, queue="periodic_tasks")
-def sync_schedule(self, _: Any = None):
+def sync_lessons(self, _: Any = None):
     """
-    Задача для синхронизации данных из Redis в БД.
+    Синхронизирует полученные данные уроков с данными БД.
     Параметр _ используется только для поддержки передачи аргументов в цепочке задач.
     """
     logger.info("Запуск задачи синхронизации расписания ...")

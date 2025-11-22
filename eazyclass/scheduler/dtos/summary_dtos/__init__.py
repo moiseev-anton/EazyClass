@@ -1,2 +1,2 @@
-from .notification_summary import LessonSummary, NotificationSummary
+from .notification_summary import StartNotificationSummary, NotificationSummary
 from .pipeline_summary import PipelineSummary

@@ -1,3 +1,3 @@
 from .start_lesson import format_for_group as format_start_lesson_message_for_group
 from .start_lesson import format_for_teacher as format_start_lesson_message_for_teacher
-from .updated_lessons import format_lessons_updated_message
+from .refreshed_lessons import format_refresh_lessons_message

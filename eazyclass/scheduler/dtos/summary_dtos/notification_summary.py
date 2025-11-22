@@ -25,7 +25,7 @@ class NotificationSummary(BaseSummary):
 
 
 @register_summary
-class LessonSummary(NotificationSummary):
+class StartNotificationSummary(NotificationSummary):
     """Отчёт по уведомлениям о начале уроков."""
 
     period_str: str = ""

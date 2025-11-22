@@ -1,7 +1,5 @@
-from scheduler.tasks.run_schedule_spider import run_schedule_spider
-from scheduler.tasks.start_lesson_notifications import schedule_lesson_notifications, send_lesson_and_report
-from scheduler.tasks.sync_schedule import sync_schedule
-from scheduler.tasks.telegram_notification import send_telegram_notifications
-from scheduler.tasks.update_groups import update_groups
-from scheduler.tasks.update_schedule import update_schedule_pipeline
-from scheduler.tasks.update_teachers import update_teachers
+from scheduler.tasks.notification import (
+    plan_upcoming_lesson_notifications,
+    process_upcoming_lesson_notification
+)
+from scheduler.tasks.refresh import run_lessons_refresh_pipeline, refresh_groups, refresh_teachers

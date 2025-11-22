@@ -1,1 +1,1 @@
-from .updater import update_teachers_endpoints
+from .updater import refresh_teachers_endpoints
