@@ -12,6 +12,8 @@ class User(TimestampedModel, AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
+    notify_schedule_updates = models.BooleanField(default=True)
+    notify_upcoming_lessons = models.BooleanField(default=True)
     # + updated_at из TimestampedModel
     # + created_at из TimestampedModel
 

@@ -17,8 +17,10 @@ class UserSerializer(json_api_serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "notify_schedule_updates",
+            "notify_upcoming_lessons",
             "accounts",
             "subscriptions",
         )
-        read_only_fields = ("id", "username", "accounts")
+        read_only_fields = ("id", "username", "accounts", "accounts", "subscriptions")
         resource_name = "users"
