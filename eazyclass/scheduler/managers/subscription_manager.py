@@ -11,20 +11,16 @@ logger = logging.getLogger(__name__)
 
 
 class SubscriptionManager(PolymorphicManager):
-    def get_subscriber_chat_ids(
-            self,
-            obj_ids: Set[int],
-            platform: PlatformValue,
-    ) -> Dict[int, list[str]]:
-        if not obj_ids:
-            return {}
 
-        # Определяем поле объекта подписки
+    def _base_queryset(self, obj_ids: set[int], platform: PlatformValue):
+        if not obj_ids:
+            return self.none()
+
+        SocialAccount = apps.get_model("scheduler", "SocialAccount")
+
         if not hasattr(self.model, "subscription_object_field"):
             raise AttributeError(f"{self.model.__name__} must define `subscription_object_field`")
         obj_id_field = f"{self.model.subscription_object_field}_id"
-
-        SocialAccount = apps.get_model("scheduler", "SocialAccount")
 
         # Prefetch аккаунтов платформы
         account_prefetch = Prefetch(
@@ -37,7 +33,7 @@ class SubscriptionManager(PolymorphicManager):
             to_attr="platform_accounts",
         )
 
-        qs = (
+        return (
             self.filter(
                 **{f"{obj_id_field}__in": obj_ids},
                 user__is_active=True,
@@ -49,12 +45,27 @@ class SubscriptionManager(PolymorphicManager):
             .prefetch_related(account_prefetch)
         )
 
-        mapping: Dict[int, list[str]] = defaultdict(list)
+    def _collect_chat_ids(self, qs):
+        mapping: dict[int, list[str]] = defaultdict(list)
+
+        obj_id_field = f"{self.model.subscription_object_field}_id"
+
         for sub in qs:
             obj_id = getattr(sub, obj_id_field)
             accounts = getattr(sub.user, "platform_accounts", [])
+
             for acc in accounts:
                 if acc.chat_id:
                     mapping[obj_id].append(acc.chat_id)
 
         return dict(mapping)
+
+    def get_subscriber_chat_ids_for_updates(self, obj_ids: set[int], platform: PlatformValue):
+        qs = self._base_queryset(obj_ids, platform)
+        qs = qs.filter(user__notify_schedule_updates=True)
+        return self._collect_chat_ids(qs)
+
+    def get_subscriber_chat_ids_for_reminders(self, obj_ids: set[int], platform: PlatformValue):
+        qs = self._base_queryset(obj_ids, platform)
+        qs = qs.filter(user__notify_upcoming_lessons=True)
+        return self._collect_chat_ids(qs)

@@ -51,9 +51,11 @@ def collect_refresh_notifications(
             teacher_periods[tid].add(pid)
 
     # Получаем адресатов
-    group_chats = GroupSubscription.objects.get_subscriber_chat_ids(group_ids, platform)
+    group_chats = GroupSubscription.objects.get_subscriber_chat_ids_for_updates(group_ids, platform)
     logger.debug(f"group_chats: {group_chats}")
-    teacher_chats = TeacherSubscription.objects.get_subscriber_chat_ids(teacher_ids, platform)
+    teacher_chats = TeacherSubscription.objects.get_subscriber_chat_ids_for_updates(
+        teacher_ids, platform
+    )
     logger.debug(f"teacher_chats: {teacher_chats}")
 
     # Названия
@@ -101,8 +103,11 @@ def collect_group_start(
         return []
 
     # Чаты подписчиков для каждой студенческой группы
-    group_chats: Dict[int, list[str]] = GroupSubscription.objects.get_subscriber_chat_ids(
-        group_ids, platform=platform
+    group_chats: Dict[int, list[str]] = (
+        GroupSubscription.objects
+        .get_subscriber_chat_ids_for_reminders(
+            group_ids, platform=platform
+        )
     )
 
     # Группировка уроков по студенческим группам
@@ -138,8 +143,11 @@ def collect_teacher_start(
         return []
 
     # Чаты
-    teacher_chats: Dict[int, list[str]] = TeacherSubscription.objects.get_subscriber_chat_ids(
-        teacher_ids, platform=platform
+    teacher_chats: Dict[int, list[str]] = (
+        TeacherSubscription.objects
+        .get_subscriber_chat_ids_for_reminders(
+            teacher_ids, platform=platform
+        )
     )
 
     notifications = []
