@@ -52,7 +52,7 @@ def process_upcoming_lesson_notification(period_id: int, periodic_task_id: int |
 
 @shared_task(queue="periodic_tasks")
 def plan_upcoming_lesson_notifications():
-    today = now().date() + timedelta(days=2)
+    today = now().date()
     periods = Period.objects.filter(date=today, start_time__isnull=False)
 
     tasks_count = 0
