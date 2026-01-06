@@ -16,6 +16,8 @@ class Teacher(models.Model):
         indexes = [
             models.Index(fields=["full_name"]),
         ]
+        verbose_name = 'Teacher'
+        verbose_name_plural = 'Teachers'
 
     def __str__(self):
         return f"{self.short_name}"

@@ -16,6 +16,9 @@ class Faculty(TimestampedModel):
             models.Index(fields=["short_title"]),  # для сортировки
         ]
 
+        verbose_name = 'Faculty'
+        verbose_name_plural = 'Faculties'
+
     def calculate_short_title(self):
         if not self.groups.exists():
             self.short_title = ""

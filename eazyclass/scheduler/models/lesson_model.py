@@ -24,6 +24,8 @@ class Lesson(TimestampedModel):
             models.Index(fields=['period', 'group']),
             models.Index(fields=['group', 'period', 'subgroup']),
         ]
+        verbose_name = 'Lesson'
+        verbose_name_plural = 'Lessons'
 
     def to_dict(self) -> dict[str, Any]:
         """Сериализация урока для JSON/Redis без лишних запросов."""

@@ -16,6 +16,8 @@ class PeriodTemplate(models.Model):
         db_table = "scheduler_period_template"
         ordering = ['start_date']
         unique_together = ('lesson_number', 'start_date')
+        verbose_name = 'Period Template'
+        verbose_name_plural = 'Period Templates'
 
     def __str__(self):
         return f"Урок {self.lesson_number} с {self.start_date} по {self.end_date}"

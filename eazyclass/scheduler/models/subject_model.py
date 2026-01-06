@@ -13,6 +13,8 @@ class Subject(models.Model):
         indexes = [
             models.Index(fields=['title']),
         ]
+        verbose_name = 'Subject'
+        verbose_name_plural = 'Subjects'
 
     def __str__(self):
         return f"{self.title}"

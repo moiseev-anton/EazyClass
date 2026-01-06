@@ -25,5 +25,8 @@ class Group(TimestampedModel):
             models.Index(fields=["title"]),
         ]
 
+        verbose_name = 'Group'
+        verbose_name_plural = 'Groups'
+
     def __str__(self):
         return f"{self.title}"

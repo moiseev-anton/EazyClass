@@ -14,5 +14,8 @@ class Classroom(models.Model):
             models.Index(fields=['title']),
         ]
 
+        verbose_name = 'Classroom'
+        verbose_name_plural = 'Classrooms'
+
     def __str__(self):
         return f"{self.title}"

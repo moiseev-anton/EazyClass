@@ -22,6 +22,9 @@ class Subscription(TimestampedModel, PolymorphicModel):
                 name="unique_subscription_per_user"
             )
         ]
+        verbose_name = 'Subscription'
+        verbose_name_plural = 'Subscriptions'
+
 
 
 class TeacherSubscription(Subscription):

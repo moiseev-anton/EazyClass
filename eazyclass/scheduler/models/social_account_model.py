@@ -29,6 +29,8 @@ class SocialAccount(models.Model):
             models.Index(fields=['platform', 'social_id']),
             models.Index(fields=["platform", "user"]),
         ]
+        verbose_name = 'Social Account'
+        verbose_name_plural = 'Social Accounts'
 
     def __str__(self):
         return f"{self.user} - {self.platform} ({self.social_id})"

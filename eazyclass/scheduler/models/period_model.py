@@ -17,6 +17,8 @@ class Period(models.Model):
         indexes = [
             models.Index(fields=["date", "lesson_number"]),
         ]
+        verbose_name = 'Period'
+        verbose_name_plural = 'Periods'
 
     def save(self, *args, **kwargs) -> None:
         self.pre_save_actions()
@@ -39,4 +41,4 @@ class Period(models.Model):
     def __str__(self) -> str:
         start = self.start_time.strftime("%H:%M") if self.start_time else "—"
         end = self.end_time.strftime("%H:%M") if self.end_time else "—"
-        return f"{self.date:%d.%m.%Y} — {self.lesson_number}: {start}–{end}"
+        return f"{self.lesson_number} | {self.date:%d.%m.%Y} | {start}–{end}"
