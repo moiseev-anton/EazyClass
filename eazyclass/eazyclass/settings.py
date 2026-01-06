@@ -59,7 +59,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "django_celery_beat",
     "rangefilter",
-    "debug_toolbar",
+    "admin_auto_filters",
     "scheduler",
     "scrapy_app",
     "utils",
