@@ -1,6 +1,10 @@
+import logging
 import pickle
 from typing import Any, Generator
+import inspect
+from asgiref.sync import sync_to_async
 from urllib.parse import urljoin
+from scrapy import signals
 
 import scrapy
 from django.conf import settings
@@ -35,37 +39,47 @@ class ScheduleSpider(scrapy.Spider):
         try:
             self.redis_client = RedisClientManager.get_client('scrapy')
         except Exception as e:
-            self.logger.error(f"Не удалось получить Redis клиента: {e}")
+            self.logger.error(f"Не удалось получить Redis клиент: {e}")
             raise
 
         self.lessons = []
         self.scraped_groups = {}
 
-    def start_requests(self) -> Generator[Request, Any, None]:
-        """Генерирует начальные запросы для всех групп."""
-        # Получаем список групп и ссылок из БД
-        group_endpoints = Group.objects.get_endpoint_map()  # Получаем список кортежей (group_id, endpoint)
+
+
+    async def start(self):
+        try:
+            group_endpoints = await sync_to_async(Group.objects.get_endpoint_map)()  # Получаем список кортежей (group_id, endpoint)
+        except Exception as e:
+            self.logger.error(f"Ошибка при получении endpoints групп из БД: {e}", exc_info=True)
+            raise
         # group_endpoints = [(5, 'view.php?id=00312')]
 
         # Проходим по всем ссылкам и отправляем запросы
+        if not group_endpoints:
+            self.logger.info("Список endpoint'ов пуст, запросы не будут отправлены")
+            return
+
         for group_id, endpoint in group_endpoints:
             url = urljoin(self.base_url, endpoint.lstrip('/'))
-            self.logger.info(f'Делаем запрос к {url} (group_id:{group_id})')
-            yield scrapy.Request(url=url, callback=self.process_page, meta={'group_id': group_id})
+            self.logger.info(f'Запланирован запрос → {url} (group:{group_id})')
+
+            yield scrapy.Request(
+                url=url,
+                callback=self.process_page,
+                meta={'group_id': group_id}
+            )
+
 
     def process_page(self, response: scrapy.http.Response):
-        """
-        Обрабатывает страницу расписания, проверяет изменения контента и извлекает данные о занятиях.
+        """ Обрабатывает страницу расписания, проверяет изменения контента и извлекает данные о занятиях. """
 
-        :param response: Ответ от сервера, содержащий HTML-страницу.
-        """
-
-        self.logger.info(f'Получен ответ от :{response.url}(group_id:{response.meta.get('group_id')})')
+        self.logger.info(f"Получен ответ от :{response.url}(group_id:{response.meta.get('group_id')})")
         try:
             processor = ResponseProcessor(response, self.redis_client)
 
             if not processor.is_content_changed():
-                self.logger.info(f'Содержимое страницы группы:{response.meta.get('group_id')} не изменилось')
+                self.logger.info(f"Содержимое страницы группы:{response.meta.get('group_id')} не изменилось")
                 return
 
             lessons = processor.extract_lessons()
@@ -85,13 +99,8 @@ class ScheduleSpider(scrapy.Spider):
         :param reason: Причина завершения работы паука.
         """
         try:
-            self.logger.info(f"Приступаем к завершению паука. Причина: {reason}")
-            # TODO: Если мы не обработали ни одной страницы => self.scraped_groups = {} (такое может быть если на сайте проблема),
-            #  то скорее стоит прервать всю цепочку задач с помощью исключения, так предыдущий результат скрайпинга останется в redis,
-            #  или можем сохранить пустой результат перезаписав предыдущий.
-            #  Иначе следующие задачи повторят работу со старым результатом
-            # if self.scraped_groups:
-            # Сериализуем список уроков
+            self.logger.info(f"Начинается закрытие паука. Причина: {reason}")
+
             lessons_json = pickle.dumps(self.lessons)
             group_ids_json = pickle.dumps(self.scraped_groups)
 
@@ -100,8 +109,9 @@ class ScheduleSpider(scrapy.Spider):
             self.redis_client.set(SCRAPED_GROUPS_KEY, group_ids_json)
 
             self.logger.info(f"Сохранено {len(self.lessons)} уроков для {len(self.scraped_groups)} групп в Redis.")
-            self.logger.info(f'Закрытие паука.')
+            self.logger.info(f'Паук {self.name} закрыт.')
         except Exception as e:
             self.logger.error(f"Ошибка при закрытии паука: {e}")
+            raise
 
 

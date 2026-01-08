@@ -43,14 +43,11 @@ class EazyScrapySpiderMiddleware:
         # Should return either None or an iterable of Request or item objects.
         pass
 
-    def process_start_requests(self, start_requests, spider):
-        # Called with the start requests of the spider, and works
-        # similarly to the process_spider_output() method, except
-        # that it doesn’t have a response associated.
-
-        # Must return only requests (not items).
-        for r in start_requests:
-            yield r
+    async def process_start(self, start):
+        # Called with an async iterator over the spider start() method or the
+        # matching method of an earlier spider middleware.
+        async for item_or_request in start:
+            yield item_or_request
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
@@ -71,6 +68,9 @@ class EazyScrapyDownloaderMiddleware:
     def process_request(self, request, spider):
         # Called for each request that goes through the downloader
         # middleware.
+        active = getattr(spider.crawler.engine.downloader, 'active', None)
+        active_count = len(active) if active is not None else 'unknown'
+        spider.logger.info(f"Отправка запроса → {request.url}  active={active_count}")
 
         # Must either:
         # - return None: continue processing this request
