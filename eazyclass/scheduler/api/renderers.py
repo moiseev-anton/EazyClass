@@ -1,6 +1,7 @@
-from rest_framework.renderers import JSONRenderer
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime
+
+from rest_framework.renderers import JSONRenderer
 
 
 class APIJSONRenderer(JSONRenderer):

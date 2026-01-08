@@ -1,10 +1,10 @@
 import logging
 from collections import defaultdict
-from typing import Dict, Optional, Set
 
 from django.apps import apps
 from django.db.models import Prefetch
 from polymorphic.managers import PolymorphicManager
+
 from scheduler.models.social_account_model import PlatformValue
 
 logger = logging.getLogger(__name__)

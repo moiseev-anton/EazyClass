@@ -1,10 +1,7 @@
-from datetime import time
-# from datetime import timedelta
 import logging
+from datetime import time
 
-# import dateparser
 from django.db import transaction
-# from django.utils import timezone
 
 from scheduler.models import PeriodTemplate, Timing, TimingWeekDay
 

@@ -1,5 +1,3 @@
-import logging
-
 from django import forms
 
 from scheduler.models import PeriodTemplate
