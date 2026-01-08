@@ -19,7 +19,14 @@ class SpiderRunner:
 
     def _crawl(self):
         """Запуск паука."""
-        process = CrawlerProcess(get_project_settings())
+        import os
+
+        os.environ.setdefault(
+            "SCRAPY_SETTINGS_MODULE",
+            "scrapy_app.settings"
+        )
+
+        process = CrawlerProcess(settings=get_project_settings())
         process.crawl(self.spider_cls, **self.spider_kwargs)
         process.start()
 
@@ -32,11 +39,9 @@ class SpiderRunner:
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, queue="periodic_tasks")
 def run_schedule_spider(self):
-    logger.info("Запуск задачи ...")
-
     try:
         runner = SpiderRunner(ScheduleSpider)
         runner.run()
-        logger.info("Завершение задачи ...")
     except Exception as e:
         logger.error(f"Ошибка при запуске паука: {e}")
+        raise
