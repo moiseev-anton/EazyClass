@@ -13,9 +13,9 @@ PAGE_HASH_KEY_PREFIX = 'scrapy:content_hash:group_id:'
 
 class ResponseProcessor:
     """
-    Класс для обработки и парсинга ответа от Scrapy, вычисления хеша контента и проверки его изменений.
+    Класс для обработки и парсинга ответа (scrapy.http.Response), вычисления хеша контента и проверки его изменений.
 
-    :param response: Ответ от Scrapy, содержащий страницу для парсинга.
+    :param response: Ответ, содержащий страницу для парсинга.
     :param redis_client: (необязательно) Клиент Redis.
     """
     DATE_ROW_LENGTH = 1
