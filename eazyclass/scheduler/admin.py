@@ -279,11 +279,14 @@ class BaseSubscriptionChildAdmin(PolymorphicChildModelAdmin):
 @admin.register(TeacherSubscription)
 class TeacherSubscriptionAdmin(BaseSubscriptionChildAdmin):
     base_model = TeacherSubscription
+    autocomplete_fields = ('user', 'teacher',)
+
 
 
 @admin.register(GroupSubscription)
-class GroupSubscriptionAdmin(TeacherSubscriptionAdmin):
+class GroupSubscriptionAdmin(BaseSubscriptionChildAdmin):
     base_model = GroupSubscription
+    autocomplete_fields = ('user', 'group',)
 
 
 @admin.register(Subscription)
