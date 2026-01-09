@@ -10,11 +10,24 @@ from scheduler.models import Faculty, Group
 
 logger = logging.getLogger(__name__)
 
+HTML_SNIPPET_LIMIT = 200
+
 
 def refresh_faculties_and_groups(base_url: str, endpoint: str):
     """Главная функция обновления факультетов и групп."""
     html = fetch_page_content(f"{base_url}{endpoint}")
     faculties: list[FacultyData] = parse_faculties_page(html)
+
+    # Если не получили ни одного факультета значит со страницей что-то не так, не выполняем обновление.
+    # Код ответа 200 не гарантирует корректность страницы.
+    # TODO: Рассмотреть возможность проверки валидности страницы по наличию конкретных тегов
+    if not faculties:
+        html_preview = html[:HTML_SNIPPET_LIMIT].decode(errors="ignore")
+        logger.error(
+            "Страница факультетов невалидна: не найдено ни одного факультета. "
+            f"Превью HTML:\n{html_preview}"
+        )
+        raise RuntimeError("Факультеты не найдены — обновление отменено")
 
     faculty_ids = set()
     group_ids = set()
