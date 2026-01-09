@@ -1,4 +1,5 @@
 import logging
+import re
 
 import requests
 
@@ -15,3 +16,14 @@ def fetch_page_content(url: str) -> bytes:
     except requests.RequestException as e:
         logger.error(f"Ошибка запроса к {url}: {e}")
         raise
+
+
+def normalize_person_name(value: str) -> str:
+    if not value:
+        return ""
+
+    value = value.lower()
+    value = value.replace("ё", "е")
+    value = re.sub(r"[^a-zа-яё]", "", value)
+
+    return value

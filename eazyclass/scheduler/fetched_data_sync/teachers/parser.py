@@ -7,14 +7,14 @@ logger = logging.getLogger(__name__)
 
 
 def parse_teachers_page(html_content: bytes, page_path: str) -> dict[str, str]:
-    """Парсит HTML и возвращает список факультетов с их группами."""
+    """Парсит HTML и возвращает словарь (нормализованное имя учителя -> endpoint)."""
     soup = BeautifulSoup(html_content, "lxml")
 
     select = soup.find("select", attrs={"name": True})
     if not select:
         raise ValueError("На странице не найден <select> с преподавателями")
 
-    param_name = select["name"]
+    param_name = select["name"]  # "idprep"
     teachers = {}
 
     for option in select.find_all("option"):
