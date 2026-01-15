@@ -1,0 +1,155 @@
+services:
+  pgdb:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    env_file:
+      - .env.prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 4s
+      timeout: 4s
+      retries: 10
+      start_period: 6s
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    restart: always
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 4s
+      timeout: 3s
+      retries: 8
+      start_period: 5s
+
+
+  django:
+    build:
+      context: .
+      dockerfile: eazyclass/Dockerfile
+    container_name: django
+    command: >
+      gunicorn eazyclass.wsgi:application 
+        --bind 0.0.0.0:8000 
+        --workers 3
+        --log-level info
+    env_file:
+      - .env.prod
+    expose:
+      - "8000"
+    # Для django BASE DIR ==  /app/eazyclass
+    volumes:
+      - static_data:/app/eazyclass/static
+      - media_data:/app/eazyclass/media
+    depends_on:
+      pgdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: eazyclass/Dockerfile
+    container_name: celery_worker
+    command: >
+      celery -A eazyclass worker
+        --pool=prefork
+        --concurrency=1
+        --loglevel=info
+    env_file:
+      - .env.prod
+    depends_on:
+      pgdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: eazyclass/Dockerfile
+    container_name: celery_beat
+    command: >
+      celery -A eazyclass beat
+        --loglevel=info
+        --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file:
+      - .env.prod
+    depends_on:
+      pgdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+
+  flower:
+    build:
+      context: .
+      dockerfile: eazyclass/Dockerfile
+    container_name: celery_flower
+    command: >
+      celery -A eazyclass flower
+        --address=0.0.0.0
+        --port=5555
+        --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}
+    env_file:
+      - .env.prod
+    expose:
+      - "5555"
+    depends_on:
+      pgdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # nginx конфиги
+      - ./nginx/eazyclass.conf:/etc/nginx/conf.d/default.conf:ro
+
+      # certbot (challenge + сертификаты)
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+
+      # статика Django
+      - static_data:/app/eazyclass/static:ro
+#      - media_data:/app/eazyclass/media:ro
+    depends_on:
+      - django
+      - flower
+    restart: always
+
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    depends_on:
+      - nginx
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+
+volumes:
+  postgres_data:
+  static_data:
+#  media_data:
+  certbot_conf:
+  certbot_www:
