@@ -23,14 +23,14 @@ class TokenCookieHandlerMixin:
     """Миксин для обработки токенов в куках"""
 
     @staticmethod
-    def _set_refresh_cookie(response: Response) -> None:
+    def _set_refresh_cookie(response: Response, request: Request) -> None:
         refresh_token = response.data.get("refresh")
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             httponly=True,
-            secure=True,
-            samesite="Lax",
+            secure=request.is_secure(),
+            samesite="Strict",
             max_age=api_settings.REFRESH_TOKEN_LIFETIME.total_seconds(),
         )
 
@@ -118,7 +118,7 @@ class CustomTokenObtainPairView(
         response = Response(data, status=status_code)
 
         if data.get("success") and self._is_browser_request(request):
-            self._set_refresh_cookie(response)
+            self._set_refresh_cookie(response, request)
             self._remove_refresh_from_body(response)
 
         return response
@@ -180,7 +180,7 @@ class CustomTokenRefreshView(
         response = Response(serializer.validated_data, status=status.HTTP_200_OK)
 
         if self._is_browser_request(request):
-            self._set_refresh_cookie(response)
+            self._set_refresh_cookie(response, request)
             self._remove_refresh_from_body(response)
 
         return response
