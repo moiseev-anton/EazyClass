@@ -22,7 +22,6 @@ from django.conf import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('scheduler.api.v1.urls')),
-    path('scheduler/', include('scheduler.urls')),
 ]
 
 
@@ -34,6 +33,6 @@ handler500 = 'scheduler.views.error_views.error_500'
 
 if settings.DEBUG:
     import debug_toolbar
-    urlpatterns = [
+    urlpatterns += [
         path('__debug__/', include(debug_toolbar.urls)),
-    ] + urlpatterns
+    ]

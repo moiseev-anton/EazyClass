@@ -15,7 +15,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.getenv("ENV_FILE", ".env.dev"))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,32 +27,42 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG") == "True"
-# DEBUG = False
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 
 DEBUG_TOOLBAR_CONFIG = {
     "IS_RUNNING_TESTS": False,  # Отключение панели инструментов при тестах
 }
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
-INTERNAL_IPS = [
-    "127.0.0.1",
-]
+INTERNAL_IPS = ["127.0.0.1"] if DEBUG else []
+
+CSRF_TRUSTED_ORIGINS = (
+    os.getenv("CSRF_TRUSTED_ORIGINS").split(",")
+    if os.getenv("CSRF_TRUSTED_ORIGINS")
+    else []
+)
+
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = (
+    os.getenv("CORS_ALLOWED_ORIGINS").split(",")
+    if os.getenv("CORS_ALLOWED_ORIGINS")
+    else []
+)
+CORS_ALLOW_CREDENTIALS = True
+
 
 # Application definition
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
-    'polymorphic',
+    "polymorphic",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "django_filters",
     "rest_framework",
     "rest_framework_json_api",
@@ -66,12 +76,16 @@ INSTALLED_APPS = [
     "drf_spectacular",
 ]
 
+if DEBUG:
+    INSTALLED_APPS += ["debug_toolbar"]
+
+
 MIDDLEWARE = [
     "scheduler.middleware.RequestLoggingMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     # 'django.middleware.locale.LocaleMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -79,6 +93,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "scheduler.middleware.Clear304BodyMiddleware",
 ]
+
+if DEBUG:
+    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
+
 
 ROOT_URLCONF = "eazyclass.urls"
 
@@ -114,11 +132,10 @@ DATABASES = {
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
-
 AUTH_USER_MODEL = "scheduler.User"
 
+# Password validation
+# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -136,7 +153,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
-
 LANGUAGE_CODE = "ru"
 LANGUAGES = [
     ('ru', 'Русский'),
@@ -154,16 +170,13 @@ LOCALE_PATHS = [
 ]
 
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "static/"
 
 # Для разработки:
-STATICFILES_DIRS = [
-    BASE_DIR / "scheduler/static",
-]
+STATICFILES_DIRS = [BASE_DIR / "scheduler/static"] if DEBUG else []
 
 # Для продакшена:
 STATIC_ROOT = BASE_DIR / "static/"
@@ -268,15 +281,12 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework_json_api.renderers.JSONRenderer",
         'rest_framework.renderers.JSONRenderer',
-        # 'scheduler.api.renderers.APIJSONRenderer',
-        # 'rest_framework.renderers.BrowsableAPIRenderer',
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.SessionAuthentication",
+        # "rest_framework.authentication.SessionAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "scheduler.authentication.HMACAuthentication",
     ),
-    # 'EXCEPTION_HANDLER': 'scheduler.api.exceptions.custom_exception_handler',
     "EXCEPTION_HANDLER": "rest_framework_json_api.exceptions.exception_handler",
     "DEFAULT_METADATA_CLASS": "rest_framework_json_api.metadata.JSONAPIMetadata",
     "DEFAULT_FILTER_BACKENDS": (
@@ -333,7 +343,6 @@ CELERY_RESULT_SERIALIZER = "json"
 
 BASE_SCRAPING_URL = os.getenv("BASE_SCRAPING_URL")
 
-BOT_SOCIAL_ID = os.getenv("BOT_SOCIAL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME")
 TELEGRAM_REDIS_STORAGE_URL = os.getenv("TELEGRAM_REDIS_STORAGE_URL")
