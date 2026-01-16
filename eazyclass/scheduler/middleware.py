@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class Clear304BodyMiddleware:
+    """Для ответов с кодом 304 удаляет тело ответа"""
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -32,7 +33,7 @@ class RequestLoggingMiddleware:
 
         if request.body:
             try:
-                logger.info("Body: %s", request.body.decode("utf-8"))
+                logger.debug("Body: %s", request.body.decode("utf-8"))
             except Exception:
                 logger.warning("Could not decode request body")
 

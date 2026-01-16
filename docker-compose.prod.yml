@@ -13,6 +13,11 @@ services:
       timeout: 4s
       retries: 10
       start_period: 6s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 
   redis:
@@ -25,6 +30,11 @@ services:
       timeout: 3s
       retries: 8
       start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 
   django:
@@ -37,6 +47,8 @@ services:
         --bind 0.0.0.0:8000 
         --workers 3
         --log-level info
+        --access-logfile -
+        --error-logfile -
     env_file:
       - .env.prod
     expose:
@@ -51,6 +63,11 @@ services:
       redis:
         condition: service_healthy
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 
   celery-worker:
@@ -71,6 +88,11 @@ services:
       redis:
         condition: service_healthy
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "8m"
+        max-file: "4"
 
 
   celery-beat:
@@ -90,6 +112,11 @@ services:
       redis:
         condition: service_healthy
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "4"
 
 
   flower:
@@ -112,6 +139,11 @@ services:
       redis:
         condition: service_healthy
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "4"
 
 
   nginx:
@@ -135,6 +167,11 @@ services:
       - django
       - flower
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 
   certbot:

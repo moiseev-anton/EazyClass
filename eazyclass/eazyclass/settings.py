@@ -81,7 +81,6 @@ if DEBUG:
 
 
 MIDDLEWARE = [
-    "scheduler.middleware.RequestLoggingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     # 'django.middleware.locale.LocaleMiddleware',
@@ -95,7 +94,10 @@ MIDDLEWARE = [
 ]
 
 if DEBUG:
-    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
+    MIDDLEWARE += [
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+        "scheduler.middleware.RequestLoggingMiddleware",
+    ]
 
 
 ROOT_URLCONF = "eazyclass.urls"
@@ -192,44 +194,69 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+
     "formatters": {
-        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process} {thread} {message}",
-            "style": "{",
+        "default": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         },
     },
     "handlers": {
         "console": {
-            "level": "INFO",
             "class": "logging.StreamHandler",
-            "formatter": "standard",
+            "formatter": "default",
         },
-        "file": {
-            "level": "INFO",
-            "class": "logging.FileHandler",
-            "filename": "celery.log",
-            "formatter": "verbose",
-            "encoding": "utf-8",
-        },
+
     },
+
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+
     "loggers": {
-        "": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": True,
-        },
         "django": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
+
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+
+        "django.server": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+
         "celery": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
+
         "scrapy": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+
+        "scrapy_app": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        "scheduler": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+
+        "utils": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
