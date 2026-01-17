@@ -144,7 +144,8 @@ def send_admin_report(summary_dict: dict):
         logger.info("Отправка отчёта админу...")
         summary = BaseSummary.deserialize(summary_dict)
 
-        report_text = summary.format_report()
+        logger.info(f"Отчет: {summary}")
+        report_text = summary.to_message()
         staff_chat_ids = SocialAccount.objects.get_staff_chat_ids(platform=Platform.TELEGRAM)
         notification = NotificationItem(message=report_text, destinations=staff_chat_ids)
 

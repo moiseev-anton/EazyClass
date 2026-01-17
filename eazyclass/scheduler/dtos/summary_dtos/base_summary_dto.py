@@ -21,8 +21,20 @@ class BaseSummary(BaseModel):
         model_cls = SUMMARY_REGISTRY.get(data.get("type"), cls)
         return model_cls.model_validate(data)
 
-    def format_report(self) -> str:
+    def to_message(self, title: str = 'Отчет') -> str:
         raise NotImplementedError()
 
+    @property
+    def parts(self) -> dict[str, object]:
+        """
+        Ключевые смысловые части summary.
+        Не обязано быть полным отображением модели.
+        """
+        return {}
+
+    def to_brief(self) -> str:
+        parts = ", ".join(f"{k}={v!r}" for k, v in self.parts.items())
+        return f"{self.__class__.__name__}({parts})"
+
     def __str__(self):
-        return self.format_report()
+        return self.to_brief()

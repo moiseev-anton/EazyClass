@@ -1,18 +1,12 @@
 import logging
-from collections import defaultdict
-from typing import Any, Dict, List, Set
+from typing import Any, Dict
 
-from django.db.models import Prefetch
-
-from scheduler.dtos import StartNotificationSummary, NotificationItem, NotificationSummary
+from scheduler.dtos import NotificationSummary, StartNotificationSummary
 from scheduler.models import (
     Lesson,
     Period,
-    SocialAccount,
 )
 from scheduler.notifications import collectors
-
-
 from scheduler.notifications.telegram_notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)

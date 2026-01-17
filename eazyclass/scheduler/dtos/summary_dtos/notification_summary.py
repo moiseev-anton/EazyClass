@@ -11,7 +11,15 @@ class NotificationSummary(BaseSummary):
     failed_count: int = 0
     blocked_chat_ids: list[int | str] = Field(default_factory=list)
 
-    def format_report(self, title: str = "📢 Уведомления") -> str:
+    @property
+    def parts(self) -> dict[str, object]:
+        return {
+            "success": self.success_count,
+            "failed": self.failed_count,
+            "blocked": len(self.blocked_chat_ids),
+        }
+
+    def to_message(self, title: str = "📢 Рассылка") -> str:
         lines = [
             f"{title}:",
             f"✅ успешно: {self.success_count}",
@@ -20,7 +28,6 @@ class NotificationSummary(BaseSummary):
 
         if self.blocked_chat_ids:
             lines.append(f"🚫 заблокировано: {len(self.blocked_chat_ids)}")
-
         return "\n".join(lines)
 
 
@@ -32,7 +39,16 @@ class StartNotificationSummary(NotificationSummary):
     lessons_count: int = 0
     notifications_count: int = 0
 
-    def format_report(self, title: str = "📚 Уведомления о занятиях") -> str:
+    @property
+    def parts(self) -> dict[str, object]:
+        return {
+            "period": self.period_str,
+            "lessons": self.lessons_count,
+            "notifications": self.notifications_count,
+            **super().parts,
+        }
+
+    def to_message(self, title: str = "📚 Уведомления о занятиях") -> str:
         if self.lessons_count == 0:
             return f"{title}:" f"Период: {self.period_str}" f"Уроков найдено: {self.lessons_count}"
 
@@ -43,7 +59,7 @@ class StartNotificationSummary(NotificationSummary):
             f"Уведомлений подготовлено: {self.notifications_count}",
         ]
 
-        if base := super().format_report().strip():
+        if base := super().to_message().strip():
             lines.append(base)
 
         return "\n".join(lines)

@@ -20,6 +20,34 @@ class PipelineSummary(BaseSummary):
 
         return data
 
+    @property
+    def parts(self) -> dict[str, object]:
+        parts: dict[str, object] = {}
+
+        if self.spider_result:
+            parts["spider"] = {
+                "groups": self.spider_result.get("groups_count"),
+                "lessons": self.spider_result.get("lessons_count"),
+            }
+
+        if self.sync_summary:
+            parts["sync"] = {
+                "added": len(self.sync_summary.get("added", [])),
+                "updated": len(self.sync_summary.get("updated", [])),
+                "removed": len(self.sync_summary.get("removed", [])),
+            }
+
+        if isinstance(self.notification_summary, BaseSummary):
+            parts["notifier"] = self.notification_summary.parts
+        elif isinstance(self.notification_summary, dict):
+            parts["notifier"] = {
+                "success": self.notification_summary.get("success_count"),
+                "failed": self.notification_summary.get("failed_count"),
+                "blocked": len(self.notification_summary.get("blocked_chat_ids", [])),
+            }
+
+        return parts
+
     @classmethod
     def deserialize(cls, data: dict) -> "PipelineSummary":
         """Десериализация, включая вложенные summary."""
@@ -30,7 +58,7 @@ class PipelineSummary(BaseSummary):
 
         return super().deserialize(data)
 
-    def format_report(self, title: str = "📊 Отчёт о синхронизации расписания") -> str:
+    def to_message(self, title: str = "📊 Отчёт о синхронизации расписания") -> str:
         """Формирует красивый текстовый отчёт по пайплайну."""
 
         def _format_section(
