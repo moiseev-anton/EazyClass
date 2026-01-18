@@ -75,7 +75,7 @@ class AuthView(JsonApiMixin, views.APIView):
 
 
 class AuthWithNonceView(AuthView):
-    # permission_classes = [IsHMACAuthenticated]
+    permission_classes = [IsHMACAuthenticated]
     serializer_class = SocialAccountAuthWithNonceSerializer
 
     @extend_schema(
