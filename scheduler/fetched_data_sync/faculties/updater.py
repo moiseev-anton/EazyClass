@@ -65,4 +65,4 @@ def refresh_faculties_and_groups(base_url: str, endpoint: str):
         g_count = Group.objects.filter(is_active=True).exclude(id__in=group_ids).update(is_active=False)
         logger.info(f"Деактивировано {g_count} групп.")
 
-    logger.info(f"Получено факультетов: {len(faculties)}")
+    logger.info(f"Получено: факультетов={len(faculty_ids)}, групп={len(group_ids)}")

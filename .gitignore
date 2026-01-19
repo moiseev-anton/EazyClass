@@ -1,7 +1,7 @@
 # Игнорирование виртуальной среды
 venv/
 .env.dev
-.env.prod
+.env
 .env
 .htpasswd
 

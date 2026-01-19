@@ -20,11 +20,11 @@ services:
   django:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile
+      dockerfile: Dockerfile
     container_name: django
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - ./eazyclass:/app:delegated
+      - .:/app:delegated
     ports:
       - "8000:8000"
     env_file:
@@ -37,11 +37,11 @@ services:
   celery-worker:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile
+      dockerfile: Dockerfile
     container_name: celery_worker
     command: celery -A eazyclass worker --pool=prefork --concurrency=1 --loglevel=debug # заменить потом на info
     volumes:
-      - ./eazyclass:/app:delegated
+      - .:/app:delegated
     env_file:
       - .env.dev
     depends_on:
@@ -51,11 +51,11 @@ services:
   celery-beat:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile
+      dockerfile: Dockerfile
     container_name: celery_beat
     command: celery -A eazyclass beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
-      - ./eazyclass:/app:delegated
+      - .:/app:delegated
     env_file:
       - .env.dev
     depends_on:
@@ -65,11 +65,11 @@ services:
   flower:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile.celery
+      dockerfile: Dockerfile
     container_name: celery_flower
     command: celery -A eazyclass flower --address=0.0.0.0 --port=5555
     volumes:
-      - ./eazyclass:/app:delegated
+      - .:/app:delegated
     ports:
       - "5555:5555"
     env_file:

@@ -1,23 +1,67 @@
-# Игнорирование файлов логов и данных
-*.log
-*.csv
-*.dat
-
-# Игнорирование директории .git и виртуальных сред Python
-.git/
-__pycache__/
-*.pyc
-../venv/
-env/
-.env
-.env.dev
-.env.prod
-
-# Игнорирование некоторых конфигурационных файлов IDE и локальных тестовых данных
-.idea/
+# Системные и редакторские файлы
+.DS_Store
 *.swp
 *.swo
-.DS_Store
-test/
-tests/
+Thumbs.db
+.vscode/
+.idea/
+*.code-workspace
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python кэш и байткод (генерируются заново)
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Локальные окружения и env-файлы (особенно важно!)
+.env
+.env.*
+.venv/
+venv/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Локальные данные и логи (не должны попадать в образ)
+*.log
+*.logs
+*.sqlite3
+*.db
+db.sqlite3
+media/
+staticfiles/
 coverage/
+htmlcov/
+tests/
+test/
+.coverage
+.tox/
+.pytest_cache/
+
+# Сборка и зависимости (если используешь npm/фронтенд)
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+dist/
+build/
+
+# Временные и ненужные в образе файлы
+*.bak
+*.tmp
+*.temp
+Dockerfile*     # ← если несколько, игнорировать лишние
+docker-compose*.yml   # ← docker-compose файлы не нужны внутри образа
+README.md
+LICENSE
+CHANGELOG.md
+
+# Директории, которые нужны только на хосте
+nginx/
+certbot/

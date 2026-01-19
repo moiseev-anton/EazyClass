@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: postgres_db
     env_file:
-      - .env.prod
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
@@ -40,23 +40,23 @@ services:
   django:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile
+      dockerfile: Dockerfile
     container_name: django
     command: >
-      gunicorn eazyclass.wsgi:application 
-        --bind 0.0.0.0:8000 
+      gunicorn eazyclass.wsgi:application
+        --bind 0.0.0.0:8000
         --workers 3
         --log-level info
         --access-logfile -
         --error-logfile -
     env_file:
-      - .env.prod
+      - .env
     expose:
       - "8000"
     # Для django BASE DIR ==  /app/eazyclass
     volumes:
-      - static_data:/app/eazyclass/static
-      - media_data:/app/eazyclass/media
+      - static_data:/app/static
+      - media_data:/app/media
     depends_on:
       pgdb:
         condition: service_healthy
@@ -73,7 +73,7 @@ services:
   celery-worker:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile
+      dockerfile: Dockerfile
     container_name: celery_worker
     command: >
       celery -A eazyclass worker
@@ -81,7 +81,7 @@ services:
         --concurrency=1
         --loglevel=info
     env_file:
-      - .env.prod
+      - .env
     depends_on:
       pgdb:
         condition: service_healthy
@@ -98,14 +98,14 @@ services:
   celery-beat:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile
+      dockerfile: Dockerfile
     container_name: celery_beat
     command: >
       celery -A eazyclass beat
         --loglevel=info
         --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file:
-      - .env.prod
+      - .env
     depends_on:
       pgdb:
         condition: service_healthy
@@ -122,7 +122,7 @@ services:
   flower:
     build:
       context: .
-      dockerfile: eazyclass/Dockerfile
+      dockerfile: Dockerfile
     container_name: celery_flower
     command: >
       celery -A eazyclass flower
@@ -130,7 +130,7 @@ services:
         --port=5555
         --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}
     env_file:
-      - .env.prod
+      - .env
     expose:
       - "5555"
     depends_on:
@@ -161,8 +161,8 @@ services:
       - certbot_conf:/etc/letsencrypt:ro
 
       # статика Django
-      - static_data:/app/eazyclass/static:ro
-#      - media_data:/app/eazyclass/media:ro
+      - static_data:/app/static:ro
+      - media_data:/app/media:ro
     depends_on:
       - django
       - flower
@@ -187,6 +187,6 @@ services:
 volumes:
   postgres_data:
   static_data:
-#  media_data:
+  media_data:
   certbot_conf:
   certbot_www:
