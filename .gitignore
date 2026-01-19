@@ -10,9 +10,6 @@ venv/
 *.pyc
 *.pyo
 
-# Игнорирование миграций
-**/migrations/
-!**/migrations/__init__.py
 
 # Файлы журналов
 *.log
