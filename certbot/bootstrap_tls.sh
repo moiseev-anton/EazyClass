@@ -21,6 +21,13 @@ source "$ENV_FILE"
 : "${TLS_EMAIL:?TLS_EMAIL is required}"
 : "${TLS_CRON_SCHEDULE:?TLS_CRON_SCHEDULE is required}"
 
+echo "DEBUG: Загрузили переменные .env"
+echo "DEBUG: TLS_PRIMARY_DOMAIN='$TLS_PRIMARY_DOMAIN'"
+echo "DEBUG: TLS_DOMAINS='$TLS_DOMAINS'"
+echo "DEBUG: TLS_EMAIL='$TLS_EMAIL'"
+echo "DEBUG: TLS_EMAIL='$TLS_EMAIL'"
+echo "DEBUG: TLS_CRON_SCHEDULE='$TLS_CRON_SCHEDULE'"
+
 echo "🔐 Bootstrapping TLS for $TLS_PRIMARY_DOMAIN"
 
 # --- Ensure nginx is running (HTTP-01 needs port 80) ------------------------
@@ -38,7 +45,11 @@ else
         $TLS_DOMAINS \
         --email "$TLS_EMAIL" \
         --agree-tos \
-        --no-eff-email
+        --no-eff-email \
+        --non-interactive || {
+            echo "❌ Failed to obtain certificate"
+            exit 1
+        }
 fi
 
 # --- Reload nginx -----------------------------------------------------------
