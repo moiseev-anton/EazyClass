@@ -73,24 +73,24 @@ class PipelineSummary(BaseSummary):
 
         sections = [
             (
-                "🕷 Spider",
+                "🕷 Scrapy",
                 self.spider_result,
                 lambda d: [
-                    f"группы: {d.get('groups_count', '?')}",
-                    f"уроки: {d.get('lessons_count', '?')}",
+                    f"проверено страниц: {d.get('groups_count', '?')}",
+                    f"получено уроков: {d.get('lessons_count', '?')}",
                 ],
             ),
             (
-                "📘 Sync",
+                "💾 Синхронизация уроков",
                 self.sync_summary,
                 lambda d: [
-                    f"добавлено: {len(d.get('added', []))}",
+                    f"создано: {len(d.get('added', []))}",
                     f"обновлено: {len(d.get('updated', []))}",
                     f"удалено: {len(d.get('removed', []))}",
                 ],
             ),
             (
-                "📢 Notifier",
+                "📢 Отправка уведомлений",
                 self.notification_summary,
                 lambda d: [
                     f"успешно={d.get('success_count', 0)}",

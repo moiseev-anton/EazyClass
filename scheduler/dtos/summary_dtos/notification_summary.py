@@ -48,10 +48,7 @@ class StartNotificationSummary(NotificationSummary):
             **super().parts,
         }
 
-    def to_message(self, title: str = "📚 Уведомления о занятиях") -> str:
-        if self.lessons_count == 0:
-            return f"{title}:" f"Период: {self.period_str}" f"Уроков найдено: {self.lessons_count}"
-
+    def to_message(self, title: str = "📨 Отчет о рассылке") -> str:
         lines = [
             f"{title}:",
             f"Период: {self.period_str}",
@@ -60,7 +57,7 @@ class StartNotificationSummary(NotificationSummary):
         ]
 
         if base := super().to_message().strip():
-            lines.append(base)
+            lines.append(f"\n{base}")
 
         return "\n".join(lines)
 
