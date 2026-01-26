@@ -52,6 +52,12 @@ CORS_ALLOWED_ORIGINS = (
 )
 CORS_ALLOW_CREDENTIALS = True
 
+# Обязательно для работы за обратным прокси (nginx)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 # Application definition
 INSTALLED_APPS = [
