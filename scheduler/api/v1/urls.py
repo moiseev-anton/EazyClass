@@ -62,7 +62,12 @@ urlpatterns = [
     # Публичная API схема
     path(
         'schema/',
-        SpectacularAPIView.as_view(urlconf=public_urlpatterns),
+        SpectacularAPIView.as_view(
+            urlconf=public_urlpatterns,
+            custom_settings={
+                'SCHEMA_PATH_PREFIX_INSERT': '/api/v1',
+            }
+        ),
         name='schema-public',
     ),
     path(
