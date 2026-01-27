@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
@@ -56,7 +56,7 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
     nonce = json_api_serializers.UUIDField(write_only=True)
     token_class = CustomRefreshToken
 
-    def validate(self, attrs: dict[str, Any]) -> dict[str, str]:
+    def validate(self, attrs: dict[str, Any]) -> Optional[dict[str, Any]]:
         nonce = str(attrs.get("nonce"))
 
         try:
@@ -94,7 +94,7 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
 class CustomTokenRefreshSerializer(BaseTokenSerializer, TokenRefreshSerializer):
     token_class = CustomRefreshToken
 
-    def validate(self, attrs: dict[str, Any]) -> dict[str, str]:
+    def validate(self, attrs: dict[str, Any]) -> Optional[dict[str, str]]:
         try:
             refresh = self.token_class(attrs["refresh"])
             user_id = refresh.payload.get(api_settings.USER_ID_CLAIM)

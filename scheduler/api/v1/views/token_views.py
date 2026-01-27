@@ -1,14 +1,15 @@
+import logging
+
 from django.utils.translation import gettext_lazy as _
-from drf_spectacular.utils import (
-    extend_schema,
-    inline_serializer,
-    OpenApiResponse,
-    OpenApiExample,
-)
-from rest_framework import status, serializers
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiExample, OpenApiParameter, OpenApiResponse
+from rest_framework import serializers, status
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -17,6 +18,9 @@ from scheduler.api.v1.serializers import (
     CustomTokenObtainPairSerializer,
     CustomTokenRefreshSerializer,
 )
+from scheduler.authentication import CustomRefreshToken
+
+logger = logging.getLogger(__name__)
 
 
 class TokenCookieHandlerMixin:
@@ -55,10 +59,30 @@ class CustomTokenObtainPairView(
         tags=["Token"],
         summary="Obtain access and refresh tokens (non-JSON:API)",
         description=(
-            "Returns a pair of JWT tokens (access and refresh). "
-            "If the client is a browser, the refresh token is set in an HttpOnly cookie."
+                "Returns a pair of JWT tokens (access and refresh).\n\n"
+                "**Browser clients (SPA, web applications):**\n\n"
+                "• Must include header `X-Client-Type: browser`\n\n"
+                "• On success, refresh token is set in an HttpOnly cookie `refresh_token`\n\n"
+                "• `refresh` field is removed from the response body\n\n"
+                "**Non-browser clients (mobile apps, Postman, etc.):**\n\n"
+                "• `X-Client-Type` header is not required\n\n"
+                "• Refresh token is returned in the response body (`refresh` field)"
         ),
         auth=[],
+        parameters=[
+            OpenApiParameter(
+                name="X-Client-Type",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=False,
+                description=(
+                        "Set to `browser` for browser-based clients (SPA).\n\n"
+                        "This instructs the server to set refresh token in HttpOnly cookie "
+                        "instead of returning it in the response body."
+                ),
+                enum=["browser"],
+            ),
+        ],
         responses={
             200: OpenApiResponse(
                 response=inline_serializer(
@@ -133,19 +157,40 @@ class CustomTokenRefreshView(
         tags=["Token"],
         summary="Refresh access and refresh tokens (non-JSON:API)",
         description=(
-            "Accepts a refresh token from either the request body or cookie, "
-            "and returns a new pair of JWT tokens. "
+                "Accepts a refresh token (from request body or cookie) and returns a new access token "
+                "(and optionally a new refresh token if rotation is enabled).\n\n"
+                "**Browser clients (SPA, web applications):**\n\n"
+                "• Must include header `X-Client-Type: browser`\n\n"
+                "• Refresh token is read from HttpOnly cookie `refresh_token`\n\n"
+                "• New refresh token (if rotated) is set in the cookie\n\n"
+                "• `refresh` field is removed from the response body\n\n"
+                "**Non-browser clients:**\n\n"
+                "• `X-Client-Type` header is not required\n\n"
+                "• Refresh token must be sent in the request body (`refresh` field)"
         ),
-        auth=[],
         request=inline_serializer(
             name="TokenRefreshRequest",
             fields={
                 "refresh": serializers.CharField(
                     required=False,
-                    help_text="Refresh token (not needed for browser clients)",
+                    help_text="Refresh token (required for non-browser clients; browser clients use cookie)",
                 )
             },
         ),
+        parameters=[
+            OpenApiParameter(
+                name="X-Client-Type",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=False,
+                description=(
+                        "Set to `browser` for browser-based clients.\n"
+                        "This tells the server to read refresh token from HttpOnly cookie "
+                        "and set new one (if rotated) in cookie instead of response body."
+                ),
+                enum=["browser"],
+            ),
+        ],
         responses={
             200: OpenApiResponse(
                 response=inline_serializer(
@@ -193,3 +238,129 @@ class CustomTokenRefreshView(
         if "refresh_token" in request.COOKIES:
             return request.COOKIES["refresh_token"]
         raise AuthenticationFailed(_("Refresh token is missing"), "authorization")
+
+
+class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
+    """
+    Выход пользователя:
+    • удаляет refresh-токен из белого списка
+    • удаляет httponly куку refresh_token
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = None
+
+    @extend_schema(
+        tags=["Token"],
+        summary="Logout — invalidate refresh token and clear cookie (non-JSON:API)",
+        description=(
+                "Invalidates the current refresh token by removing it from the whitelist "
+                "and clears the `refresh_token` HttpOnly cookie (if present).\n\n"
+                "• Browser clients: refresh token is taken from cookie\n"
+                "• Non-browser clients: refresh token should be sent in the request body (`refresh` field)\n\n"
+                "The `X-Client-Type` header is **not required** and has no effect on the logout process "
+                "(unlike token obtain/refresh endpoints)."
+        ),
+        methods=["POST"],
+        request=inline_serializer(
+            name="LogoutRequest",
+            fields={
+                "refresh": serializers.CharField(
+                    required=False,
+                    help_text="Refresh token (required for non-browser clients; browser clients use cookie)",
+                )
+            },
+        ),
+        responses={
+            200: OpenApiResponse(
+                response=inline_serializer(
+                    name="LogoutResponse",
+                    fields={
+                        "success": serializers.BooleanField(),
+                        "detail": serializers.CharField(),
+                    },
+                ),
+                description="Logout successful",
+                examples=[
+                    OpenApiExample(
+                        "Success",
+                        value={
+                            "success": True,
+                            "detail": "Logout successful",
+                        },
+                    ),
+                ],
+            ),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided or are invalid",
+            ),
+            500: OpenApiResponse(
+                description="Internal server error during logout process",
+            ),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        # Пытаемся получить refresh-токен (из кук или из тела запроса)
+        refresh_str = self._get_refresh_token_from_request(request)
+
+        if not refresh_str:
+            # Если токена вообще нет — считаем, что уже разлогинен
+            return self._success_response(detail="Already logged out")
+
+        try:
+            refresh = CustomRefreshToken(refresh_str)
+
+            # Удаляем из белого списка
+            try:
+                refresh.remove_from_whitelist()
+            except Exception as e:
+                logger.warning(f"Ошибка при удалении из whitelist: {e}", exc_info=True)
+                # не падаем — куку всё равно надо удалить
+
+            # Удаляем куку (если она была)
+            response = self._success_response(detail="Logout successful")
+            self._clear_refresh_cookie(response, request)
+            return response
+
+        except TokenError:
+            # Токен битый / истёк / невалидный → просто чистим куку
+            response = self._success_response(detail="Logout successful (invalid token)")
+            self._clear_refresh_cookie(response, request)
+            return response
+
+        except Exception as e:
+            logger.exception("Неожиданная ошибка при logout")
+            return Response(
+                {"detail": "Internal server error during logout"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @staticmethod
+    def _get_refresh_token_from_request(request) -> str | None:
+        # Сначала кука (основной сценарий для браузера)
+        if "refresh_token" in request.COOKIES:
+            return request.COOKIES["refresh_token"]
+
+        # На всякий случай — тело запроса
+        return request.data.get("refresh")
+
+    @staticmethod
+    def _clear_refresh_cookie(response: Response, request) -> None:
+        response.set_cookie(
+            key="refresh_token",
+            value="",
+            httponly=True,
+            secure=request.is_secure(),
+            samesite="None", # TODO: временно. заменить на "Strict"
+            max_age=0,
+            path="/",
+        )
+
+    @staticmethod
+    def _success_response(detail: str = "Logout successful") -> Response:
+        return Response(
+            {
+                "success": True,
+                "detail": detail,
+            },
+            status=status.HTTP_200_OK
+        )

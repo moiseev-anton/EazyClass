@@ -6,5 +6,5 @@ from .lesson_views import LessonViewSet
 from .nonce_view import NonceView
 from .subscription_views import SubscriptionViewSet, GroupSubscriptionViewSet, TeacherSubscriptionViewSet
 from .teacher_views import TeacherViewSet
-from .token_views import CustomTokenRefreshView, CustomTokenObtainPairView
+from .token_views import CustomTokenRefreshView, CustomTokenObtainPairView, LogoutView
 from .user_views import UserViewSet

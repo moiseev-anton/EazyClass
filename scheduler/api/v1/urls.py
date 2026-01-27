@@ -17,6 +17,7 @@ from scheduler.api.v1.views import (
     GroupSubscriptionViewSet,
     GroupViewSet,
     LessonViewSet,
+    LogoutView,
     NonceView,
     SubscriptionViewSet,
     TeacherSubscriptionViewSet,
@@ -40,6 +41,7 @@ public_urlpatterns = [
     # представления
     path("token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
+    path("token/logout/", LogoutView.as_view(), name="token_logout"),
     path("deeplink/<str:platform>/", DeeplinkView.as_view(), name="generate-deeplink"),
 ]
 
