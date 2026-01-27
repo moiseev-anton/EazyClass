@@ -10,9 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
-import os
+
+from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
 load_dotenv(os.getenv("ENV_FILE", ".env.dev"))
@@ -50,7 +52,14 @@ CORS_ALLOWED_ORIGINS = (
     if os.getenv("CORS_ALLOWED_ORIGINS")
     else []
 )
+
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-client-type",
+]
+
 CORS_ALLOW_CREDENTIALS = True
+
 
 # Обязательно для работы за обратным прокси (nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
