@@ -22,5 +22,5 @@ class UserSerializer(json_api_serializers.ModelSerializer):
             "accounts",
             "subscriptions",
         )
-        read_only_fields = ("id", "username", "accounts", "accounts", "subscriptions")
+        read_only_fields = ("id", "accounts", "subscriptions")
         resource_name = "users"
