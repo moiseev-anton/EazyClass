@@ -28,10 +28,10 @@ class HMACAuthentication(BaseAuthentication):
 
         # Воссоздаем изначальную строку
         method = request.method
-        url = request.build_absolute_uri()
+        full_path = request.get_full_path()  # path_and_query
         body_hash = hashlib.sha256(request.body).hexdigest()
 
-        data = f"{method}\n{url}\n{timestamp}\n{platform}\n{social_id}\n{body_hash}".encode("utf-8")
+        data = f"{method}\n{full_path}\n{timestamp}\n{platform}\n{social_id}\n{body_hash}".encode("utf-8")
         logger.info(data)
         # Получаем HMAC и сравниваем
         expected_signature = hmac.new(
