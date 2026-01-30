@@ -139,7 +139,13 @@ def send_lessons_refresh_notifications(summary_dict: dict) -> dict:
 
 @shared_task(queue="periodic_tasks")
 def send_admin_report(summary_dict: dict):
-    """Финальная задача — отправка отчёта админу."""
+    """
+    Финальная задача — отправка отчёта админу.
+    Используем отдельный телеграм-бот для админов.
+    Это работает пока в телеграм user_id == chat_id.
+    Так как рассылка происходит по chat_id,
+     а мы располагаем только chat_id для основного бота.
+    """
     try:
         logger.info("Отправка отчёта админу...")
         summary = BaseSummary.deserialize(summary_dict)
@@ -149,7 +155,7 @@ def send_admin_report(summary_dict: dict):
         staff_chat_ids = SocialAccount.objects.get_staff_chat_ids(platform=Platform.TELEGRAM)
         notification = NotificationItem(message=report_text, destinations=staff_chat_ids)
 
-        notifier = TelegramNotifier(settings.TELEGRAM_BOT_TOKEN)
+        notifier = TelegramNotifier(settings.TELEGRAM_ADMIN_BOT_TOKEN)
         notifier.send_notification(notification)
         return summary_dict
     except Exception as e:
