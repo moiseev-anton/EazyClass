@@ -69,8 +69,10 @@ TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
 RETRY_ENABLED = True
-RETRY_TIMES = 3  # Количество повторных попыток
-RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]  # HTTP-коды, при которых будет повтор
+DOWNLOAD_TIMEOUT = 10
+RETRY_TIMES = 2  # Количество повторных попыток
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]  # HTTP-коды, при которых будет повтор
+CLOSESPIDER_ERRORCOUNT = 20   # количество ошибок после которых паук остановится
 
 LOG_ENABLED = True
 LOG_LEVEL = "INFO"

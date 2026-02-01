@@ -1,6 +1,7 @@
 import pytest
 from scrapy.http import HtmlResponse, Request
-from scrapy_app.response_processor import ResponseProcessor, PAGE_HASH_KEY_PREFIX
+from scrapy_app.response_processor import ResponseProcessor
+from utils import KeyEnum
 from scrapy_app.tests.html_test_cases import html_test_cases
 from unittest.mock import MagicMock
 import hashlib
@@ -44,4 +45,4 @@ def test_check_content_changed(old_body, new_body, expected_result):
     processor = ResponseProcessor(response=response, redis_client=redis_client)
 
     assert processor.is_content_changed() == expected_result
-    redis_client.get.assert_called_with(f"{PAGE_HASH_KEY_PREFIX}1")
+    redis_client.get.assert_called_with(f"{KeyEnum.PAGE_HASH_PREFIX}1")

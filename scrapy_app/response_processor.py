@@ -4,11 +4,9 @@ from typing import List, Dict, Optional
 
 from scrapy_app.item_loaders import LessonLoader
 from scrapy_app.items import LessonItem
-from utils import RedisClientManager
+from utils import RedisClientManager, KeyEnum
 
 logger = logging.getLogger(__name__)
-
-PAGE_HASH_KEY_PREFIX = 'scrapy:content_hash:group_id:'
 
 
 class ResponseProcessor:
@@ -71,9 +69,9 @@ class ResponseProcessor:
         except Exception as e:
             raise RuntimeError(f"Ошибка парсинга страницы (group_id: {self.group_id}): {e}")
 
-    def get_group_hash_pair(self) -> tuple[int, str]:
+    def get_content_hash(self) -> str:
         """Возвращает пару (group_id, content_hash)."""
-        return self.group_id, self.content_hash
+        return self.content_hash
 
     def is_content_changed(self) -> bool:
         """Возвращает флаг, показывающий, изменился ли контент страницы."""
@@ -98,7 +96,7 @@ class ResponseProcessor:
         Проверяет, был ли изменен контент на странице, сравнив текущий хеш с хранимым в Redis.
         Возвращает True, если контент изменился, иначе False.
         """
-        redis_key = f'{PAGE_HASH_KEY_PREFIX}{self.group_id}'
+        redis_key = f'{KeyEnum.PAGE_HASH_PREFIX}{self.group_id}'
         try:
             previous_hash = self.redis_client.get(redis_key)
             if previous_hash:

@@ -26,8 +26,12 @@ class PipelineSummary(BaseSummary):
 
         if self.spider_result:
             parts["spider"] = {
-                "groups": self.spider_result.get("groups_count"),
-                "lessons": self.spider_result.get("lessons_count"),
+                "total_groups": self.spider_result.get("total_groups"),
+                "changed": self.spider_result.get("changed"),
+                "no_change": self.spider_result.get("lessons_count"),
+                "errors": self.spider_result.get("lessons_count"),
+                "error_groups": self.spider_result.get("lessons_count", []),
+                "total_lessons": self.spider_result.get("lessons_count"),
             }
 
         if self.sync_summary:
@@ -76,8 +80,12 @@ class PipelineSummary(BaseSummary):
                 "🕷 Scrapy",
                 self.spider_result,
                 lambda d: [
-                    f"проверено страниц: {d.get('groups_count', '?')}",
-                    f"получено уроков: {d.get('lessons_count', '?')}",
+                    f"всего страниц/групп: {d.get('total_groups', '?')}",
+                    f"проверено страниц: {d.get('changed', '?')}",
+                    f"пропущено (повтор): {d.get('no_change', '?')}",
+                    f"ошибок: {d.get('errors', '?')}",
+                    f"получено уроков: {d.get('total_lessons', '?')}",
+
                 ],
             ),
             (

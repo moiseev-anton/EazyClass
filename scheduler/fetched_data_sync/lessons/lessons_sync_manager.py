@@ -1,5 +1,5 @@
 import logging
-import pickle
+import orjson
 from datetime import date
 from typing import Any, Dict, List, Optional
 
@@ -9,16 +9,10 @@ from django.utils import timezone
 
 from scheduler.models import Classroom, Lesson, Period, Subject, Teacher
 from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
-from scrapy_app.spiders import (
-    PAGE_HASH_KEY_PREFIX,
-    SCRAPED_GROUPS_KEY,
-    SCRAPED_LESSONS_KEY,
-)
-from utils import RedisClientManager
+from utils import RedisClientManager, KeyEnum
 
 logger = logging.getLogger(__name__)
 
-SCHEDULE_CHANGES_KEY = "schedule_changes"
 ComparisonSummary = Dict[str, List[Dict[str, Any]]]
 
 
@@ -63,14 +57,17 @@ class LessonsSyncManager:
 
     def _fetch_data(self) -> tuple[Dict[int, str], List[Dict[str, Any]]]:
         """Получает данные из Redis и десериализует их."""
-        lessons_pickle = self.redis_client.get(SCRAPED_LESSONS_KEY)
-        groups_pickle = self.redis_client.get(SCRAPED_GROUPS_KEY)
-        if not lessons_pickle or not groups_pickle:
+        lessons_json = self.redis_client.get(KeyEnum.SCRAPED_LESSONS)
+        groups_json = self.redis_client.get(KeyEnum.SCRAPED_GROUPS)
+        if not lessons_json or not groups_json:
             raise ValueError("Данные для обработки отсутствуют в Redis")
 
-        lesson_items = pickle.loads(lessons_pickle)  # [{lesson_dict},...]
-        scraped_groups = pickle.loads(groups_pickle)  # {group_id: last_content_hash}
+        lesson_items = orjson.loads(lessons_json)  # [{lesson_dict},...]
+        scraped_groups = orjson.loads(groups_json)  # {group_id: last_content_hash}
         logger.info("Данные скрайпинга загружены из Redis")
+
+        # Преобразование дат (orjson возвращает строковые даты)
+        lesson_items = self._normalize_lessons_dates(lesson_items)
 
         self._last_scraped_groups = scraped_groups
         self._last_scraped_lessons = lesson_items
@@ -191,7 +188,7 @@ class LessonsSyncManager:
             with self.redis_client.pipeline() as pipe:
                 for group_id, page_hash in scraped_groups.items():
                     pipe.setex(
-                        f"{PAGE_HASH_KEY_PREFIX}{group_id}",
+                        f"{KeyEnum.PAGE_HASH_PREFIX}{group_id}",
                         self.PAGE_HASH_TIMEOUT,
                         page_hash,
                     )
@@ -210,12 +207,18 @@ class LessonsSyncManager:
         }
         return serialized
 
-    @property
-    def fetched_data_summary(self):
-        lessons_count = len(self._last_scraped_lessons) if self._last_scraped_lessons else 0
-        groups_count = len(self._last_scraped_groups) if self._last_scraped_groups else 0
+    @staticmethod
+    def _normalize_lessons_dates(lesson_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Преобразует строки дат в date-объекты в уроках.
+        Использует кэш для уникальных строк дат.
+        """
+        date_cache: Dict[str, date] = {}  # {date_str: date_obj}
 
-        return {
-            "lessons_count": lessons_count,
-            "groups_count": groups_count,
-        }
+        for item in lesson_items:
+            date_str = item["period"]["date"]
+            if date_str not in date_cache:
+                date_cache[date_str] = date.fromisoformat(date_str)
+            item["period"]["date"] = date_cache[date_str]
+
+        return lesson_items
