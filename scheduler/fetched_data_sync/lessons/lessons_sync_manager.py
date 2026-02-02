@@ -36,8 +36,6 @@ class LessonsSyncManager:
         self.redis_client = redis_client or RedisClientManager.get_client("scrapy")
         self.start_sync_day = start_sync_day or date.today()
 
-        self._last_scraped_groups: dict[int, str] | None = None
-        self._last_scraped_lessons: list[dict[str, Any]] | None = None
 
     def update_schedule(self) -> ComparisonSummary:
         """Основной пайплайн: fetch → process → apply → serialize."""
@@ -68,9 +66,6 @@ class LessonsSyncManager:
 
         # Преобразование дат (orjson возвращает строковые даты)
         lesson_items = self._normalize_lessons_dates(lesson_items)
-
-        self._last_scraped_groups = scraped_groups
-        self._last_scraped_lessons = lesson_items
 
         return scraped_groups, lesson_items
 
@@ -114,7 +109,7 @@ class LessonsSyncManager:
         update_time = timezone.now()
         new_lessons = []
         for item in lesson_items:
-            if item["group_id"] in scraped_groups and item["period"]["date"] >= self.start_sync_day:
+            if str(item["group_id"]) in scraped_groups and item["period"]["date"] >= self.start_sync_day:
                 lesson = Lesson(
                     group_id=item["group_id"],
                     subgroup=item["subgroup"],
