@@ -98,9 +98,8 @@ class ResponseProcessor:
         """
         redis_key = f'{KeyEnum.PAGE_HASH_PREFIX}{self.group_id}'
         try:
-            previous_hash = self.redis_client.get(redis_key)
-            if previous_hash:
-                return self.content_hash != previous_hash.decode()
+            if previous_hash := self.redis_client.get(redis_key):
+                return self.content_hash != previous_hash
             return True
 
         except (ConnectionError, TimeoutError) as e:

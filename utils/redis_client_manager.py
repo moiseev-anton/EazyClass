@@ -24,7 +24,9 @@ class RedisClientManager:
             try:
                 logger.info(f'Создаем и кешируем (сингтоним) redis клиента {alias}')
                 redis_url = settings.REDIS_CONFIG[alias]
-                RedisClientManager._clients[alias] = redis.from_url(redis_url)
+                RedisClientManager._clients[alias] = redis.from_url(
+                    redis_url, decode_responses=True,
+                )
 
             except redis.ConnectionError as e:
                 logger.error(f"Ошибка подключения к Redis для alias '{alias}': {e}")
