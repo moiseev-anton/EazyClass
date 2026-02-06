@@ -1,10 +1,10 @@
 import hashlib
 import logging
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from scrapy_app.item_loaders import LessonLoader
 from scrapy_app.items import LessonItem
-from utils import RedisClientManager, KeyEnum
+from utils import KeyEnum, RedisClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +22,30 @@ class ResponseProcessor:
 
     def __init__(self, response: 'scrapy.http.Response', redis_client: Optional['redis.client.Redis'] = None):
         self.response = response
+        self.url = response.url
         self.group_id = response.meta.get('group_id')
-        if self.group_id is None:
-            raise ValueError("Отсутствует group_id в response.meta")
 
         self.redis_client = redis_client or RedisClientManager.get_client('scrapy')
+
         self.content_hash = self._calculate_content_hash()
-        self.content_changed = self._check_content_changed()
+
+        # Проверка изменений имеет смысл только для страниц групп
+        self.content_changed: Optional[bool] = (
+            self._check_content_changed() if self.group_id is not None else None
+        )
+
         self.current_date = None
         self.lessons = []
+
+    def validate_page(self):
+        if self.response.xpath('//table//tr[@class="shadow"]').get() is None:
+            html_preview = self.response.text[:self.HTML_SNIPPET_LIMIT]
+            context = self._log_context()
+
+            raise RuntimeError(
+                f"Страница {self.url} не соответствует ожидаемой структуре ({context}). "
+                f"Начало содержимого:\n{html_preview}..."
+            )
 
     def extract_lessons(self) -> List[Dict]:
         """
@@ -39,6 +54,10 @@ class ResponseProcessor:
         Проходит по всем строкам таблицы и извлекает данные о дате или занятиях.
         Если структура строки некорректна, выбрасывается ошибка.
         """
+
+        if self.group_id is None:
+            raise ValueError(f"Невозможно выполнить извлечение Lessons без group_id (url: {self.url})")
+
         try:
             logger.debug('Начинается парсинг страницы')
             self.validate_page()
@@ -64,10 +83,11 @@ class ResponseProcessor:
                     self.lessons.append(lesson)
                 else:
                     raise ValueError(f"Некорректная структура таблицы")
+
             logger.info(f'Получено {len(self.lessons)} уроков для group_id: {self.group_id}.')
             return self.lessons
         except Exception as e:
-            raise RuntimeError(f"Ошибка парсинга страницы (group_id: {self.group_id}): {e}")
+            raise RuntimeError(f"Ошибка парсинга страницы {self.url} (group_id: {self.group_id}): {e}")
 
     def get_content_hash(self) -> str:
         """Возвращает пару (group_id, content_hash)."""
@@ -96,6 +116,9 @@ class ResponseProcessor:
         Проверяет, был ли изменен контент на странице, сравнив текущий хеш с хранимым в Redis.
         Возвращает True, если контент изменился, иначе False.
         """
+        if self.group_id is None:
+            raise ValueError(f"Невозможно выполнить проверку изменения контента без group_id (url: {self.url})")
+
         redis_key = f'{KeyEnum.PAGE_HASH_PREFIX}{self.group_id}'
         try:
             if previous_hash := self.redis_client.get(redis_key):
@@ -103,13 +126,10 @@ class ResponseProcessor:
             return True
 
         except (ConnectionError, TimeoutError) as e:
-            logger.error(f"Ошибка соединения с Redis при получении предыдущего хеша страницы {self.group_id}: {e}")
+            logger.error(f"Ошибка соединения с Redis при проверке хеша ({self._log_context}): {e}")
         except Exception as e:
-            logger.error(f"Неизвестная ошибка при проверке изменения контента для group_id  {self.group_id}: {e}")
+            logger.error(f"Неизвестная ошибка при проверке изменения контента страницы ({self._log_context}): {e}")
         return False
 
-    def validate_page(self):
-        if self.response.xpath('//table//tr[@class="shadow"]').get() is None:
-            html_preview = self.response.text[:self.HTML_SNIPPET_LIMIT]
-            raise RuntimeError(f"Страница не соответствует ожидаемой структуре (group_id={self.group_id}). "
-                               f"Начало содержимого:\n{html_preview}...")
+    def _log_context(self) -> str:
+        return "no group_id" if self.group_id is None else f"group_id={self.group_id}"

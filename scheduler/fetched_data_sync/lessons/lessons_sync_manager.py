@@ -1,19 +1,28 @@
 import logging
-import orjson
+from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
+import orjson
+import redis
 from bulk_sync import bulk_compare
 from django.db import transaction
 from django.utils import timezone
 
-from scheduler.models import Classroom, Lesson, Period, Subject, Teacher
 from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
-from utils import RedisClientManager, KeyEnum
+from scheduler.models import Classroom, Lesson, Period, Subject, Teacher
+from utils import KeyEnum, RedisClientManager
 
 logger = logging.getLogger(__name__)
 
 ComparisonSummary = Dict[str, List[Dict[str, Any]]]
+
+
+@dataclass(frozen=True)
+class ScrapyFetchResult:
+    scraped_groups: Dict[str, str]
+    lesson_items: List[Dict[str, Any]]
+    unchanged_groups: Set[str]
 
 
 class LessonsSyncManager:
@@ -36,41 +45,46 @@ class LessonsSyncManager:
         self.redis_client = redis_client or RedisClientManager.get_client("scrapy")
         self.start_sync_day = start_sync_day or date.today()
 
-
     def update_schedule(self) -> ComparisonSummary:
         """Основной пайплайн: fetch → process → apply → serialize."""
-        scraped_groups, lesson_items = self._fetch_data()
+        data = self._fetch_data()
 
-        if not scraped_groups:
+        if not data.scraped_groups:
             logger.info("Перечень групп пуст.")
             return self.EMPTY_SUMMARY
 
-        new_lessons = self._process_lessons(lesson_items, scraped_groups)
-        comparison_result = self._compare_lessons(new_lessons, scraped_groups)
+        new_lessons = self._process_lessons(data.lesson_items, data.scraped_groups)
+        comparison_result = self._compare_lessons(new_lessons, data.scraped_groups)
         self._apply_db_changes(comparison_result)
         serialized_summary = self._serialize_summary(comparison_result)
-        self._save_to_redis(scraped_groups)
+        self._save_to_redis(data.scraped_groups, data.unchanged_groups)
 
         return serialized_summary
 
-    def _fetch_data(self) -> tuple[Dict[int, str], List[Dict[str, Any]]]:
-        """Получает данные из Redis и десериализует их."""
+    def _fetch_data(self) -> ScrapyFetchResult:
         lessons_json = self.redis_client.get(KeyEnum.SCRAPED_LESSONS)
         groups_json = self.redis_client.get(KeyEnum.SCRAPED_GROUPS)
+        unchanged_json = self.redis_client.get(KeyEnum.UNCHANGED_GROUPS)
+
         if not lessons_json or not groups_json:
             raise ValueError("Данные для обработки отсутствуют в Redis")
 
-        lesson_items = orjson.loads(lessons_json)  # [{lesson_dict},...]
-        scraped_groups = orjson.loads(groups_json)  # {group_id: last_content_hash}
+        lesson_items = orjson.loads(lessons_json)
+        scraped_groups = orjson.loads(groups_json)
+        unchanged_groups = set(orjson.loads(unchanged_json) or [])
+
         logger.info("Данные скрайпинга загружены из Redis")
 
-        # Преобразование дат (orjson возвращает строковые даты)
         lesson_items = self._normalize_lessons_dates(lesson_items)
 
-        return scraped_groups, lesson_items
+        return ScrapyFetchResult(
+            scraped_groups=scraped_groups,
+            lesson_items=lesson_items,
+            unchanged_groups=unchanged_groups,
+        )
 
     def _process_lessons(
-        self, lesson_items: List[Dict[str, Any]], scraped_groups: Dict[int, str]
+        self, lesson_items: List[Dict[str, Any]], scraped_groups: Dict[str, str]
     ) -> List[Lesson]:
         """Process: gather → map → create. Returns new_lessons и mappers (for reuse if needed)."""
         teachers = RelatedObjectsMap(Teacher, ("full_name",))
@@ -125,7 +139,7 @@ class LessonsSyncManager:
         return new_lessons
 
     def _compare_lessons(
-        self, new_lessons: List[Lesson], scraped_groups: Dict[int, str]
+        self, new_lessons: List[Lesson], scraped_groups: Dict[str, str]
     ) -> Dict[str, List[Lesson]]:
         """Compare: filter existing + bulk_compare."""
         periods = Period.objects.filter(date__gte=self.start_sync_day)
@@ -177,8 +191,12 @@ class LessonsSyncManager:
             )
         logger.info("Изменения отражены в БД.")
 
-    def _save_to_redis(self, scraped_groups: Dict[int, str]) -> None:
-        """Save page hashes"""
+    def _save_to_redis(self, scraped_groups: Dict[str, str], unchanged_groups: Set[str]) -> None:
+        self._save_page_hashes(scraped_groups)
+        self._update_synced_groups_set(scraped_groups, unchanged_groups)
+
+    def _save_page_hashes(self, scraped_groups: Dict[str, str]) -> None:
+        """Сохраняет хеши страниц успешно обработанных групп"""
         try:
             with self.redis_client.pipeline() as pipe:
                 for group_id, page_hash in scraped_groups.items():
@@ -191,6 +209,28 @@ class LessonsSyncManager:
             logger.info(f"Хеши страниц сохранены для {len(scraped_groups)} групп")
         except Exception as e:
             logger.warning(f"Не удалось сохранить хеши страниц в Redis: {e}", exc_info=True)
+
+    def _update_synced_groups_set(self, scraped_groups: Dict[str, str], unchanged_groups: Set[str]) -> None:
+        """Добавляет успешно обработанные группы в set по хешу главной страницы"""
+        main_hash = self.redis_client.get(KeyEnum.MAIN_PAGE_HASH)
+
+        if not main_hash:
+            logger.info("Хеш главной страницы отсутствует → множество не обновляется")
+            return
+
+        set_key = f"{KeyEnum.SYNCED_GROUPS_PREFIX}{main_hash}"
+        successfully_synced_ids = {group_id for group_id in scraped_groups.keys()} | unchanged_groups
+
+        try:
+            added = self.redis_client.sadd(set_key, *successfully_synced_ids)
+            self.redis_client.expire(set_key, self.PAGE_HASH_TIMEOUT)
+
+            total_now = self.redis_client.scard(set_key)
+            logger.info(
+                f"Множество {set_key} обновлено: добавлено {added} новых, всего теперь {total_now}"
+            )
+        except redis.RedisError as e:
+            logger.warning(f"Не удалось обновить множество синхронизированных групп {set_key}: {e}")
 
     @staticmethod
     def _serialize_summary(

@@ -27,11 +27,13 @@ class PipelineSummary(BaseSummary):
         if self.spider_result:
             parts["spider"] = {
                 "total_groups": self.spider_result.get("total_groups"),
-                "changed": self.spider_result.get("changed"),
-                "no_change": self.spider_result.get("lessons_count"),
-                "errors": self.spider_result.get("lessons_count"),
-                "error_groups": self.spider_result.get("lessons_count", []),
-                "total_lessons": self.spider_result.get("lessons_count"),
+                "skipped": self.spider_result.get("skipped"),
+                "parsed": self.spider_result.get("parsed"),
+                "no_change": self.spider_result.get("no_change"),
+                "errors": self.spider_result.get("errors"),
+                "error_groups": self.spider_result.get("error_groups", []),
+                "total_lessons": self.spider_result.get("total_lessons"),
+                "closing_reason": self.spider_result.get("closing_reason"),
             }
 
         if self.sync_summary:
@@ -81,11 +83,12 @@ class PipelineSummary(BaseSummary):
                 self.spider_result,
                 lambda d: [
                     f"всего страниц/групп: {d.get('total_groups', '?')}",
-                    f"проверено страниц: {d.get('changed', '?')}",
-                    f"пропущено (повтор): {d.get('no_change', '?')}",
+                    f"пропущено: {d.get('skipped', '?')}",
+                    f"обработано: {d.get('parsed', '?')}",
+                    f"повторных: {d.get('no_change', '?')}",
                     f"ошибок: {d.get('errors', '?')}",
                     f"получено уроков: {d.get('total_lessons', '?')}",
-
+                    f"статус: {d.get('closing_reason', '?')}",
                 ],
             ),
             (
