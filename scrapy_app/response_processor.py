@@ -57,7 +57,7 @@ class ResponseProcessor:
                     for field, text in zip(self.FIELD_ORDER, row_cells_texts):
                         loader.add_value(field, text)
 
-                    loader.add_value('group_id', self.group_id)
+                    loader.add_value('group_id', int(self.group_id))
                     loader.add_value('date', self.current_date)
 
                     lesson = loader.load_item_dict()

@@ -47,8 +47,9 @@ class ScheduleSpider(scrapy.Spider):
 
     async def start(self):
         try:
-            group_endpoints = await sync_to_async(Group.objects.get_endpoint_map)()  # Получаем список кортежей (group_id, endpoint)
-            # group_endpoints = [(5, 'view.php?id=00312')]
+            # Получаем список кортежей ("group_id", "endpoint")
+            group_endpoints = await sync_to_async(Group.objects.get_endpoint_map)()
+            # group_endpoints = [("5", "view.php?id=00312")]
         except Exception as e:
             error_msg = f"Ошибка при обращении к БД (Group.objects.get_endpoint_map): {e}"
             self.logger.exception(error_msg)  # logger.exception покажет полный traceback
@@ -92,6 +93,7 @@ class ScheduleSpider(scrapy.Spider):
             content_hash = processor.get_content_hash()
             self.scraped_groups[str(group_id)] = content_hash
             self.summary['changed'] += 1
+            self.scraped_groups[group_id] = content_hash
 
         except Exception as e:
             self.logger.error(f"Ошибка обработки страницы (group_id: {group_id}): {e}")
