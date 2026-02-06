@@ -44,16 +44,15 @@ class ScheduleSpider(scrapy.Spider):
             'total_lessons': 0
         }
 
-
     async def start(self):
         try:
             # Получаем список кортежей ("group_id", "endpoint")
             group_endpoints = await sync_to_async(Group.objects.get_endpoint_map)()
             # group_endpoints = [("5", "view.php?id=00312")]
         except Exception as e:
-            error_msg = f"Ошибка при обращении к БД (Group.objects.get_endpoint_map): {e}"
-            self.logger.exception(error_msg)  # logger.exception покажет полный traceback
-            raise scrapy.exceptions.CloseSpider(error_msg)
+            error_msg = f"Ошибка при получении групп из БД"
+            self.logger.exception(f"{error_msg}: {e}")  # logger.exception покажет полный traceback
+            raise CloseSpider(error_msg)
 
         # Проходим по всем ссылкам и отправляем запросы
         if not group_endpoints:
@@ -68,15 +67,15 @@ class ScheduleSpider(scrapy.Spider):
 
             yield scrapy.Request(
                 url=url,
-                callback=self.process_page,
-                meta={'group_id': group_id}
+                callback=self.process_lessons_page,
+                errback=self._handle_page_error,
+                meta={"group_id": group_id},
             )
 
+    def process_lessons_page(self, response: scrapy.http.Response):
+        """Обрабатывает страницу расписания, проверяет изменения контента и извлекает данные о занятиях."""
 
-    def process_page(self, response: scrapy.http.Response):
-        """ Обрабатывает страницу расписания, проверяет изменения контента и извлекает данные о занятиях. """
-
-        group_id = response.meta.get('group_id')
+        group_id = response.meta.get("group_id")
         self.logger.info(f"Получен ответ от :{response.url}(group_id:{group_id})")
         try:
             processor = ResponseProcessor(response, self.redis_client)
@@ -88,7 +87,7 @@ class ScheduleSpider(scrapy.Spider):
 
             if extracted_lessons := processor.extract_lessons():
                 self.lessons.extend(extracted_lessons)
-                self.summary['total_lessons'] += len(extracted_lessons)
+                self.summary["total_lessons"] += len(extracted_lessons)
 
             content_hash = processor.get_content_hash()
             self.scraped_groups[str(group_id)] = content_hash
@@ -100,6 +99,17 @@ class ScheduleSpider(scrapy.Spider):
             self.summary['errors'] += 1
             self.summary['error_groups'].append(group_id)
 
+    def _hangle_main_page_error(self, failure):
+        """Errback для главной страницы"""
+        self.logger.error(f"Ошибка при запросе главной страницы: {failure}")
+        raise CloseSpider("Главная страница недоступна")
+
+    def _handle_page_error(self, failure):
+        """Errback для отдельных страниц — логируем и игнорируем, паук продолжается."""
+        group_id = failure.request.meta.get("group_id", "unknown")
+        self.logger.warning(f"Ошибка обработки страницы группы {group_id}: {failure.value}")
+        self.summary["errors"] += 1
+        self.summary["error_groups"].append(group_id)
 
     def closed(self, reason):
         """
