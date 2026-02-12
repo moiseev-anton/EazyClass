@@ -62,10 +62,7 @@ CRON_FILE="/etc/cron.d/eazyclass-certbot"
 RENEW_SCRIPT="$SCRIPT_DIR/renew_tls.sh"
 
 # --- Validate renew script --------------------------------------------------
-if [ ! -x "$RENEW_SCRIPT" ]; then
-    echo "⚠ renew_tls.sh is not executable, fixing"
-    chmod +x "$RENEW_SCRIPT"
-fi
+chmod 755 "$RENEW_SCRIPT" 2>/dev/null || true
 
 # --- Install cron -----------------------------------------------------------
 if [ ! -f "$CRON_FILE" ]; then

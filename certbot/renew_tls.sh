@@ -9,7 +9,7 @@ echo "🔄 Running certbot renew..."
 
 docker compose -f "$COMPOSE_FILE" run --rm certbot renew \
   --webroot \
-  --webroot-path=/var/www/certbot\
+  --webroot-path=/var/www/certbot \
   --quiet \
   --non-interactive
 
