@@ -20,6 +20,7 @@ class User(TimestampedModel, AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = []
 
     class Meta:
         indexes = [models.Index(fields=['username'])]

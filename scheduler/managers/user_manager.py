@@ -16,7 +16,7 @@ class UserManager(BaseUserManager):
                 return username
 
     @transaction.atomic
-    def _create_user(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def _create_user(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, password=None, **extra_fields):
         from scheduler.models.social_account_model import Platform, SocialAccount
 
         if platform not in [p.value for p in Platform]:
@@ -31,7 +31,11 @@ class UserManager(BaseUserManager):
             username=self._generate_default_username(),
             **extra_fields
         )
-        user.set_unusable_password()
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
+
         user.save(using=self._db)
 
         # Привязываем к платформе (Telegram/VK)
@@ -50,7 +54,7 @@ class UserManager(BaseUserManager):
 
         return self._create_user(social_id, platform, chat_id, first_name, last_name, extra_data, **extra_fields)
 
-    def create_superuser(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
+    def create_superuser(self, username, password, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -59,10 +63,14 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        if chat_id is None:
-            chat_id = social_id
+        if not password:
+            raise ValueError("Superuser must have a password.")
 
-        return self._create_user(social_id, platform, chat_id,  first_name, last_name, extra_data, **extra_fields)
+        user = self.model(username=username, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+
+        return user
 
     @transaction.atomic
     def get_or_create_user(self, social_id, platform, chat_id=None, first_name=None, last_name=None, extra_data=None, **extra_fields):
