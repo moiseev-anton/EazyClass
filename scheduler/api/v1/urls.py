@@ -51,12 +51,12 @@ public_urlpatterns = [
 internal_urlpatterns = [
     path("auth/", AuthView.as_view(), name="auth"),
     path(
-        "auth_with_nonce/",
+        "auth-with-nonce/",
         AuthWithNonceView.as_view(),
         name="auth-with-nonce",
     ),
-    path("bind_nonce/", NonceView.as_view(), name="nonce"),
     path("token/twa/", TelegramTokenObtainView.as_view(), name="twa-auth"),
+    path("bind-nonce/", NonceView.as_view(), name="nonce"),
 ]
 
 urlpatterns = [
