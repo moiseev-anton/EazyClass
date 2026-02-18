@@ -91,6 +91,27 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
             logger.warning(f"Failed to reduce nonce TTL: {str(e)}")
 
 
+class TelegramTokenObtainSerializer(BaseTokenSerializer):
+    token_class = CustomRefreshToken
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+
+        if not user or not user.is_authenticated:
+            raise AuthenticationFailed("User not authenticated")
+
+        refresh = self.token_class.for_user(user)
+
+        if api_settings.UPDATE_LAST_LOGIN:
+            update_last_login(None, user)
+
+        return {
+            "success": True,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }
+
+
 class CustomTokenRefreshSerializer(BaseTokenSerializer, TokenRefreshSerializer):
     token_class = CustomRefreshToken
 

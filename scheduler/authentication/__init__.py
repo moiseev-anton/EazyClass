@@ -1,2 +1,3 @@
 from .custom_refresh_token import CustomRefreshToken
 from .hmac_authentication import HMACAuthentication
+from .twa_authentication import TelegramWebAppAuthentication

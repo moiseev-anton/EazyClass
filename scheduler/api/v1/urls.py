@@ -22,6 +22,7 @@ from scheduler.api.v1.views import (
     SubscriptionViewSet,
     TeacherSubscriptionViewSet,
     TeacherViewSet,
+    TelegramTokenObtainView,
     UserViewSet,
 )
 
@@ -53,6 +54,7 @@ internal_urlpatterns = [
         name="auth-with-nonce",
     ),
     path("bind_nonce/", NonceView.as_view(), name="nonce"),
+    path("token/twa/", TelegramTokenObtainView.as_view(), name="twa-auth"),
 ]
 
 urlpatterns = [

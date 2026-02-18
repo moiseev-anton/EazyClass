@@ -19,5 +19,6 @@ from .token_serializers import (
     CustomTokenRefreshSerializer,
     CustomTokenObtainPairSerializer,
     TokenResponseSerializer,
+    TelegramTokenObtainSerializer
 )
 from .user_serializers import UserSerializer
