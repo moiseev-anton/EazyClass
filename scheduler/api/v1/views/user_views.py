@@ -37,9 +37,7 @@ class UserViewSet(
     permission_classes = [IsAuthenticated, IsSelf]
     http_method_names = ["get", "patch"]
 
-    queryset = User.objects.filter(is_active=True).prefetch_related(
-        "accounts", "subscriptions"
-    )
+    queryset = User.objects.filter(is_active=True)
 
     @extend_schema(
         tags=["User"],
