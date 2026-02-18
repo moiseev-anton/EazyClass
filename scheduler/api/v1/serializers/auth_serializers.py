@@ -61,7 +61,7 @@ class AuthSerializer(json_api_serializers.Serializer):
         user, created = User.objects.get_or_create_user(
             platform=platform,
             social_id=social_id,
-            chat_id=validated_data.get("chat_id") or social_id,
+            chat_id=validated_data.get("chat_id"),
             first_name=validated_data.get("first_name") or "Anonymous",
             last_name=validated_data.get("last_name") or "",
             extra_data=validated_data.get("extra_data") or {},
@@ -79,12 +79,17 @@ class AuthSerializer(json_api_serializers.Serializer):
         return self.create(self.validated_data)
 
     def update(self, instance):
-        new_extra = self.validated_data.get("extra_data") or {}
-        current_extra = instance.extra_data or {}
         updated_fields = []
 
+        # Проверяем нужно ли обновить chat_id
+        new_chat_id = self.validated_data.get("chat_id")
+        if new_chat_id and new_chat_id != instance.chat_id:
+            instance.chat_id = new_chat_id
+            updated_fields.append("chat_id")
+
         # Проверяем, нужно ли обновить extra_data
-        if new_extra != current_extra:
+        new_extra = self.validated_data.get("extra_data") or {}
+        if new_extra != (instance.extra_data or {}):
             instance.extra_data = new_extra
             updated_fields.append("extra_data")
 
