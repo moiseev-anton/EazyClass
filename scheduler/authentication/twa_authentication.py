@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import time
 from urllib.parse import parse_qsl
 
@@ -10,6 +11,8 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
 from scheduler.models.social_account_model import Platform
+
+logger = logging.getLogger(__name__)
 
 
 class TelegramWebAppAuthentication(BaseAuthentication):
@@ -51,8 +54,8 @@ class TelegramWebAppAuthentication(BaseAuthentication):
             f"{k}={v}" for k, v in sorted(parsed.items())
         )
 
-        secret_key = hashlib.sha256(
-            settings.TELEGRAM_BOT_TOKEN.encode()
+        secret_key = hmac.new(
+            b"WebAppData", settings.TELEGRAM_BOT_TOKEN.encode(), hashlib.sha256
         ).digest()
 
         calculated_hash = hmac.new(
@@ -62,10 +65,14 @@ class TelegramWebAppAuthentication(BaseAuthentication):
         ).hexdigest()
 
         if not hmac.compare_digest(calculated_hash, received_hash):
+            logger.info("TWA auth: signature mismatch")
             raise AuthenticationFailed("Invalid Telegram signature")
 
         auth_date = int(parsed.get("auth_date", 0))
-        if time.time() - auth_date > self.max_age_seconds:
+        age = time.time() - auth_date
+
+        if age > self.max_age_seconds:
+            logger.info("TWA auth: initData expired")
             raise AuthenticationFailed("initData expired")
 
         return parsed
@@ -74,18 +81,25 @@ class TelegramWebAppAuthentication(BaseAuthentication):
         telegram_user = json.loads(data["user"])
 
         social_id = str(telegram_user["id"])
-        chat_id = data.get("chat_instance")  # если есть
-        extra_data = telegram_user
+        chat_id = None
+        if chat := data.get("chat"):
+            chat_obj = json.loads(chat)
+            if chat_id_raw := chat_obj.get("id"):
+                chat_id = str(chat_id_raw)
 
         User = get_user_model()
 
-        user, _ = User.objects.get_or_create_user(
+        user, created = User.objects.get_or_create_user(
             social_id=social_id,
             platform=Platform.TELEGRAM.value,
             chat_id=chat_id,
             first_name=telegram_user.get("first_name"),
             last_name=telegram_user.get("last_name"),
-            extra_data=extra_data,
+            extra_data=telegram_user,
+        )
+
+        logger.info(
+            f"TWA auth: user {'created' if created else 'loaded'} id={user.id}"
         )
 
         return user
