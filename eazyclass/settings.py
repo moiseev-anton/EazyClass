@@ -390,9 +390,20 @@ TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME")
 TELEGRAM_REDIS_STORAGE_URL = os.getenv("TELEGRAM_REDIS_STORAGE_URL")
 TELEGRAM_ADMIN_BOT_TOKEN = os.getenv("TELEGRAM_ADMIN_BOT_TOKEN")
 
-AUTH_DEEPLINK_TEMPLATES = {
-    "telegram": f"https://t.me/{TELEGRAM_BOT_USERNAME}?start={{nonce}}",
-    "vk": f"https://vk.com/<bot_name>?start={{nonce}}",
+VK_BOT_TOKEN = os.getenv("VK_BOT_TOKEN")
+VK_BOT_USERNAME = os.getenv("VK_BOT_USERNAME")
+
+AUTH_PLATFORMS = {
+    "telegram": {
+        "bot_username": TELEGRAM_BOT_USERNAME,
+        "bot_url": f"https://t.me/{TELEGRAM_BOT_USERNAME}",
+        "deeplink_template": f"https://t.me/{TELEGRAM_BOT_USERNAME}?start={{nonce}}",
+    },
+    "vk": {
+        "bot_username": VK_BOT_USERNAME,
+        "bot_url": f"https://vk.me/{VK_BOT_USERNAME}",
+        "deeplink_template": f"https://vk.me/{VK_BOT_USERNAME}?ref={{nonce}}",
+    },
 }
 
 BOT_HMAC_SECRETS = {

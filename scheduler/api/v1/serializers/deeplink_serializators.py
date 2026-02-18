@@ -9,5 +9,8 @@ class DeeplinkParamsSerializer(serializers.Serializer):
 
 
 class DeeplinkOutputSerializer(serializers.Serializer):
-    deeplink = json_api_serializers.URLField()
-    nonce = json_api_serializers.UUIDField()
+    platform = serializers.CharField()
+    deeplink = serializers.URLField()
+    nonce = serializers.UUIDField()
+    bot_url = serializers.URLField()
+    bot_username = serializers.CharField()

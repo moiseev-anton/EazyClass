@@ -23,11 +23,21 @@ logger = logging.getLogger(__name__)
 
 class DeeplinkFactory:
     @classmethod
-    def generate(cls, platform: str, nonce: str) -> str:
-        templates = getattr(settings, "AUTH_DEEPLINK_TEMPLATES", {})
-        if platform not in templates:
+    def generate(cls, platform: str, nonce: str) -> dict:
+        platforms = getattr(settings, "AUTH_PLATFORMS", {})
+        config = platforms.get(platform)
+
+        if not config:
             raise ValueError(f"Invalid platform: {platform}")
-        return templates[platform].format(nonce=nonce)
+
+        deeplink = config["deeplink_template"].format(nonce=nonce)
+
+        return {
+            "platform": platform,
+            "deeplink": deeplink,
+            "bot_url": config["bot_url"],
+            "bot_username": config["bot_username"],
+        }
 
 
 class DeeplinkView(PlainApiViewMixin, views.APIView):
@@ -59,10 +69,17 @@ class DeeplinkView(PlainApiViewMixin, views.APIView):
         serializer.is_valid(raise_exception=True)
         validated_platform = serializer.validated_data["platform"]
 
-        nonce = str(uuid.uuid4())
-        deeplink = DeeplinkFactory.generate(validated_platform, nonce)
-        logger.info(f"Generated deeplink for platform {platform} with nonce {nonce}")
-        response_serializer = DeeplinkOutputSerializer(
-            {"deeplink": deeplink, "nonce": nonce}
+        nonce = uuid.uuid4()
+
+        data = DeeplinkFactory.generate(validated_platform, str(nonce))
+        response_serializer = DeeplinkOutputSerializer({**data, "nonce": nonce})
+
+        logger.debug(
+            "Generated deeplink",
+            extra={
+                "platform": validated_platform,
+                "nonce": str(nonce),
+            },
         )
+
         return Response(response_serializer.data, status=status.HTTP_200_OK)
