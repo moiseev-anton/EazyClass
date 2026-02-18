@@ -20,6 +20,7 @@ from scheduler.api.v1.views import (
     LogoutView,
     NonceView,
     SubscriptionViewSet,
+    SocialAccountViewSet,
     TeacherSubscriptionViewSet,
     TeacherViewSet,
     TelegramTokenObtainView,
@@ -33,6 +34,7 @@ router.register(r"faculties", FacultyViewSet, basename="faculties")
 router.register(r"teachers", TeacherViewSet, basename="teachers")
 router.register(r"users", UserViewSet, basename="users")
 router.register(r"subscriptions", SubscriptionViewSet, basename="subscription")   # GET, DELETE
+router.register(r"social-accounts", SocialAccountViewSet, basename="social-accounts")
 router.register(r'group-subscriptions', GroupSubscriptionViewSet, basename='group-subscriptions')  # POST, PATCH, DELETE
 router.register(r'teacher-subscriptions', TeacherSubscriptionViewSet, basename='teacher-subscriptions')  # POST, PATCH, DELETE
 

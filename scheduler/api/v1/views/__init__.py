@@ -4,7 +4,8 @@ from .faculty_view import FacultyViewSet
 from .group_views import GroupViewSet
 from .lesson_views import LessonViewSet
 from .nonce_view import NonceView
-from .subscription_views import SubscriptionViewSet, GroupSubscriptionViewSet, TeacherSubscriptionViewSet
+from .social_account_view import SocialAccountViewSet
+from .subscription_views import GroupSubscriptionViewSet, SubscriptionViewSet, TeacherSubscriptionViewSet
 from .teacher_views import TeacherViewSet
 from .token_views import CustomTokenObtainPairView, CustomTokenRefreshView, LogoutView, TelegramTokenObtainView
 from .user_views import UserViewSet

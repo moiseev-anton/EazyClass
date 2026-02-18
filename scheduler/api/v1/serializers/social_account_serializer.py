@@ -11,7 +11,7 @@ class SocialAccountSerializer(json_api_serializers.ModelSerializer):
     class Meta:
         model = SocialAccount
         resource_name = "social-accounts"
-        fields = ("id", "platform", "social_id", "chat_id", "extra_data", "user")
+        fields = ("id", "platform", "social_id", "chat_id", "is_blocked", "extra_data", "user")
         read_only_fields = ("id", "platform", "social_id")
 
 

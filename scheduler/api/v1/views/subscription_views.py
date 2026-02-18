@@ -111,6 +111,7 @@ class TeacherSubscriptionViewSet(
 
 
 class SubscriptionAlreadyExists(exceptions.APIException):
+    # Не используется. При создании новой подписки автоматическое удаление старых
     status_code = 409
     default_detail = (
         "User already has a subscription."
