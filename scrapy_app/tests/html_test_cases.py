@@ -1,10 +1,5 @@
 from contextlib import nullcontext as does_not_raise
-from scrapy_app.item_loaders import (
-    TEACHER_DEFAULT_VALUE,
-    CLASSROOM_DEFAULT_VALUE,
-    SUBJECT_DEFAULT_VALUE,
-    SUBGROUP_DEFAULT_VALUE
-)
+from enums import Defaults
 
 import pytest
 
@@ -62,13 +57,13 @@ expected_valid_result = [
         'period': {'lesson_number': 1, 'date': '2024-12-09'},
         'subject': {'title': 'Математика'}, 'classroom': {'title': 'А101'},
         'teacher': {'full_name': 'Иванов И.И.'},
-        'subgroup': SUBGROUP_DEFAULT_VALUE
+        'subgroup': Defaults.SUBGROUP
      },
     {
         'group_id': 1,
         'period': {'lesson_number': 2, 'date': '2024-12-09'},
         'subject': {'title': 'Геометрия'},
-        'classroom': {'title': CLASSROOM_DEFAULT_VALUE},
+        'classroom': {'title': Defaults.CLASSROOM},
         'teacher': {'full_name': 'Петров П.П.'},
         'subgroup': 1
     },
@@ -83,10 +78,10 @@ expected_valid_result = [
     {
         'group_id': 1,
         'period': {'lesson_number': 4, 'date': '2024-12-11'},
-        'subject': {'title': SUBJECT_DEFAULT_VALUE},
-        'classroom': {'title': CLASSROOM_DEFAULT_VALUE},
-        'teacher': {'full_name': TEACHER_DEFAULT_VALUE},
-        'subgroup': SUBGROUP_DEFAULT_VALUE},
+        'subject': {'title': Defaults.SUBJECT_TITLE},
+        'classroom': {'title': Defaults.CLASSROOM},
+        'teacher': {'full_name': Defaults.TEACHER_NAME},
+        'subgroup': Defaults.SUBGROUP},
 ]
 
 # -----------------------------------

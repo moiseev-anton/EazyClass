@@ -4,7 +4,8 @@ from typing import Dict, List, Optional
 
 from scrapy_app.item_loaders import LessonLoader
 from scrapy_app.items import LessonItem
-from utils import KeyEnum, RedisClientManager
+from utils import RedisClientManager
+from enums import KeyEnum
 
 logger = logging.getLogger(__name__)
 

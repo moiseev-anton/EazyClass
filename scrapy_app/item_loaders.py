@@ -8,15 +8,12 @@ import logging
 from dateparser.date import DateDataParser
 from itemloaders.processors import MapCompose, TakeFirst
 from scrapy.loader import ItemLoader
+from enums import Defaults
 
 from scheduler.models import Subject, Classroom, Teacher
 
 logger = logging.getLogger(__name__)
 
-# Константы для значений по умолчанию
-SUBJECT_DEFAULT_VALUE = TEACHER_DEFAULT_VALUE = 'Не указано'
-CLASSROOM_DEFAULT_VALUE = '(дист)'
-SUBGROUP_DEFAULT_VALUE = 0
 
 DATE_PATTERN = r'\b\d{1,2}\.\d{1,2}\.\d{4}\b'
 
@@ -187,10 +184,10 @@ class LessonLoader(ItemLoader):
 
     group_id_in = build_integer_processor(min_value=0)
     date_in = MapCompose(parse_date)
-    subject_title_in = build_string_processor(SUBJECT_DEFAULT_VALUE, MAX_SUBJECT_TITLE_LENGTH)
-    classroom_title_in = build_string_processor(CLASSROOM_DEFAULT_VALUE, MAX_CLASSROOM_TITLE_LENGTH)
-    teacher_fullname_in = build_string_processor(TEACHER_DEFAULT_VALUE, MAX_TEACHER_FULLNAME_LENGTH)
-    subgroup_in = build_subgroup_processor(default=0, min_value=0, max_value=9)
+    subject_title_in = build_string_processor(Defaults.SUBJECT_TITLE, MAX_SUBJECT_TITLE_LENGTH)
+    classroom_title_in = build_string_processor(Defaults.CLASSROOM, MAX_CLASSROOM_TITLE_LENGTH)
+    teacher_fullname_in = build_string_processor(Defaults.TEACHER_NAME, MAX_TEACHER_FULLNAME_LENGTH)
+    subgroup_in = build_subgroup_processor(default=Defaults.SUBGROUP, min_value=0, max_value=9)
     lesson_number_in = build_integer_processor(min_value=0, max_value=9)
 
     def load_item_dict(self) -> dict:

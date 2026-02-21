@@ -1,6 +1,7 @@
 from django.db import models
 
 from scheduler.managers import TeacherManager
+from enums import Defaults
 
 
 class Teacher(models.Model):
@@ -36,6 +37,10 @@ class Teacher(models.Model):
         if full_name in ("не указано", ""):
             self.full_name = "не указано"
             return "не указано"
+        default_name = Defaults.TEACHER_NAME
+        if full_name in (default_name, ""):
+            self.full_name = default_name
+            return default_name
 
         names = full_name.split()
         short_name = names[0]  # Берем первый элемент полностью

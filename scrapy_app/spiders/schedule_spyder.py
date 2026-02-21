@@ -9,7 +9,8 @@ from scrapy.exceptions import CloseSpider
 
 from scheduler.models import Group
 from scrapy_app.response_processor import ResponseProcessor
-from utils import KeyEnum, RedisClientManager
+from utils import RedisClientManager
+from enums import KeyEnum
 
 MAIN_PAGE_HASH_TTL = timedelta(days=3)
 

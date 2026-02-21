@@ -12,13 +12,10 @@ from scrapy_app.item_loaders import (
     build_integer_processor,
     build_string_processor,
     build_subgroup_processor,
-    SUBJECT_DEFAULT_VALUE,
-    TEACHER_DEFAULT_VALUE,
-    CLASSROOM_DEFAULT_VALUE,
-    SUBGROUP_DEFAULT_VALUE,
     MAX_CLASSROOM_TITLE_LENGTH,
 )
 from scrapy_app.items import LessonItem
+from enums import Defaults
 
 
 @pytest.mark.parametrize(
@@ -202,21 +199,21 @@ def test_date_processor(raw_date_string, expectation, exception):
         ("group_id", "invalid", None, pytest.raises(ValueError)),  # Некорректное значение
 
         ("subject_title", " Математика ", "Математика", does_not_raise()),  # Валидная строка
-        ("subject_title", " ", SUBJECT_DEFAULT_VALUE, does_not_raise()),  # Замена на значение по умолчанию
+        ("subject_title", " ", Defaults.SUBJECT_TITLE, does_not_raise()),  # Замена на значение по умолчанию
         ("subject_title", None, None, does_not_raise()),  # None не обрабатывается
 
         ("teacher_fullname", " Иванов И.И. ", "Иванов И.И.", does_not_raise()),  # Валидная строка
-        ("teacher_fullname", " ", TEACHER_DEFAULT_VALUE, does_not_raise()),  # Замена на значение по умолчанию
+        ("teacher_fullname", " ", Defaults.TEACHER_NAME, does_not_raise()),  # Замена на значение по умолчанию
 
         ("classroom_title", " А101 ", "А101", does_not_raise()),  # Валидная строка
-        ("classroom_title", " ", CLASSROOM_DEFAULT_VALUE, does_not_raise()),  # Замена на значение по умолчанию
+        ("classroom_title", " ", Defaults.CLASSROOM, does_not_raise()),  # Замена на значение по умолчанию
         ("classroom_title", "Очень длинная строка", "Очень длинная строка"[:MAX_CLASSROOM_TITLE_LENGTH],
          does_not_raise()),  # Ожидаем обрезку строки
 
         ("subgroup", 1, 1, does_not_raise()), # int
         ("subgroup", " 1 ", 1, does_not_raise()),  # Число строкой
-        ("subgroup", " ", SUBGROUP_DEFAULT_VALUE, does_not_raise()), # Пробелы
-        ("subgroup", "", SUBGROUP_DEFAULT_VALUE, does_not_raise()), # Пустая строка
+        ("subgroup", " ", Defaults.SUBGROUP, does_not_raise()), # Пробелы
+        ("subgroup", "", Defaults.SUBGROUP, does_not_raise()), # Пустая строка
         ("subgroup", "invalid", 1, pytest.raises(ValueError)),  # Некорректная строка
 
     ],

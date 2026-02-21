@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
 from django.conf import settings
-from utils.redis_client_manager import RedisClientManager
+from utils import RedisClientManager
 
 
 # Тест на успешное создание клиента Redis через RedisClientManager

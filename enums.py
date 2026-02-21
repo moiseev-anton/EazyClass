@@ -1,5 +1,4 @@
-from enum import StrEnum
-
+from enum import Enum, IntEnum, StrEnum
 
 class KeyEnum(StrEnum):
     SCRAPED_LESSONS = "scrapy:scraped_lesson_items"
@@ -9,3 +8,9 @@ class KeyEnum(StrEnum):
     MAIN_PAGE_HASH = "scrapy:last_version_main_page_hash"
     SYNCED_GROUPS_PREFIX = "scrapy:synced_groups:"
     UNCHANGED_GROUPS = "scrapy:unchanged_groups"
+
+class Defaults:
+    TEACHER_NAME = "не указано"
+    SUBJECT_TITLE = "не указано"
+    SUBGROUP = 0
+    CLASSROOM = "(дист)"

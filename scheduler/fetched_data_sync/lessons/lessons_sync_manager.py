@@ -11,7 +11,8 @@ from django.utils import timezone
 
 from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
 from scheduler.models import Classroom, Lesson, Period, Subject, Teacher
-from utils import KeyEnum, RedisClientManager
+from utils import RedisClientManager
+from enums import KeyEnum
 
 logger = logging.getLogger(__name__)
 

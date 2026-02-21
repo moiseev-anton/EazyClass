@@ -1,7 +1,7 @@
 import pytest
 from scrapy.http import HtmlResponse, Request
 from scrapy_app.response_processor import ResponseProcessor
-from utils import KeyEnum
+from enums import KeyEnum
 from scrapy_app.tests.html_test_cases import html_test_cases
 from unittest.mock import MagicMock
 import hashlib

@@ -6,7 +6,8 @@ from celery import shared_task
 
 from scheduler.dtos import PipelineSummary
 from scheduler.fetched_data_sync import LessonsSyncManager
-from utils import RedisClientManager, KeyEnum
+from utils import RedisClientManager
+from enums import KeyEnum
 
 logger = logging.getLogger(__name__)
 
