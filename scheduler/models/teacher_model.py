@@ -1,7 +1,14 @@
+import re
+
 from django.db import models
 
 from scheduler.managers import TeacherManager
 from enums import Defaults
+
+
+INITIALS_PATTERN = re.compile(
+    r"^[А-ЯЁA-Z][а-яёa-z-]+\s+[А-ЯЁA-Z]\.(?:[А-ЯЁA-Z]\.)?$"
+)
 
 
 class Teacher(models.Model):
@@ -34,13 +41,13 @@ class Teacher(models.Model):
 
     def generate_short_name(self):
         full_name = str(self.full_name).strip()
-        if full_name in ("не указано", ""):
-            self.full_name = "не указано"
-            return "не указано"
         default_name = Defaults.TEACHER_NAME
         if full_name in (default_name, ""):
             self.full_name = default_name
             return default_name
+
+        if INITIALS_PATTERN.match(full_name):
+            return full_name
 
         names = full_name.split()
         short_name = names[0]  # Берем первый элемент полностью
