@@ -10,6 +10,7 @@ from scheduler.tasks.notification import (
     send_admin_report,
     send_lessons_refresh_notifications,
 )
+from scheduler.tasks.extract_raw_lessons import process_google_schedule
 
 
 from scheduler.fetched_data_sync import refresh_faculties_and_groups, refresh_teachers_endpoints
@@ -43,6 +44,17 @@ def refresh_teachers(self, base_url: str = BASE_URL, page_path:str = TEACHERS_PA
 def run_lessons_refresh_pipeline():
         chain(
             run_schedule_spider.s(),
+            sync_lessons.s(),
+            send_lessons_refresh_notifications.s(),
+            send_admin_report.s(),
+        ).apply_async()
+
+
+# Цепочка: file_rider -> sync -> telegram_notifications
+@shared_task(queue="periodic_tasks")
+def run_lessons_refresh_by_google_docs():
+        chain(
+            process_google_schedule.s(),
             sync_lessons.s(),
             send_lessons_refresh_notifications.s(),
             send_admin_report.s(),
