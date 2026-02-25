@@ -17,11 +17,6 @@ logger = logging.getLogger(__name__)
 
 DATE_PATTERN = r'\b\d{1,2}\.\d{1,2}\.\d{4}\b'
 
-# Константы максимальных длин (связаны с моделями Django)
-MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field('title').max_length
-MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field('title').max_length
-MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
-
 date_parser = DateDataParser(
     languages=['ru'],
     settings={
@@ -62,114 +57,60 @@ def parse_date(value: str) -> DateClass:
     raise TypeError(f"Ожидалось строковое представление даты или объект date, получено: {type(value)}")
 
 
-def validate_integer(value: int, min_value: int = float('-inf'), max_value: int = float('inf')) -> int:
+def normalize_html_text(value) -> str | None:
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def normalize_int(value, min_value=float('-inf'), max_value=float('inf')) -> int:
     """
-    Проверяет, что значение является целым числом и лежит в пределах заданного диапазона.
+    Нормализует обязательное целое значение.
 
-    :param value: Число для проверки.
-    :type value: int
-    :param min_value: Минимально допустимое значение. По умолчанию `-inf`.
-    :type min_value: int, optional
-    :param max_value: Максимально допустимое значение. По умолчанию `inf`.
-    :type max_value: int, optional
-
-    :return: Проверенное значение.
-    :rtype: int
-
-    :raises ValueError: Если значение выходит за пределы указанного диапазона или диапазон задан некорректно
+    - пустые значения запрещены
+    - приводит к int
+    - проверяет диапазон
     """
-    if min_value > max_value:
-        raise ValueError(f'Недопустимое значение: min_value ({min_value}) > max_value({max_value})')
+    if value is None:
+        raise ValueError("Ожидалось целое число, получено None")
 
-    value = int(value)
-    if min_value <= value <= max_value:
-        return value
-    raise ValueError(f"Значение '{value}' вне допустимого диапазона [{min_value}, {max_value}].")
+    if isinstance(value, str):
+        value = value.strip()
+        if value == '':
+            raise ValueError("Пустая строка недопустима для целого значения")
+
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"Невозможно привести к int: {value!r}")
+
+    if not (min_value <= value <= max_value):
+        raise ValueError(f"Значение '{value}' вне диапазона [{min_value}, {max_value}]")
+
+    return value
 
 
-def replace_empty_string(value: str, default: Any = '') -> str:
-    """Заменяет пустую строку на значение по умолчанию."""
+def normalize_optional_int(value, min_value=float('-inf'), max_value=float('inf')) -> int | None:
+    """
+    Нормализует необязательное целое значение.
+
+    - None или пустая строка → None
+    - иначе → normalize_int
+    """
+    if value is None:
+        return None
+
     if isinstance(value, str) and value.strip() == '':
-        return default
-    return value
+        return None
 
+    return normalize_int(value, min_value=min_value, max_value=max_value)
 
-def truncate_string(value: str, max_length: int) -> str:
-    """
-    Ограничивает длину строки заданным максимальным значением.
+def required_int_processor(min_value=float('-inf'), max_value=float('inf')):
+    return MapCompose(partial(normalize_int, min_value=min_value, max_value=max_value))
 
-    Если строка превышает максимальную длину, она будет обрезана.
-
-    :param value: Строка, длина которой должна быть ограничена.
-    :type value: str
-    :param max_length: Максимальная длина строки.
-    :type max_length: int
-
-    :return: Строка с ограниченной длиной.
-    :rtype: str
-
-    :raises ValueError: Если передан недопустимый параметр `max_length`.
-    """
-    if max_length <= 0:
-        raise ValueError(f'Недопустимое значение max_length: {max_length}')
-    if len(value) > max_length:
-        return value[:max_length]
-    return value
-
-
-def build_integer_processor(min_value=float('-inf'), max_value=float('inf')) -> MapCompose:
-    """
-    Строит процессор для обработки целых чисел, который выполняет проверку диапазона и преобразует значение в целое число.
-
-    :param default: Значение по умолчанию для пустых строк. По умолчанию `0`.
-    :type default: int, optional
-    :param min_value: Минимально допустимое значение. По умолчанию `-inf`.
-    :type min_value: int, optional
-    :param max_value: Максимально допустимое значение. По умолчанию `inf`.
-    :type max_value: int, optional
-
-    :return: Процессор, который обрабатывает строку, преобразует её в целое число и проверяет на диапазон.
-    :rtype: MapCompose
-    """
-    range_validate = partial(validate_integer, min_value=min_value, max_value=max_value)
-    return MapCompose(range_validate)
-
-
-def build_subgroup_processor(default: int = 0, min_value=float('-inf'), max_value=float('inf')) -> MapCompose:
-    """
-    Строит процессор для обработки целых чисел, который выполняет проверку диапазона и преобразует значение в целое число.
-
-    :param default: Значение по умолчанию для пустых строк. По умолчанию `0`.
-    :type default: int, optional
-    :param min_value: Минимально допустимое значение. По умолчанию `-inf`.
-    :type min_value: int, optional
-    :param max_value: Максимально допустимое значение. По умолчанию `inf`.
-    :type max_value: int, optional
-
-    :return: Процессор, который обрабатывает строку, преобразует её в целое число и проверяет на диапазон.
-    :rtype: MapCompose
-    """
-    replace_empty = partial(replace_empty_string, default=default)
-    range_validate = partial(validate_integer, min_value=min_value, max_value=max_value)
-    return MapCompose(replace_empty, range_validate)
-
-
-def build_string_processor(default: str, max_length: int) -> MapCompose:
-    """
-    Строит процессор для обработки строк, который выполняет замену пустой строки на значение по умолчанию
-    и обрезает строку до заданной длины.
-
-    :param default: Значение по умолчанию для пустых строк.
-    :type default: str
-    :param max_length: Максимальная длина строки.
-    :type max_length: int
-
-    :return: Процессор, который обрабатывает строку, заменяет пустую строку и обрезает её по длине.
-    :rtype: MapCompose
-    """
-    replace_empty = partial(replace_empty_string, default=default)
-    truncate = partial(truncate_string, max_length=max_length)
-    return MapCompose(str.strip, replace_empty, truncate)
+def optional_int_processor(min_value=float('-inf'), max_value=float('inf')):
+    return MapCompose(partial(normalize_optional_int, min_value=min_value, max_value=max_value))
 
 
 class LessonLoader(ItemLoader):
@@ -182,13 +123,13 @@ class LessonLoader(ItemLoader):
     """
     default_output_processor = TakeFirst()
 
-    group_id_in = build_integer_processor(min_value=0)
+    group_id_in = required_int_processor(0)
     date_in = MapCompose(parse_date)
-    subject_title_in = build_string_processor(Defaults.SUBJECT_TITLE, MAX_SUBJECT_TITLE_LENGTH)
-    classroom_title_in = build_string_processor(Defaults.CLASSROOM, MAX_CLASSROOM_TITLE_LENGTH)
-    teacher_fullname_in = build_string_processor(Defaults.TEACHER_NAME, MAX_TEACHER_FULLNAME_LENGTH)
-    subgroup_in = build_subgroup_processor(default=Defaults.SUBGROUP, min_value=0, max_value=9)
-    lesson_number_in = build_integer_processor(min_value=0, max_value=9)
+    subject_title_in = MapCompose(normalize_html_text)
+    classroom_title_in = MapCompose(normalize_html_text)
+    teacher_fullname_in = MapCompose(normalize_html_text)
+    subgroup_in = optional_int_processor(0, 9)
+    lesson_number_in = required_int_processor(0, 9)
 
     def load_item_dict(self) -> dict:
         """Возвращает данные в целевой структуре словаря."""
@@ -207,5 +148,5 @@ class LessonLoader(ItemLoader):
             'teacher': {
                 'full_name': self.get_output_value('teacher_fullname'),
             },
-            'subgroup': str(self.get_output_value('subgroup')),
+            'subgroup': self.get_output_value('subgroup'),
         }

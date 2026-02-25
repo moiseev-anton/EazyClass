@@ -1,7 +1,6 @@
 import logging
-from typing import Any
+from typing import Any, Callable
 
-import django.db.models
 from django.db import transaction
 from django.db.models import Model
 
@@ -10,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 class RelatedObjectsMap:
     """Класс для управления маппингом значений на связанные объекты из базы данных."""
-    __slots__ = ('model', 'fields', 'existing_mappings', 'pending_keys')
+    __slots__ = ('model', 'fields', 'existing_mappings', 'pending_keys', 'skip_if')
 
-    def __init__(self, model: type[Model], fields: tuple[str, ...]):
+    def __init__(self, model: type[Model], fields: tuple[str, ...], skip_if: Callable[[dict], bool] | None = None):
         """
         Инициализирует объект маппера.
 
@@ -20,10 +19,11 @@ class RelatedObjectsMap:
             model (Type[Model]): Модель, для которой создается маппинг.
             fields (tuple[str, ...]): Перечень полей для создания ключей.
         """
-        self.model: django.db.models.Model = model
+        self.model = model
         self.fields = fields
         self.existing_mappings = {}  # {mapping_key: id}
         self.pending_keys = set()  # Ключи для маппинга
+        self.skip_if = skip_if
 
     def _generate_key(self, data: dict[str, Any]) -> tuple:
         """Создает ключ в соответствии с `fields`."""
@@ -34,14 +34,23 @@ class RelatedObjectsMap:
             )
         return tuple(data[field] for field in self.fields)
 
+    def _should_skip(self, data: dict) -> bool:
+        return bool(self.skip_if and self.skip_if(data))
+
     def add(self, data: dict):
         """Добавляет ключ для маппинга."""
+        if self._should_skip(data):
+            return
+
         key = self._generate_key(data)
         if key not in self.existing_mappings:
             self.pending_keys.add(key)
 
-    def get_or_map_id(self, data: dict, default=None) -> int:
+    def get_or_map_id(self, data: dict, default=None) -> int | None:
         """Получает ID для заданных данных."""
+        if self._should_skip(data):
+            return None
+
         key = self._generate_key(data)
         if key in self.pending_keys:
             self.resolve_pending_keys()

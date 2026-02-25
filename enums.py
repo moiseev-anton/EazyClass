@@ -12,5 +12,5 @@ class KeyEnum(StrEnum):
 class Defaults:
     TEACHER_NAME = "не указано"
     SUBJECT_TITLE = "не указано"
-    SUBGROUP = 0
+    SUBGROUP = "0"
     CLASSROOM = "дист"

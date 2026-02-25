@@ -12,9 +12,15 @@ from django.utils import timezone
 from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
 from scheduler.models import Classroom, Lesson, Period, Subject, Teacher
 from utils import RedisClientManager
-from enums import KeyEnum
+from enums import Defaults, KeyEnum
 
 logger = logging.getLogger(__name__)
+
+
+MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field('title').max_length
+MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field('title').max_length
+MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
+
 
 ComparisonSummary = Dict[str, List[Dict[str, Any]]]
 
@@ -52,6 +58,8 @@ class LessonsSyncManager:
 
         if not data.scraped_groups:
             logger.info("Перечень групп пуст.")
+            if data.unchanged_groups:
+                self._update_synced_groups_set(data.scraped_groups, data.unchanged_groups)
             return self.EMPTY_SUMMARY
 
         new_lessons = self._process_lessons(data.lesson_items, data.scraped_groups)
@@ -76,7 +84,8 @@ class LessonsSyncManager:
 
         logger.info("Данные скрайпинга загружены из Redis")
 
-        lesson_items = self._normalize_lessons_dates(lesson_items)
+        lesson_items = self._normalize_lessons_fields(lesson_items)
+        # logger.info(lesson_items)
 
         return ScrapyFetchResult(
             scraped_groups=scraped_groups,
@@ -88,10 +97,14 @@ class LessonsSyncManager:
         self, lesson_items: List[Dict[str, Any]], scraped_groups: Dict[str, str]
     ) -> List[Lesson]:
         """Process: gather → map → create. Returns new_lessons и mappers (for reuse if needed)."""
-        teachers = RelatedObjectsMap(Teacher, ("full_name",))
         classrooms = RelatedObjectsMap(Classroom, ("title",))
         subjects = RelatedObjectsMap(Subject, ("title",))
         periods = RelatedObjectsMap(Period, ("date", "lesson_number"))
+        teachers = RelatedObjectsMap(
+            Teacher,
+            ("full_name",),
+            skip_if=lambda d: d.get("full_name") is None
+        )
 
         for item in lesson_items:
             teachers.add(item["teacher"])
@@ -244,10 +257,20 @@ class LessonsSyncManager:
         return serialized
 
     @staticmethod
-    def _normalize_lessons_dates(lesson_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _truncate(value: str | None, max_length: int) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value[:max_length] if value else None
+
+    @classmethod
+    def _normalize_lessons_fields(cls, lesson_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Преобразует строки дат в date-объекты в уроках.
-        Использует кэш для уникальных строк дат.
+        Обрабатывает поля уроков:
+            - Подставляет дефолты для subject, classroom, subgroup
+            - Оставляет teacher как есть (None если нет)
+            - Применяет truncate по макс. длине для строк
+            - Преобразует строки дат в date-объекты в уроках (использует кэш дат)
         """
         date_cache: Dict[str, date] = {}  # {date_str: date_obj}
 
@@ -256,5 +279,23 @@ class LessonsSyncManager:
             if date_str not in date_cache:
                 date_cache[date_str] = date.fromisoformat(date_str)
             item["period"]["date"] = date_cache[date_str]
+
+            subject_title = item["subject"].get("title")
+            item["subject"]["title"] = (
+                cls._truncate(subject_title, MAX_SUBJECT_TITLE_LENGTH) or Defaults.SUBJECT_TITLE
+            )
+
+            classroom_title = item["classroom"].get("title")
+            item["classroom"]["title"] = (
+                cls._truncate(classroom_title, MAX_CLASSROOM_TITLE_LENGTH) or Defaults.CLASSROOM
+            )
+
+            teacher_fullname = item["teacher"].get("full_name")
+            item["teacher"]["full_name"] = (
+                cls._truncate(teacher_fullname, MAX_TEACHER_FULLNAME_LENGTH)
+            )
+
+            subgroup = item.get("subgroup")
+            item["subgroup"] = str(subgroup) if isinstance(subgroup, int) else Defaults.SUBGROUP
 
         return lesson_items

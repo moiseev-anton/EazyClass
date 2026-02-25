@@ -1,21 +1,16 @@
 from contextlib import nullcontext as does_not_raise
-from datetime import date as DateClass
+from datetime import date as DateClass, date
 
 import pytest
 
 from scrapy_app.item_loaders import (
     LessonLoader,
     parse_date,
-    validate_integer,
-    replace_empty_string,
-    truncate_string,
-    build_integer_processor,
-    build_string_processor,
-    build_subgroup_processor,
-    MAX_CLASSROOM_TITLE_LENGTH,
+    normalize_int,
+    normalize_optional_int,
+    normalize_html_text,
 )
 from scrapy_app.items import LessonItem
-from enums import Defaults
 
 
 @pytest.mark.parametrize(
@@ -46,111 +41,57 @@ def test_parse_date(value, expectation):
 @pytest.mark.parametrize(
     "value, min_value, max_value, result, expectation",
     [
-        # Валидные кейсы
-        (10, 0, 20, 10, does_not_raise()),  # В диапазоне
-        (' 10 ', 0, 20, 10, does_not_raise()),  # В диапазоне, но строкой
-        (0, 0, 20, 0, does_not_raise()),  # Равно минимальному
-        (20, 0, 20, 20, does_not_raise()),  # Равно максимальному
-        (5, float('-inf'), float('inf'), 5, does_not_raise()),
+        (10, 0, 20, 10, does_not_raise()),
+        (" 10 ", 0, 20, 10, does_not_raise()),
+        (0, 0, 20, 0, does_not_raise()),
+        (20, 0, 20, 20, does_not_raise()),
 
-        # Невалидные кейсы
-        (' ', 0, 20, 10, pytest.raises(ValueError)),  # Пустая строка
-        (-1, 0, 20, None, pytest.raises(ValueError)),  # Меньше минимального
-        (21, 0, 20, None, pytest.raises(ValueError)),  # Больше максимального
-        (0, 3, 2, None, pytest.raises(ValueError))  # Некорректный диапазон
+        (None, 0, 20, None, pytest.raises(ValueError)),
+        ("", 0, 20, None, pytest.raises(ValueError)),
+        (" ", 0, 20, None, pytest.raises(ValueError)),
+        ("abc", 0, 20, None, pytest.raises(ValueError)),
+        (21, 0, 20, None, pytest.raises(ValueError)),
+        (-1, 0, 20, None, pytest.raises(ValueError)),
     ],
 )
-def test_validate_integer(value, min_value, max_value, result, expectation):
+def test_normalize_int(value, min_value, max_value, result, expectation):
     with expectation:
-        valid_value = validate_integer(value, min_value, max_value)
-        assert valid_value == result
-
-
-@pytest.mark.parametrize(
-    "value, default, result",
-    [
-        ("", "default", "default"),  # Полностью пустая строка
-        ("", None, None),  # Полностью пустая строка
-        ("  ", "default", "default"),  # Строка с пробелами
-        ("value", "default", "value"),  # Непустая строка
-    ],
-)
-def test_replace_empty_string(value, default, result):
-    processed_value = replace_empty_string(value, default)
-    assert processed_value == result
-
-
-@pytest.mark.parametrize(
-    "value, max_length, result, expectation",
-    [
-        ("short", 10, "short", does_not_raise()),  # Не превышает длину
-        ("very long string", 10, "very long ", does_not_raise()),  # Превышает длину
-        ("exactly 10", 10, "exactly 10", does_not_raise()),  # Ровно длина
-        ("", 10, "", does_not_raise()),  # Пустая строка
-
-        ("", 0, "", pytest.raises(ValueError)),  # некорректная max_length
-    ],
-)
-def test_truncate_string(value, max_length, result, expectation):
-    with expectation:
-        truncated_value = truncate_string(value, max_length)
-        assert truncated_value == result
+        assert normalize_int(value, min_value, max_value) == result
 
 
 @pytest.mark.parametrize(
     "value, min_value, max_value, result, expectation",
     [
-        (" 10 ", 0, 20, 10, does_not_raise()),  # В диапазоне, строкой
-        (10, 0, 20, 10, does_not_raise()),  # В диапазоне
+        (None, 0, 9, None, does_not_raise()),
+        ("", 0, 9, None, does_not_raise()),
+        (" ", 0, 9, None, does_not_raise()),
 
-        ("", 0, 20, 0, pytest.raises(ValueError)),  # Пустая строка
-        (" ", 0, 20, 0, pytest.raises(ValueError)),  # Строка с пробелами
-        ("30", 0, 20, None, pytest.raises(ValueError)),  # Выше максимального
-        ("5", 10, 20, None, pytest.raises(ValueError)), # Ниже минимального
-        ("not an integer", 0, 20, None, pytest.raises(ValueError)),  # Некорректное значение
+        ("1", 0, 9, 1, does_not_raise()),
+        (1, 0, 9, 1, does_not_raise()),
+
+        ("abc", 0, 9, None, pytest.raises(ValueError)),
+        ("10", 0, 9, None, pytest.raises(ValueError)),
     ],
 )
-def test_integer_processor(value, min_value, max_value, result, expectation):
-    processor = build_integer_processor(min_value, max_value)
+def test_normalize_optional_int(value, min_value, max_value, result, expectation):
     with expectation:
-        processed_value = processor(value)[0]
-        assert processed_value == result
+        assert normalize_optional_int(value, min_value, max_value) == result
 
 
 @pytest.mark.parametrize(
-    "value, default, min_value, max_value, result, expectation",
+    "value, result, expectation",
     [
-        (" 10 ", None, 0, 20, 10, does_not_raise()),  # В диапазоне, строкой
-        (10, None, 0, 20, 10, does_not_raise()),  # В диапазоне
+        (" Математика ", "Математика", does_not_raise()),
+        ("", None, does_not_raise()),
+        ("   ", None, does_not_raise()),
+        (None, None, does_not_raise()),
+        (123, "123", does_not_raise()),
 
-        ("", 0, 0, 20, 0, does_not_raise()),  # Пустая строка
-        ("  ", 0, 0, 20, 0, does_not_raise()),  # Строка с пробелами
-
-        ("30", None, 0, 20, None, pytest.raises(ValueError)),  # Выше максимального
-        ("5", None, 10, 20, None, pytest.raises(ValueError)), # Ниже минимального
-        ("not an integer", None, 0, 20, None, pytest.raises(ValueError)),  # Некорректное значение
     ],
 )
-def test_subgroup_processor(value, default, min_value, max_value, result, expectation):
-    processor = build_subgroup_processor(default, min_value, max_value)
+def test_normalize_html_text(value, result, expectation):
     with expectation:
-        processed_value = processor(value)[0]
-        assert processed_value == result
-
-
-@pytest.mark.parametrize(
-    "value, default, max_length, result",
-    [
-        ("  Valid string  ", "default", 20, "Valid string"),  # Корректное значение
-        ("", "default", 20, "default"),  # Значение по умолчанию
-        ("Long string exceeding length", "default", 10, "Long strin"),  # Обрезка
-        ("Long string exceeding length", "default", 10, "Long strin"),
-    ],
-)
-def test_string_processor(value, default, max_length, result):
-    processor = build_string_processor(default, max_length)
-    processed_value = processor(value)[0]
-    assert processed_value == result
+        assert normalize_html_text(value) == result
 
 
 @pytest.mark.parametrize(
@@ -179,41 +120,44 @@ def test_date_processor(raw_date_string, expectation, exception):
 @pytest.mark.parametrize(
     "field, input_value, expected_output, expectation",
     [
+        # date
         ("date", " 12.03.2023 - Воскресение ", DateClass(2023, 3, 12), does_not_raise()),  # Валидное значение
         ("date", None, None, does_not_raise()),  # None пропускается без обработки (Особенность ItemLoader)
         ("date", "invalid", None, pytest.raises(ValueError)),  # Некорректное значение
         ("date", "  ", None, pytest.raises(ValueError)),  # Некорректное значение
 
+        # lesson_number (обязательное число)
         ("lesson_number", "  1 ", 1, does_not_raise()),  # Число строкой
         ("lesson_number", 1, 1, does_not_raise()), # int
         ("lesson_number", None, None, does_not_raise()), # None пропускается без обработки (Особенность ItemLoader)
         ("lesson_number", "  ", 1, pytest.raises(ValueError)),  # Пробелы
         ("lesson_number", "", 1, pytest.raises(ValueError)),  # Пустая строка
-        ("lesson_number", "invalid", None, pytest.raises(ValueError)),  # Некорректное значение
+        ("lesson_number", "abc", None, pytest.raises(ValueError)),  # Некорректное значение
 
+        # group_id
         ("group_id", "  1 ", 1, does_not_raise()),  # Число строкой
         ("group_id", 1, 1, does_not_raise()),  # int
         ("group_id", None, None, does_not_raise()), # None пропускается без обработки (Особенность ItemLoader)
+
+        ("group_id", "-1", -1, pytest.raises(ValueError)), # Отрицательное
         ("group_id", "  ", 1, pytest.raises(ValueError)),  # Пробелы
         ("group_id", "", 1, pytest.raises(ValueError)),  # Пустая строка
         ("group_id", "invalid", None, pytest.raises(ValueError)),  # Некорректное значение
 
         ("subject_title", " Математика ", "Математика", does_not_raise()),  # Валидная строка
-        ("subject_title", " ", Defaults.SUBJECT_TITLE, does_not_raise()),  # Замена на значение по умолчанию
+        ("subject_title", " ", None, does_not_raise()),  # Замена на значение по умолчанию
         ("subject_title", None, None, does_not_raise()),  # None не обрабатывается
 
         ("teacher_fullname", " Иванов И.И. ", "Иванов И.И.", does_not_raise()),  # Валидная строка
-        ("teacher_fullname", " ", Defaults.TEACHER_NAME, does_not_raise()),  # Замена на значение по умолчанию
+        ("teacher_fullname", " ", None, does_not_raise()),  # Замена на значение по умолчанию
 
         ("classroom_title", " А101 ", "А101", does_not_raise()),  # Валидная строка
-        ("classroom_title", " ", Defaults.CLASSROOM, does_not_raise()),  # Замена на значение по умолчанию
-        ("classroom_title", "Очень длинная строка", "Очень длинная строка"[:MAX_CLASSROOM_TITLE_LENGTH],
-         does_not_raise()),  # Ожидаем обрезку строки
+        ("classroom_title", " ", None, does_not_raise()),  # Замена на значение по умолчанию
 
         ("subgroup", 1, 1, does_not_raise()), # int
         ("subgroup", " 1 ", 1, does_not_raise()),  # Число строкой
-        ("subgroup", " ", Defaults.SUBGROUP, does_not_raise()), # Пробелы
-        ("subgroup", "", Defaults.SUBGROUP, does_not_raise()), # Пустая строка
+        ("subgroup", " ", None, does_not_raise()), # Пробелы
+        ("subgroup", "", None, does_not_raise()), # Пустая строка
         ("subgroup", "invalid", 1, pytest.raises(ValueError)),  # Некорректная строка
 
     ],
@@ -225,38 +169,70 @@ def test_lesson_loader_single_field(field, input_value, expected_output, expecta
         assert loader.get_output_value(field) == expected_output
 
 
-def test_load_item_dict_structure():
+
+@pytest.mark.parametrize(
+    "input_data, expected_structure",
+    [
+        # Полностью заполненный урок
+        ({
+            "group_id": 1,
+            "date": " 2025-01-01 ",
+            "subject_title": " Математика ",
+            "classroom_title": " 101 ",
+            "teacher_fullname": " Иванов Иван Иванович ",
+            "subgroup": " 1 ",
+            "lesson_number": " 2 ",
+        },
+        {
+            "group_id": 1,
+            "period": {
+                "lesson_number": 2,
+                "date": date.fromisoformat("2025-01-01"),
+            },
+            "subject": {
+                "title": "Математика",
+            },
+            "classroom": {
+                "title": "101",
+            },
+            "teacher": {
+                "full_name": "Иванов Иван Иванович",
+            },
+            "subgroup": 1,
+        }),
+
+        # Урок с допустимыми пропусками
+        ({
+            "group_id": "1",
+            "date": " 2025-01-01 ",
+            "subject_title": " ",
+            "classroom_title": "",
+            "teacher_fullname": " ",
+            "subgroup": "",
+            "lesson_number": " 2 ",
+        },
+        {
+            "group_id": 1,
+            "period": {
+                "lesson_number": 2,
+                "date": date.fromisoformat("2025-01-01"),
+            },
+            "subject": {
+                "title": None,
+            },
+            "classroom": {
+                "title": None,
+            },
+            "teacher": {
+                "full_name": None,
+            },
+            "subgroup": None,
+        }),
+
+    ],
+)
+def test_load_item_dict_structure(input_data, expected_structure):
     loader = LessonLoader(item=LessonItem())
-
-    # Вводные данные для теста
-    input_data = {
-        "group_id": 1,
-        "date": " 2025-01-01 ",
-        "subject_title": " Математика ",
-        "classroom_title": " 101 ",
-        "teacher_fullname": " Иванов Иван Иванович ",
-        "subgroup": " 1 ",
-        "lesson_number": " 2 ",
-    }
-
-    # Ожидаемая структура
-    expected_structure = {
-        "group_id": 1,
-        "period": {
-            "lesson_number": 2,
-            "date": "2025-01-01",
-        },
-        "subject": {
-            "title": "Математика",
-        },
-        "classroom": {
-            "title": "101",
-        },
-        "teacher": {
-            "full_name": "Иванов Иван Иванович",
-        },
-        "subgroup": 1,
-    }
 
     # Заполняем данные в загрузчик
     for field, value in input_data.items():

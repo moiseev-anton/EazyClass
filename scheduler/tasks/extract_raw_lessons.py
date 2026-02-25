@@ -7,16 +7,13 @@ from typing import Dict, List, Optional, Set, Tuple
 import orjson
 from celery import shared_task
 
-from scheduler.models import Classroom, Group, Subject, Teacher
+from scheduler.models import Group, Teacher
 from utils import RedisClientManager
-from enums import Defaults, KeyEnum
+from enums import KeyEnum
 
 logger = logging.getLogger(__name__)
 
 
-MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field("title").max_length
-MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field("full_name").max_length
-MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field("title").max_length
 
 
 DATA_DIR = Path("/worker_input")
@@ -95,7 +92,6 @@ def process_lessons_csv(
     lessons_path: Path,
     group_map: Dict[str, int],
     teacher_map: Dict[str, str],
-    processed_group_ids: Set[int],
 ) -> Tuple[List[dict], Set[int]]:
     """Читает CSV с уроками, возвращает валидные уроки и failed-группы"""
     all_raw_lessons = []
@@ -119,7 +115,7 @@ def process_lessons_csv(
                     logger.warning(f"Строка {row_num}: группа '{group_title}' не найдена в БД")
                     continue
 
-                teacher_short = (row.get("teacher") or "").strip()
+                teacher_short = (row.get("teacher") or "").strip() or None
                 teacher_full = teacher_map.get(teacher_short, teacher_short)
 
                 lesson = {
@@ -129,23 +125,15 @@ def process_lessons_csv(
                         "date": row["date"].strip(),
                     },
                     "subject": {
-                        "title": (row.get("subject") or Defaults.SUBJECT_TITLE).strip()[
-                            :MAX_SUBJECT_TITLE_LENGTH
-                        ],
+                        "title": (row.get("subject") or "").strip() or None,
                     },
                     "classroom": {
-                        "title": (
-                            (row.get("cabinet") or row.get("classroom") or "").strip()[
-                                :MAX_CLASSROOM_TITLE_LENGTH
-                            ]
-                            or Defaults.CLASSROOM
-                        ),
+                        "title": (row.get("classroom") or "").strip() or None,
                     },
                     "teacher": {
-                        "full_name": teacher_full[:MAX_TEACHER_FULLNAME_LENGTH]
-                        or Defaults.TEACHER_NAME
+                        "full_name": teacher_full,
                     },
-                    "subgroup": str(int(row.get("subgroup", Defaults.SUBGROUP))),
+                    "subgroup": int(row["subgroup"]) if (row.get("subgroup") or "").strip() else None,
                 }
 
                 all_raw_lessons.append(lesson)
@@ -249,7 +237,7 @@ def process_google_schedule(
 
         # 4. Обрабатываем уроки
         all_raw_lessons, failed_group_ids = process_lessons_csv(
-            lessons_path, group_map, teacher_map, processed_group_ids
+            lessons_path, group_map, teacher_map
         )
 
         valid_lessons = [l for l in all_raw_lessons if l["group_id"] not in failed_group_ids]
