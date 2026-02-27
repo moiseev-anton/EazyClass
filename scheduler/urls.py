@@ -1,10 +1,7 @@
 from django.urls import path
-
-from scheduler.views.base_views import home_view
+from django.views.generic import TemplateView
 
 urlpatterns = [
-    path('test/', home_view, name='test'),
-    path('schedule/', home_view, name='test'),
-    path('list/', home_view, name='test'),
-    path('notifications/', home_view, name='test'),
+    path("terms/", TemplateView.as_view(template_name="legal/terms.html"), name="terms"),
+    path("privacy/", TemplateView.as_view(template_name="legal/privacy.html"), name="privacy"),
 ]

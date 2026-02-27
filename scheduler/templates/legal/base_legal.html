@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}EazyClass{% endblock %}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --text: #222;
+            --muted: #666;
+            --border: #e5e5e5;
+            --bg: #ffffff;
+            --accent: #2a7cff;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 40px 20px 60px;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+
+        h2 {
+            margin-top: 36px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            font-size: 20px;
+        }
+
+        p {
+            margin: 14px 0;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .app-link {
+            display: inline-block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>{% block header %}{% endblock %}</h1>
+        <div class="muted">
+            Последнее обновление: {% block updated %}{% endblock %}
+        </div>
+    </div>
+
+    {% block content %}{% endblock %}
+
+    <div class="footer">
+        Сервис EazyClass<br>
+        По вопросам: eazyclass@yandex.ru
+    </div>
+
+</div>
+</body>
+</html>
