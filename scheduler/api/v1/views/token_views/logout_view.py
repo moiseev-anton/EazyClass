@@ -123,10 +123,10 @@ class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
             key="refresh_token",
             value="",
             httponly=True,
-            secure=request.is_secure(),
-            samesite="None", # TODO: временно. заменить на "Strict"
+            secure=True,
+            samesite="Lax",
             max_age=0,
-            path="/",
+            path="/api/",
         )
 
     @staticmethod

@@ -58,7 +58,10 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-client-type",
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False
+
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
 
 
 # Обязательно для работы за обратным прокси (nginx)

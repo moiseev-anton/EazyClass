@@ -17,9 +17,10 @@ class TokenCookieHandlerMixin:
             key="refresh_token",
             value=refresh_token,
             httponly=True,
-            secure=request.is_secure(),
-            samesite="None",
+            secure=True,
+            samesite="Lax",
             max_age=api_settings.REFRESH_TOKEN_LIFETIME.total_seconds(),
+            path="/api/",
         )
 
     @staticmethod
