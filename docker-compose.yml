@@ -163,6 +163,9 @@ services:
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
 
+      # SPA
+      - /home/deploy/apps/spa:/usr/share/nginx/html:ro
+
       # статика Django
       - static_data:/app/static:ro
       - media_data:/app/media:ro
