@@ -23,6 +23,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis_cache
+    networks:
+      - default
+      - backend_net
     restart: always
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
@@ -57,6 +60,9 @@ services:
     volumes:
       - static_data:/app/static
       - media_data:/app/media
+    networks:
+      - default
+      - backend_net
     depends_on:
       pgdb:
         condition: service_healthy
@@ -169,6 +175,9 @@ services:
       # статика Django
       - static_data:/app/static:ro
       - media_data:/app/media:ro
+    networks:
+      - default
+      - backend_net
     depends_on:
       - django
       - flower
@@ -196,3 +205,7 @@ volumes:
   media_data:
   certbot_conf:
   certbot_www:
+
+networks:
+  backend_net:
+    external: true
