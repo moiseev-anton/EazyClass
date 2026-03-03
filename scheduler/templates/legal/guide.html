@@ -3,7 +3,7 @@
 {% load static %}
 {% block title %}Руководство пользователя — EazyClass{% endblock %}
 {% block header %}📘 Руководство пользователя{% endblock %}
-{% block updated %}02.03.2026{% endblock %}
+{% block updated %}03.03.2026{% endblock %}
 
 {% block content %}
 <main class="container">
@@ -74,9 +74,9 @@
                 src="{% static 'scheduler/images/android_done.png' %}"
                 alt="Chrome предложение установки"
                 style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
-        >
+        ><br>
+        ⚠️ <i>Установка поддерживается не всеми браузерами. Рекомендуется использовать Google Chrome.</i>
     </p>
-    <i>⚠️ Установка поддерживается не всеми браузерами. Рекомендуется использовать Google Chrome.</i>
 
 
     <h2>🔐 Вход и регистрация</h2>
@@ -109,13 +109,15 @@
                 src="{% static 'scheduler/images/open_btn.jpg' %}"
                 alt="Кнопка входа"
                 style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
-        >
-        <br>Авторизация выполняется автоматически при открытии.<br>
+        ><br>
+        Авторизация выполняется автоматически при открытии.<br>
         <img
                 src="{% static 'scheduler/images/twa.jpg' %}"
                 alt="TWA"
                 style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
-        >
+        ><br>
+        ⚠️ <i>При долгом простое приложения запущенного в Telegram может истечь сессия.<br>
+        Это особенность платформы. ПОЛНОСТЬЮ закройте приложение и откройте снова</i>.
     </p>
 
     <h2>⭐ Выбор расписания</h2>
