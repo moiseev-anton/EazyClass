@@ -1,0 +1,219 @@
+{% extends "legal/base_legal.html" %}
+
+{% load static %}
+{% block title %}Руководство пользователя — EazyClass{% endblock %}
+{% block header %}📘 Руководство пользователя{% endblock %}
+{% block updated %}02.03.2026{% endblock %}
+
+{% block content %}
+<main class="container">
+    <style>
+        .container img:not([style*='max-width: 30px']) {
+            width: min(400px, 100%) !important;
+            max-width: none !important;
+            height: auto !important;
+        }
+    </style>
+
+    <h2>🌐 Браузер</h2>
+    <p>Использовать приложение можно, просто открыв сайт
+        <a href="https://eazyclass.ru" target="_blank">https://eazyclass.ru</a><br>
+        Работает в десктопных и мобильных браузерах.
+    </p>
+    <p>Для мобильных устройств доступна установка приложения прямо с сайта.</p>
+
+    <h2>📱 Установка мобильного приложения</h2>
+    <h3>iOS</h3>
+    <ol>
+        <li>Откройте <a href="https://eazyclass.ru" target="_blank">https://eazyclass.ru</a> в браузере</li>
+        <li>Нажмите кнопку «Поделиться»</li>
+        <li>Выберите «На экран Домой»</li>
+        <li>Подтвердите установку</li>
+    </ol>
+    <img
+            src="{% static 'scheduler/images/ios_install.png' %}"
+            alt="iOS установка, шаг 1"
+            style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+    >
+    <img
+            src="{% static 'scheduler/images/ios_add.png' %}"
+            alt="iOS установка, шаг 2"
+            style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+    >
+    <p>Приложение появится на рабочем столе устройства.<br>
+        <img
+                src="{% static 'scheduler/images/iOS_done.jpg' %}"
+                alt="iOS установка завершена"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+
+    <h3>Android</h3>
+    <p>В большинстве случаев браузер автоматически предложит установить приложение.<br>
+        <img
+                src="{% static 'scheduler/images/chrome_offer.png' %}"
+                alt="Chrome предложение установки"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+
+
+    </p>
+
+    <p>Если предложение не появилось, то в меню браузера нажмите "Добавить на гл. экран"
+        <img
+                src="{% static 'scheduler/images/chrome_menu.jpg' %}"
+                alt="Chrome меню"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+        <img
+                src="{% static 'scheduler/images/crome_setup_btn.jpg' %}"
+                alt="Chrome Установить"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+        <img
+                src="{% static 'scheduler/images/android_done.png' %}"
+                alt="Chrome предложение установки"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+    <i>⚠️ Установка поддерживается не всеми браузерами. Рекомендуется использовать Google Chrome.</i>
+
+
+    <h2>🔐 Вход и регистрация</h2>
+    <h3>Вход через сайт или мобильное приложение</h3>
+    <p>Для начала работы необходимо выполнить вход через Telegram.</p>
+    <ol>
+        <li>Нажмите кнопку «Войти через Telegram».<br>
+            <img
+                    src="{% static 'scheduler/images/login_btn.png' %}"
+                    alt="Кнопка входа"
+                    style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+            >
+        </li>
+        <li>Вы будете автоматически перенаправлены в Telegram-бот.</li>
+        <li>Бот пришлет сообщение об успешной авторизации.<br>
+            <img
+                    src="{% static 'scheduler/images/confirmation.jpg' %}"
+                    alt="Кнопка входа"
+                    style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+            ></li>
+        <li>Вход выполнен — просто вернитесь на сайт или в приложение.</li>
+    </ol>
+
+
+    <h2>Запуск в Telegram</h2>
+    <p>Можно пользоваться полноценным приложением прямо в Telegram.<br>
+        Запустите бот (если ранее не запускали)<br>
+        У бота имеется кнопка «Открыть», которая запускает приложение.<br>
+        <img
+                src="{% static 'scheduler/images/open_btn.jpg' %}"
+                alt="Кнопка входа"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+        <br>Авторизация выполняется автоматически при открытии.<br>
+        <img
+                src="{% static 'scheduler/images/twa.jpg' %}"
+                alt="TWA"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+
+    <h2>⭐ Выбор расписания</h2>
+
+    <p>После входа приложение открывается на странице «Расписание». <br> Здесь будет закреплено расписание на которое Вы
+        подпишитесь.</p>
+    <b>ВАЖНО: подпишитесь на расписание, чтобы иметь быстрый доступ к нему на стартовой странице приложения</b>
+
+    <ol>
+        <li>Перейдите в раздел Группы или Преподаватели.</li>
+        <li>Найдите нужное расписание.</li>
+        <li>Нажмите значок ⭐ рядом с Заголовком</li>
+    </ol>
+    <p><img
+            src="{% static 'scheduler/images/subscription.png' %}"
+            alt="Подписка"
+            style="max-width: 500px; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+    ></p>
+    <p><b>После подписки автоматически включаются уведомления в Telegram-боте.</b><br>
+        Уведомления будут сообщать об изменениях в расписании и напоминать о начале занятий.<br>
+        Их можно отключить в разделе Профиль.
+    </p>
+    <p><img
+            src="{% static 'scheduler/images/notification_switch.png' %}"
+            alt="Настройка уведомлений"
+            style="max-width: 500px; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+    ></p>
+
+    <h2>📅 Навигация по расписанию</h2>
+    <h3>Переключение дней</h3>
+    <p>По умолчанию открывается текущий день.<br>Переключение между днями осуществляется соответствующими кнопками<br>
+        На мобильных устройствах переключать дни можно свайпами
+    </p>
+    <p>
+        <img
+                src="{% static 'scheduler/images/lesson_list.png' %}"
+                alt="Переключение дней"
+                style="max-width: 100%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+
+
+    <h3>Смена недели</h3>
+    <p>По умолчанию загружается текущая неделя.<br> Навигация в заголовке позволяет выбрать другую неделю</p>
+    <p>
+        <img
+                src="{% static 'scheduler/images/schedule_header.png' %}"
+                alt="Кнопки заголовка"
+                style="max-width: 100%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+    <p>Календарь позволяет выбрать сразу нужную неделю</p>
+    <p>
+        <img
+                src="{% static 'scheduler/images/calendar.png' %}"
+                alt="Календарь"
+                style="max-width: 100%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+
+
+    <h3>Режим отображения</h3>
+    <p>В правом верхнем углу находится переключатель День / Неделя
+        <img
+                src="{% static 'scheduler/images/mode_btn.png' %}"
+                alt="Кнопка режима"
+                style="max-width: 30px; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+    <p>Режим недели показывает занятия сразу на всю неделю в виде вертикального списка, удобен для просмотра в
+        браузере.</p>
+    <p><img
+            src="{% static 'scheduler/images/week_mode.png' %}"
+            alt="Недельный режим"
+            style="max-width: 100%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+    ></p>
+
+    <h2>📚 Карточка занятия</h2>
+    <p>
+        <img
+                src="{% static 'scheduler/images/lesson_card.png' %}"
+                alt="Карточка занятия"
+                style="max-width: 100%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+    <p>Нажатие на преподавателя или группу открывает их расписание.</p>
+
+
+    <h2>🤖 Работа через Telegram-бот</h2>
+    <p>Telegram-бот — полноценный инструмент для работы с расписанием. <br>
+        В нём реализован упрощенный пользовательский интерфейс аналогичный приложению.<br>
+        Это может быть полезно при проблемах со скоростью интернета или малой производительности устройства.<br>
+        <img
+                src="{% static 'scheduler/images/bot_ui.jpg' %}"
+                alt="Bot UI"
+                style="max-width: 50%; height: auto; border: 1px solid #d8dee4; border-radius: 8px;"
+        >
+    </p>
+
+</main>
+{% endblock %}

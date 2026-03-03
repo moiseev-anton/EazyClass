@@ -3,67 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}EazyClass{% endblock %}</title>
-
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
         :root {
-            --text: #222;
-            --muted: #666;
-            --border: #e5e5e5;
+            --text: #1f2328;
+            --muted: #59636e;
+            --border: #d8dee4;
             --bg: #ffffff;
-            --accent: #2a7cff;
+            --accent: #0969da;
+            --code-bg: #f6f8fa;
+            --max-width: 760px;
         }
 
         body {
             margin: 0;
-            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
             background: var(--bg);
             color: var(--text);
-            line-height: 1.6;
+            font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.7;
         }
 
-        .container {
-            max-width: 860px;
+        .doc {
+            max-width: var(--max-width);
             margin: 0 auto;
-            padding: 40px 20px 60px;
+            padding: 40px 20px 56px;
+        }
+
+        .doc-header {
+            margin-bottom: 28px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border);
         }
 
         h1 {
-            margin-top: 0;
-            font-size: 24px;
+            margin: 0;
+            font-size: 2rem;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
+        }
+
+        .meta {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        h2, h3 {
+            margin-top: 1.9em;
+            margin-bottom: 0.65em;
+            line-height: 1.35;
+            letter-spacing: -0.01em;
         }
 
         h2 {
-            margin-top: 36px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border);
-            font-size: 20px;
+            font-size: 1.45rem;
+            padding-bottom: 0.28em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.18rem;
         }
 
         p {
-            margin: 14px 0;
+            margin: 0.8em 0;
         }
 
-        ul {
-            padding-left: 20px;
+        ul, ol {
+            margin: 0.65em 0 1em;
+            padding-left: 1.3em;
         }
 
-        .muted {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .header {
-            margin-bottom: 30px;
-        }
-
-        .footer {
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-            font-size: 14px;
-            color: var(--muted);
+        li {
+            margin: 0.35em 0;
         }
 
         a {
@@ -75,30 +88,46 @@
             text-decoration: underline;
         }
 
-        .app-link {
-            display: inline-block;
-            margin-top: 10px;
+        code {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.05em 0.32em;
+            font-size: 0.92em;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        blockquote {
+            margin: 1em 0;
+            padding-left: 1em;
+            color: var(--muted);
+            border-left: 3px solid var(--border);
+        }
+
+        .doc-footer {
+            margin-top: 2.4rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.95rem;
         }
     </style>
 </head>
-
 <body>
-<div class="container">
-
-    <div class="header">
+<article class="doc">
+    <header class="doc-header">
         <h1>{% block header %}{% endblock %}</h1>
-        <div class="muted">
-            Последнее обновление: {% block updated %}{% endblock %}
-        </div>
-    </div>
+        {% block meta %}
+            <p class="meta">Последнее обновление: {% block updated %}{% endblock %}</p>
+        {% endblock %}
+    </header>
 
     {% block content %}{% endblock %}
 
-    <div class="footer">
-        Сервис EazyClass<br>
-        По вопросам: eazyclass@yandex.ru
-    </div>
-
-</div>
+    <footer class="doc-footer">
+        <div>Сервис EazyClass</div>
+        <div>По вопросам: <a href="mailto:eazyclass@yandex.ru">eazyclass@yandex.ru</a></div>
+    </footer>
+</article>
 </body>
 </html>
