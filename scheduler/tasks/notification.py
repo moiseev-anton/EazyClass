@@ -29,7 +29,7 @@ def send_upcoming_lesson_notifications(period_id: int):
         summary: StartNotificationSummary = notification_service.send_start_notifications(period)
 
         if blocked := summary.blocked_chat_ids:
-            marked_count = SocialAccount.objects.mark_chats_blocked(blocked)
+            marked_count = SocialAccount.objects.mark_chats_blocked(platform=notifier.platform, chat_ids=blocked)
         logger.info(f"Отправлены уведомления для периода {period_id}")
 
         return summary.model_dump()
