@@ -1,7 +1,7 @@
 from django.db import models
 
 from scheduler.managers import PeriodManager
-from scheduler.models.period_template_models import PeriodTemplate
+from scheduler.models.period_template_models import Timing
 
 
 class Period(models.Model):
@@ -30,11 +30,11 @@ class Period(models.Model):
         Если шаблон отсутствует, start_time и end_time остаются None.
         """
         if not self.start_time or not self.end_time:
-            template = PeriodTemplate.objects.get_template_for_day(
+
+            timing = Timing.objects.get_for_period(
                 date=self.date, lesson_number=self.lesson_number
             )
-            if template and template.timings.exists():
-                timing = template.timings.first()
+            if timing:
                 self.start_time = timing.start_time
                 self.end_time = timing.end_time
 

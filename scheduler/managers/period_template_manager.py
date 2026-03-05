@@ -9,24 +9,24 @@ logger = logging.getLogger(__name__)
 
 
 class PeriodTemplateManager(models.Manager):
-    def get_template_for_day(self, date: DateClass | str, lesson_number: int) -> Optional['PeriodTemplate']:
-        """
-        Возвращает подходящий шаблон для номера урока и дня недели (по дате).
-        """
-        if isinstance(date, str):
-            date = DateClass.fromisoformat(date)
-
-        day_of_week_number = date.weekday()  # 0 - понедельник, 6 - воскресенье
-
-        # Ищем подходящий PeriodTemplate с учетом даты и номера урока
-        return self.filter(
-            lesson_number=lesson_number,
-            start_date__lte=date,
-        ).filter(
-            models.Q(end_date__gte=date) | models.Q(end_date__isnull=True)  # Дата окончания больше или NULL
-        ).filter(
-            timings__weekdays__day_of_week=day_of_week_number  # Связь через Timing и TimingWeekDay
-        ).distinct().first()
+    # def get_template_for_day(self, date: DateClass | str, lesson_number: int) -> Optional['PeriodTemplate']:
+    #     """
+    #     Возвращает подходящий шаблон для номера урока и дня недели (по дате).
+    #     """
+    #     if isinstance(date, str):
+    #         date = DateClass.fromisoformat(date)
+    #
+    #     day_of_week_number = date.weekday()  # 0 - понедельник, 6 - воскресенье
+    #
+    #     # Ищем подходящий PeriodTemplate с учетом даты и номера урока
+    #     return self.filter(
+    #         lesson_number=lesson_number,
+    #         start_date__lte=date,
+    #     ).filter(
+    #         models.Q(end_date__gte=date) | models.Q(end_date__isnull=True)  # Дата окончания больше или NULL
+    #     ).filter(
+    #         timings__weekdays__day_of_week=day_of_week_number  # Связь через Timing и TimingWeekDay
+    #     ).distinct().first()
 
     def overlapping(self, lesson_number: int, start_date: DateClass, end_date: Optional[DateClass],
                     exclude_pk: Optional[int] = None):
