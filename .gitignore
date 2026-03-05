@@ -2,7 +2,6 @@
 venv/
 .env.dev
 .env
-.env
 .htpasswd
 
 # Игнорирование папок __pycache__ и скомпилированных файлов
@@ -33,7 +32,9 @@ media
 *.bak
 *.tmp
 *.secret
+*.dump
 Thumbs.db
+rclone/rclone.conf
 
 # Скомпилированные / оптимизированные файлы Python
 *.py[cod]

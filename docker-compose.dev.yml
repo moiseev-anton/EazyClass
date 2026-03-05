@@ -21,6 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: django
     container_name: django
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
@@ -38,10 +39,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: backup-tools
     container_name: celery_worker
     command: celery -A eazyclass worker --pool=prefork --concurrency=1 --loglevel=debug # заменить потом на info
     volumes:
       - .:/app:delegated
+      - ./data:/worker_input
+      - ./rclone:/root/.config/rclone
     env_file:
       - .env.dev
     depends_on:
@@ -52,6 +56,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: backup-tools
     container_name: celery_beat
     command: celery -A eazyclass beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
@@ -66,6 +71,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: django
     container_name: celery_flower
     command: celery -A eazyclass flower --address=0.0.0.0 --port=5555
     volumes:

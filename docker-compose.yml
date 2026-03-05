@@ -44,6 +44,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: django
     container_name: django
     command: >
       gunicorn eazyclass.wsgi:application
@@ -80,6 +81,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: backup-tools
     container_name: celery_worker
     command: >
       celery -A eazyclass worker
@@ -88,6 +90,7 @@ services:
         --loglevel=info
     volumes:
       - /home/deploy/worker_data:/worker_input
+      - ./rclone:/root/.config/rclone
     env_file:
       - .env
     depends_on:
@@ -107,6 +110,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: backup-tools
     container_name: celery_beat
     command: >
       celery -A eazyclass beat
@@ -131,6 +135,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: django
     container_name: celery_flower
     command: >
       celery -A eazyclass flower
