@@ -47,3 +47,25 @@ class PeriodTemplateManager(models.Manager):
             query &= ~Q(pk=exclude_pk)
 
         return self.filter(query)
+
+
+class TimingManager(models.Manager):
+    def get_for_period(self, date, lesson_number):
+        if isinstance(date, str):
+            date = DateClass.fromisoformat(date)
+
+        weekday = date.weekday()
+
+        return (
+            self.select_related("period_template")
+            .filter(
+                period_template__lesson_number=lesson_number,
+                period_template__start_date__lte=date
+            )
+            .filter(
+                models.Q(period_template__end_date__gte=date) |
+                models.Q(period_template__end_date__isnull=True)
+            )
+            .filter(weekdays__day_of_week=weekday)
+            .first()
+        )

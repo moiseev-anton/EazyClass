@@ -2,7 +2,7 @@ from datetime import date as DateClass
 
 from django.db import models
 
-from scheduler.managers import PeriodTemplateManager
+from scheduler.managers import PeriodTemplateManager, TimingManager
 
 
 class PeriodTemplate(models.Model):
@@ -27,6 +27,8 @@ class Timing(models.Model):
     period_template = models.ForeignKey(PeriodTemplate, related_name='timings', on_delete=models.CASCADE)
     start_time = models.TimeField()
     end_time = models.TimeField()
+
+    objects = TimingManager()
 
     class Meta:
         constraints = [
