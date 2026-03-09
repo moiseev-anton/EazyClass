@@ -171,7 +171,7 @@ class LessonsSyncManager:
 
         return {
             "added": raw_result["added"],
-            "updated": raw_result["updated"],
+            "updated": raw_result["updated_details"],
             "removed": list(raw_result["removed"]),
         }
 
@@ -248,12 +248,30 @@ class LessonsSyncManager:
 
     @staticmethod
     def _serialize_summary(
-        comparison_result: Dict[str, List[Lesson]],
+        comparison_result: Dict[str, Any],
     ) -> ComparisonSummary:
-        serialized = {
-            key: [lesson.to_dict() for lesson in lessons]
-            for key, lessons in comparison_result.items()
-        }
+
+        serialized: dict[str, list[dict]] = {}
+
+        for key, value in comparison_result.items():
+            if key == "updated":
+                details_list = []
+                for lesson_obj, field_changes in value.items():
+                    if not field_changes:
+                        continue
+
+                    lesson_dict = lesson_obj.to_dict()
+                    lesson_dict["changes"] = {
+                        field: list(old_new)
+                        for field, old_new in field_changes.items()
+                    }
+                    details_list.append(lesson_dict)
+                serialized[key] = details_list
+
+            else:
+                # added / removed — обычные списки Lesson
+                serialized[key] = [lesson.to_dict() for lesson in value]
+
         return serialized
 
     @staticmethod

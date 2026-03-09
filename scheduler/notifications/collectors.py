@@ -50,6 +50,14 @@ def collect_refresh_notifications(
             teacher_ids.add(tid)
             teacher_periods[tid].add(pid)
 
+        # Если был заменен teacher, то надо сформировать уведомления и для старого teacher
+        if lesson_changes := lesson.get("changes"):
+            teacher_changes = lesson_changes.get("teacher")
+            if isinstance(teacher_changes, (list, tuple)) and len(teacher_changes) == 2:
+                old_tid, new_tid = teacher_changes
+                teacher_ids.add(old_tid)
+                teacher_periods[old_tid].add(pid)
+
     # Получаем адресатов
     group_chats = GroupSubscription.objects.get_subscriber_chat_ids_for_updates(group_ids, platform)
     logger.debug(f"group_chats: {group_chats}")
