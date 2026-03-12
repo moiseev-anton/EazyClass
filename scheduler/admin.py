@@ -21,7 +21,13 @@ from scheduler.admin_filters import (
     TeacherHasLessonsFilter,
     UserHasSubscriptionFilter
 )
-from scheduler.forms import PeriodTemplateForm, TimingForm, TimingInlineFormSet, LessonAdminForm
+from scheduler.forms import (
+    PeriodTemplateForm,
+    TimingForm,
+    TimingInlineFormSet,
+    LessonAdminForm,
+    UserCreationForm,
+)
 from scheduler.models import (
     Classroom,
     Faculty,
@@ -157,8 +163,10 @@ class LessonAdmin(BaseActiveAdmin):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    add_form = UserCreationForm
     inlines = (SocialAccountInline,)
-    list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'subscriptions_link', 'updated_at', 'created_at', 'is_staff', 'is_active',)
+
+    list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'subscriptions_link', 'updated_at', 'created_at', 'password_status', 'is_staff', 'is_active',)
     list_display_links = ('id', 'username')
     list_filter = ('is_active', UserHasSubscriptionFilter)
     list_editable = ('notify_schedule_updates', 'notify_upcoming_lessons',)
@@ -166,16 +174,17 @@ class UserAdmin(BaseUserAdmin):
     readonly_fields = ('created_at', 'updated_at')
     fieldsets = (
         (None, {
-            'fields': ('username', 'first_name', 'last_name', 'is_active')
+            'fields': ('username', 'first_name', 'last_name', 'password', 'is_active',)
         }),
         ('Notifications', {
             'fields': ('notify_schedule_updates', 'notify_upcoming_lessons')
         }),
         ('Permissions', {
-            'fields': ('groups', 'user_permissions', 'is_staff', 'is_superuser'),
+            'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
+            'fields': ('last_login', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
         }),
     )
 
@@ -183,9 +192,19 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'first_name', 'last_name', 'password1', 'password2', 'is_staff', 'is_superuser', 'is_active'),
+            'fields': ('username', 'first_name', 'last_name', "usable_password", 'password1', 'password2', 'is_staff', 'is_superuser', 'is_active'),
         }),
     )
+
+    # Индикатор состояния пароля в списке и в форме
+    def password_status(self, obj):
+        if obj.has_usable_password():
+            return mark_safe('<span style="color:#28a745;">✔ Есть</span>')
+        else:
+            return mark_safe('<span style="color:#999;">✘ Нет</span>')
+
+    password_status.short_description = "Пароль"
+    password_status.admin_order_field = "password"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -200,7 +219,7 @@ class UserAdmin(BaseUserAdmin):
 
         return format_html('<a href="{}?user__id__exact={}">{}</a>', url, obj.id, count)
 
-    subscriptions_link.short_description = "Subscriptions"
+    subscriptions_link.short_description = "Subs"
     subscriptions_link.admin_order_field = "_subscriptions_count"
 
 

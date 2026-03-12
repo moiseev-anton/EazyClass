@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class UserManager(BaseUserManager):
-    def _generate_default_username(self):
+    def generate_default_username(self):
         """Генерация случайного уникального имени пользователя."""
         while True:
             username = f"s{random.randint(100000, 999999)}"
@@ -28,7 +28,7 @@ class UserManager(BaseUserManager):
         user = self.model(
             first_name=first_name,
             last_name=last_name,
-            username=self._generate_default_username(),
+            username=self.generate_default_username(),
             **extra_fields
         )
         if password:
