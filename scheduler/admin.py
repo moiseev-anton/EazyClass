@@ -1,67 +1,39 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from polymorphic.admin import (PolymorphicChildModelAdmin, PolymorphicChildModelFilter, PolymorphicParentModelAdmin)
 from rangefilter.filters import DateRangeFilter
-from admin_auto_filters.filters import AutocompleteFilter
 
 # Local imports
 from scheduler.activities.admin_query_actions import make_active, make_inactive, toggle_active
-from scheduler.forms import TimingForm, TimingInlineFormSet, PeriodTemplateForm
+from scheduler.admin_filters import (
+    ClassroomFilter,
+    ClassroomHasLessonsFilter,
+    FacultyFilter,
+    GroupFilter,
+    GroupHasLessonsFilter,
+    SubjectFilter,
+    SubjectHasLessonsFilter,
+    TeacherFilter,
+    TeacherHasLessonsFilter,
+    UserHasSubscriptionFilter
+)
+from scheduler.forms import PeriodTemplateForm, TimingForm, TimingInlineFormSet
 from scheduler.models import (
+    Classroom,
     Faculty,
     Group,
-    SocialAccount,
-    Teacher,
-    Subject,
-    Classroom,
-    Lesson,
-    User,
-    Timing,
-    Subscription,
-    TeacherSubscription,
     GroupSubscription,
-    PeriodTemplate,
+    Lesson,
     Period,
+    PeriodTemplate,
+    SocialAccount,
+    Subject,
+    Subscription,
+    Teacher,
+    TeacherSubscription,
+    Timing,
+    User
 )
-from polymorphic.admin import (
-    PolymorphicParentModelAdmin,
-    PolymorphicChildModelAdmin,
-    PolymorphicChildModelFilter,
-)
-
-
-
-# ---------------------------------------------------------------------------
-# Autocomplete filters
-# ---------------------------------------------------------------------------
-
-class GroupFilter(AutocompleteFilter):
-    """Filter lessons by `group` using autocomplete."""
-    title = 'Group'
-    field_name = 'group'
-
-
-class TeacherFilter(AutocompleteFilter):
-    """Filter lessons by `teacher` using autocomplete."""
-    title = 'Teacher'
-    field_name = 'teacher'
-
-
-class SubjectFilter(AutocompleteFilter):
-    """Filter lessons by `subject` using autocomplete."""
-    title = 'Subject'
-    field_name = 'subject'
-
-
-class FacultyFilter(AutocompleteFilter):
-    """Filter groups by `faculty` using autocomplete."""
-    title = 'Faculty'
-    field_name = 'faculty'
-
-
-class ClassroomFilter(AutocompleteFilter):
-    """Filter groups by `faculty` using autocomplete."""
-    title = 'Classroom'
-    field_name = 'classroom'
 
 
 # ---------------------------------------------------------------------------
@@ -99,17 +71,17 @@ class FacultyAdmin(BaseActiveAdmin):
 class GroupAdmin(BaseActiveAdmin):
     list_display = ('title', 'grade', 'faculty', 'endpoint', 'is_active', 'updated_at', 'created_at', 'id')
     search_fields = ('title',)
-    list_filter = (FacultyFilter, 'grade', 'is_active')
+    list_filter = (FacultyFilter, 'grade', 'is_active', GroupHasLessonsFilter)
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('faculty', 'grade',)
     autocomplete_fields = ('faculty',)
-    
+
 
 @admin.register(Teacher)
 class TeacherAdmin(BaseActiveAdmin):
     list_display = ('short_name', 'full_name', 'endpoint', 'is_active')
     search_fields = ('full_name', 'short_name')
-    list_filter = ('is_active',)
+    list_filter = ('is_active', TeacherHasLessonsFilter)
     ordering = ('full_name',)
 
 
@@ -117,7 +89,7 @@ class TeacherAdmin(BaseActiveAdmin):
 class SubjectAdmin(BaseActiveAdmin):
     list_display = ('id', 'title', 'is_active')
     search_fields = ('title',)
-    list_filter = ('is_active',)
+    list_filter = ('is_active', SubjectHasLessonsFilter)
     ordering = ('title',)
 
 
@@ -125,7 +97,7 @@ class SubjectAdmin(BaseActiveAdmin):
 class ClassroomAdmin(BaseActiveAdmin):
     list_display = ('title', 'is_active')
     search_fields = ('title',)
-    list_filter = ('is_active',)
+    list_filter = ('is_active', ClassroomHasLessonsFilter)
     ordering = ('title',)
 
 
@@ -171,7 +143,7 @@ class UserAdmin(BaseUserAdmin):
     inlines = (SocialAccountInline,)
     list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'updated_at', 'created_at', 'is_staff', 'is_active',)
     list_display_links = ('id', 'username')
-    list_filter = ('is_active', )
+    list_filter = ('is_active', UserHasSubscriptionFilter)
     list_editable = ('notify_schedule_updates', 'notify_upcoming_lessons',)
     search_fields = ('username', 'first_name', 'last_name', 'id')
     readonly_fields = ('created_at', 'updated_at')
