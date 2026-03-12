@@ -1,5 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.db.models import Count
+from django.urls import reverse
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from polymorphic.admin import (PolymorphicChildModelAdmin, PolymorphicChildModelFilter, PolymorphicParentModelAdmin)
 from rangefilter.filters import DateRangeFilter
 
@@ -79,10 +83,19 @@ class GroupAdmin(BaseActiveAdmin):
 
 @admin.register(Teacher)
 class TeacherAdmin(BaseActiveAdmin):
-    list_display = ('short_name', 'full_name', 'endpoint', 'is_active')
+    list_display = ('short_name', 'full_name', 'endpoint', 'lesson_count', 'is_active')
     search_fields = ('full_name', 'short_name')
     list_filter = ('is_active', TeacherHasLessonsFilter)
     ordering = ('full_name',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(_lesson_count=Count("lessons"))
+
+    def lesson_count(self, obj):
+        return obj._lesson_count
+
+    lesson_count.short_description = "Lessons"
 
 
 @admin.register(Subject)
@@ -141,7 +154,7 @@ class LessonAdmin(BaseActiveAdmin):
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     inlines = (SocialAccountInline,)
-    list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'updated_at', 'created_at', 'is_staff', 'is_active',)
+    list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'subscriptions_link', 'updated_at', 'created_at', 'is_staff', 'is_active',)
     list_display_links = ('id', 'username')
     list_filter = ('is_active', UserHasSubscriptionFilter)
     list_editable = ('notify_schedule_updates', 'notify_upcoming_lessons',)
@@ -170,15 +183,42 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(_subscriptions_count=Count("subscriptions"))
+
+    def subscriptions_link(self, obj):
+        count = obj._subscriptions_count
+        url = reverse("admin:scheduler_subscription_changelist")
+
+        if count == 0:
+            return mark_safe('<span style="color:#999;">0</span>')
+
+        return format_html('<a href="{}?user__id__exact={}">{}</a>', url, obj.id, count)
+
+    subscriptions_link.short_description = "Subscriptions"
+    subscriptions_link.admin_order_field = "_subscriptions_count"
+
+
 @admin.register(SocialAccount)
 class SocialAccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'platform', 'social_id', 'is_blocked', 'extra_data')
+    list_display = ('id', 'user_link', 'platform', 'social_id', 'is_blocked', 'extra_data')
     list_editable = ('is_blocked',)
     search_fields = ()
     list_select_related = ('user',)
     autocomplete_fields = ('user',)
     list_filter = ('platform', 'is_blocked')
 
+    def user_link(self, obj):
+        user = obj.user
+        if not user:
+            return "-"
+
+        url = reverse("admin:scheduler_user_change", args=[user.id])
+        return format_html('<a href="{}">{}</a>', url, user)
+
+    user_link.short_description = "User"
+    user_link.admin_order_field = "user"
 
 
 class TimingInline(admin.TabularInline):
@@ -254,7 +294,6 @@ class TeacherSubscriptionAdmin(BaseSubscriptionChildAdmin):
     autocomplete_fields = ('user', 'teacher',)
 
 
-
 @admin.register(GroupSubscription)
 class GroupSubscriptionAdmin(BaseSubscriptionChildAdmin):
     base_model = GroupSubscription
@@ -265,11 +304,22 @@ class GroupSubscriptionAdmin(BaseSubscriptionChildAdmin):
 class SubscriptionAdmin(PolymorphicParentModelAdmin):
     base_model = Subscription
     child_models = (TeacherSubscription, GroupSubscription)
-    list_display = ('id', 'user', 'subscription_object', 'created_at', 'updated_at')
+    list_display = ('id', 'user_link', 'subscription_object', 'created_at', 'updated_at')
     list_filter = (PolymorphicChildModelFilter, 'created_at')
     list_select_related = ('user',)
     autocomplete_fields = ('user',)
-    
+
+    def user_link(self, obj):
+        user = obj.user
+        if not user:
+            return "-"
+
+        url = reverse("admin:scheduler_user_change", args=[user.id])
+        return format_html('<a href="{}">{}</a>', url, user)
+
+    user_link.short_description = "User"
+    user_link.admin_order_field = "user"
+
     def subscription_object(self, obj):
         # Попытаться получить реальный (дочерний) экземпляр и вывести связанный объект
         real = obj
@@ -289,4 +339,3 @@ class SubscriptionAdmin(PolymorphicParentModelAdmin):
                 return getattr(real, f)
         return None
     subscription_object.short_description = 'Object'
-
