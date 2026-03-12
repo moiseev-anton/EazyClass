@@ -21,7 +21,7 @@ from scheduler.admin_filters import (
     TeacherHasLessonsFilter,
     UserHasSubscriptionFilter
 )
-from scheduler.forms import PeriodTemplateForm, TimingForm, TimingInlineFormSet
+from scheduler.forms import PeriodTemplateForm, TimingForm, TimingInlineFormSet, LessonAdminForm
 from scheduler.models import (
     Classroom,
     Faculty,
@@ -116,6 +116,7 @@ class ClassroomAdmin(BaseActiveAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(BaseActiveAdmin):
+    form = LessonAdminForm
     list_display = ('id', 'period_date', 'period_lesson_number', 'group', 'teacher', 'classroom', 'subgroup', 'is_active', 'subject')
     search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
     list_filter = (
@@ -129,10 +130,19 @@ class LessonAdmin(BaseActiveAdmin):
         'is_active',
     )
     list_select_related = ('period', 'group', 'teacher', 'classroom', 'subject')
-    autocomplete_fields = ('group', 'teacher', 'classroom', 'subject', 'period')
+    autocomplete_fields = ('group', 'teacher', 'classroom', 'subject', )
     list_display_links = ('id', 'subject')
     ordering = ('-period__date', 'period__lesson_number', 'group',)
     readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('date', 'lesson_number', 'group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
 
     def period_date(self, obj):
         return obj.period.date if obj.period_id else None
@@ -144,12 +154,6 @@ class LessonAdmin(BaseActiveAdmin):
     period_lesson_number.admin_order_field = 'period__lesson_number'
     period_lesson_number.short_description = 'Lesson #'
 
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        form.base_fields['period'].help_text = (
-            'Поиск period по дате в формате YYYY-MM-DD'
-        )
-        return form
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
