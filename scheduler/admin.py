@@ -166,7 +166,7 @@ class UserAdmin(BaseUserAdmin):
     add_form = UserCreationForm
     inlines = (SocialAccountInline,)
 
-    list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'subscriptions_link', 'updated_at', 'created_at', 'password_status', 'is_staff', 'is_active',)
+    list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'subscriptions_link', 'last_login', 'updated_at', 'created_at', 'password_status', 'is_staff', 'is_active',)
     list_display_links = ('id', 'username')
     list_filter = ('is_active', UserHasSubscriptionFilter)
     list_editable = ('notify_schedule_updates', 'notify_upcoming_lessons',)
