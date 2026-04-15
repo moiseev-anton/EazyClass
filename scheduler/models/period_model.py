@@ -12,9 +12,9 @@ class Period(models.Model):
     part = models.PositiveSmallIntegerField(
         default=0,
         choices=[
-            (0, "Полная пара"),
-            (1, "1-я половина"),
-            (2, "2-я половина"),
+            (0, "full"),
+            (1, "1st part"),
+            (2, "2nd part"),
         ],
     )
 

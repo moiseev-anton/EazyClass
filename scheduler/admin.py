@@ -292,10 +292,10 @@ class PeriodTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(Period)
 class PeriodAdmin(admin.ModelAdmin):
-    list_display = ('id', 'date', 'lesson_number', 'start_time', 'end_time')
+    list_display = ('id', 'date', 'lesson_number', 'part', 'start_time', 'end_time')
     list_filter = (('date', DateRangeFilter), 'lesson_number')
     date_hierarchy = 'date'
-    ordering = ('-date', 'lesson_number',)
+    ordering = ('-date', 'lesson_number', 'part')
     search_fields = ('date',)
 
 
