@@ -15,6 +15,9 @@ class LessonSerializer(json_api_serializers.ModelSerializer):
     number = json_api_serializers.IntegerField(
         source="period.lesson_number", read_only=True
     )
+    part = json_api_serializers.IntegerField(
+        source="period.part", read_only=True
+    )
     start_time = json_api_serializers.TimeField(
         source="period.start_time",
         read_only=True,
@@ -31,6 +34,7 @@ class LessonSerializer(json_api_serializers.ModelSerializer):
             "id",
             "date",
             "number",
+            "part",
             "start_time",
             "end_time",
             "subject",

@@ -85,7 +85,6 @@ class LessonsSyncManager:
         logger.info("Данные скрайпинга загружены из Redis")
 
         lesson_items = self._normalize_lessons_fields(lesson_items)
-        # logger.info(lesson_items)
 
         return ScrapyFetchResult(
             scraped_groups=scraped_groups,
@@ -99,7 +98,7 @@ class LessonsSyncManager:
         """Process: gather → map → create. Returns new_lessons и mappers (for reuse if needed)."""
         classrooms = RelatedObjectsMap(Classroom, ("title",))
         subjects = RelatedObjectsMap(Subject, ("title",))
-        periods = RelatedObjectsMap(Period, ("date", "lesson_number"))
+        periods = RelatedObjectsMap(Period, ("date", "lesson_number", "part"))
         teachers = RelatedObjectsMap(
             Teacher,
             ("full_name",),
@@ -297,6 +296,9 @@ class LessonsSyncManager:
             if date_str not in date_cache:
                 date_cache[date_str] = date.fromisoformat(date_str)
             item["period"]["date"] = date_cache[date_str]
+
+            part = item["period"].get("part")
+            item["period"]["part"] = part if isinstance(part, int) else Defaults.PERIOD_PART
 
             subject_title = item["subject"].get("title")
             item["subject"]["title"] = (

@@ -105,6 +105,7 @@ def process_lessons_csv(
 
         reader = csv.DictReader(f, delimiter=delimiter)
 
+        # В CSV все элементы строковые
         for row_num, row in enumerate(reader, 1):
             try:
                 group_title = row.get("group", "").strip()
@@ -122,6 +123,7 @@ def process_lessons_csv(
                     "group_id": group_id,
                     "period": {
                         "lesson_number": int(row["lesson_number"]),
+                        "part": int(row["part"]) if (row.get("part") or "").strip() else None,
                         "date": row["date"].strip(),
                     },
                     "subject": {

@@ -9,11 +9,19 @@ class Period(models.Model):
     date = models.DateField()
     start_time = models.TimeField(default=None, null=True, blank=True)
     end_time = models.TimeField(default=None, null=True, blank=True)
+    part = models.PositiveSmallIntegerField(
+        default=0,
+        choices=[
+            (0, "Полная пара"),
+            (1, "1-я половина"),
+            (2, "2-я половина"),
+        ],
+    )
 
     objects = PeriodManager()
 
     class Meta:
-        unique_together = ("date", "lesson_number")
+        unique_together = ("date", "lesson_number", "part")
         indexes = [
             models.Index(fields=["date", "lesson_number"]),
         ]
@@ -34,11 +42,16 @@ class Period(models.Model):
             timing = Timing.objects.get_for_period(
                 date=self.date, lesson_number=self.lesson_number
             )
-            if timing:
-                self.start_time = timing.start_time
-                self.end_time = timing.end_time
+            if not timing:
+                return
+
+            start, end = timing.get_time_range(self.part)
+
+            self.start_time = start
+            self.end_time = end
 
     def __str__(self) -> str:
         start = self.start_time.strftime("%H:%M") if self.start_time else "—"
         end = self.end_time.strftime("%H:%M") if self.end_time else "—"
-        return f"{self.lesson_number} | {self.date:%d.%m.%Y} | {start}–{end}"
+        part_str = f"({self.part})" if self.part else ""
+        return f"{self.lesson_number}{part_str} | {self.date:%d.%m.%Y} | {start}–{end}"

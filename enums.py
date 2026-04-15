@@ -13,4 +13,5 @@ class Defaults:
     TEACHER_NAME = "не указано"
     SUBJECT_TITLE = "не указано"
     SUBGROUP = "0"
+    PERIOD_PART = 0
     CLASSROOM = "дист"
