@@ -1,4 +1,5 @@
 import logging
+from datetime import date, datetime
 from typing import Any, List
 
 from django import forms
@@ -28,10 +29,16 @@ class TimingForm(forms.ModelForm):
         required=False,
         label="Дни недели"
     )
+    part_duration = forms.IntegerField(
+        min_value=0,
+        required=True,
+        label="Длительность полупары (мин)",
+        help_text="0 — без деления на полупары",
+    )
 
     class Meta:
         model = Timing
-        fields = ['start_time', 'end_time', 'weekdays']
+        fields = ['start_time', 'end_time', 'part_duration', 'weekdays']
 
     def __init__(self, *args, **kwargs) -> None:
         """Инициализация формы с предзаполнением дней недели, если объект уже существует."""
@@ -55,10 +62,20 @@ class TimingForm(forms.ModelForm):
 
         start_time = cleaned_data.get('start_time')
         end_time = cleaned_data.get('end_time')
+        half_duration = cleaned_data.get("part_duration")
 
         if start_time and end_time and start_time > end_time:
             raise forms.ValidationError("Время начала не может быть позже времени окончания.")
 
+        if start_time and end_time and half_duration is not None:
+            start = datetime.combine(date.min, start_time)
+            end = datetime.combine(date.min, end_time)
+            duration_minutes = int((end - start).total_seconds() // 60)
+
+            if half_duration > 0 and half_duration * 2 > duration_minutes:
+                raise forms.ValidationError(
+                    "Удвоенная длительность полупары превышает длительность пары"
+                )
         return cleaned_data
 
     @transaction.atomic
