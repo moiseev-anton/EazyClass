@@ -89,7 +89,7 @@ services:
         --concurrency=1
         --loglevel=info
     volumes:
-      - /home/deploy/worker_data:/worker_input
+      - ../../worker_data:/worker_input
       - ./rclone:/root/.config/rclone
     env_file:
       - .env
