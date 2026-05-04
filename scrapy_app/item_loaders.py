@@ -1,28 +1,23 @@
-from datetime import date as DateClass
-from functools import lru_cache
-from functools import partial
-from typing import Any
-import re
 import logging
+import re
+from datetime import date as DateClass
+from functools import lru_cache, partial
 
 from dateparser.date import DateDataParser
 from itemloaders.processors import MapCompose, TakeFirst
 from scrapy.loader import ItemLoader
-from enums import Defaults
-
-from scheduler.models import Subject, Classroom, Teacher
 
 logger = logging.getLogger(__name__)
 
 
-DATE_PATTERN = r'\b\d{1,2}\.\d{1,2}\.\d{4}\b'
+DATE_PATTERN = r"\b\d{1,2}\.\d{1,2}\.\d{4}\b"
 
 date_parser = DateDataParser(
-    languages=['ru'],
+    languages=["ru"],
     settings={
         "PREFER_LOCALE_DATE_ORDER": True,
         "RETURN_AS_TIMEZONE_AWARE": False,
-    }
+    },
 )
 
 
@@ -40,21 +35,23 @@ def parse_date(value: str) -> DateClass:
     if isinstance(value, str):
         try:
             # Первая попытка парсинга
-            return date_parser.get_date_data(value.strip())['date_obj'].date()
+            return date_parser.get_date_data(value.strip())["date_obj"].date()
         except (AttributeError, TypeError):
-            logger.warning(f'Замечена нестандартная стока даты: {value}')
+            logger.warning(f"Замечена нестандартная стока даты: {value}")
             # Попробуем извлечь дату с помощью регулярного выражения
             match = re.search(DATE_PATTERN, value)
             if match:
                 value = match.group(0)
                 # Вторая попытка парсинга после извлечения
-                return date_parser.get_date_data(value)['date_obj'].date()
+                return date_parser.get_date_data(value)["date_obj"].date()
             raise ValueError(f"Не удалось извлечь дату из строки: {value}")
 
     if isinstance(value, DateClass):
         return value
 
-    raise TypeError(f"Ожидалось строковое представление даты или объект date, получено: {type(value)}")
+    raise TypeError(
+        f"Ожидалось строковое представление даты или объект date, получено: {type(value)}"
+    )
 
 
 def normalize_html_text(value) -> str | None:
@@ -64,7 +61,7 @@ def normalize_html_text(value) -> str | None:
     return value or None
 
 
-def normalize_int(value, min_value=float('-inf'), max_value=float('inf')) -> int:
+def normalize_int(value, min_value=float("-inf"), max_value=float("inf")) -> int:
     """
     Нормализует обязательное целое значение.
 
@@ -77,7 +74,7 @@ def normalize_int(value, min_value=float('-inf'), max_value=float('inf')) -> int
 
     if isinstance(value, str):
         value = value.strip()
-        if value == '':
+        if value == "":
             raise ValueError("Пустая строка недопустима для целого значения")
 
     try:
@@ -91,7 +88,7 @@ def normalize_int(value, min_value=float('-inf'), max_value=float('inf')) -> int
     return value
 
 
-def normalize_optional_int(value, min_value=float('-inf'), max_value=float('inf')) -> int | None:
+def normalize_optional_int(value, min_value=float("-inf"), max_value=float("inf")) -> int | None:
     """
     Нормализует необязательное целое значение.
 
@@ -101,15 +98,17 @@ def normalize_optional_int(value, min_value=float('-inf'), max_value=float('inf'
     if value is None:
         return None
 
-    if isinstance(value, str) and value.strip() == '':
+    if isinstance(value, str) and value.strip() == "":
         return None
 
     return normalize_int(value, min_value=min_value, max_value=max_value)
 
-def required_int_processor(min_value=float('-inf'), max_value=float('inf')):
+
+def required_int_processor(min_value=float("-inf"), max_value=float("inf")):
     return MapCompose(partial(normalize_int, min_value=min_value, max_value=max_value))
 
-def optional_int_processor(min_value=float('-inf'), max_value=float('inf')):
+
+def optional_int_processor(min_value=float("-inf"), max_value=float("inf")):
     return MapCompose(partial(normalize_optional_int, min_value=min_value, max_value=max_value))
 
 
@@ -121,6 +120,7 @@ class LessonLoader(ItemLoader):
     Поля ожидаются в виде строк.
     group_id ожидается int.
     """
+
     default_output_processor = TakeFirst()
 
     group_id_in = required_int_processor(0)
@@ -134,19 +134,19 @@ class LessonLoader(ItemLoader):
     def load_item_dict(self) -> dict:
         """Возвращает данные в целевой структуре словаря."""
         return {
-            'group_id': self.get_output_value('group_id'),
-            'period': {
-                'lesson_number': self.get_output_value('lesson_number'),
-                'date': self.get_output_value('date'),
+            "group_id": self.get_output_value("group_id"),
+            "period": {
+                "lesson_number": self.get_output_value("lesson_number"),
+                "date": self.get_output_value("date"),
             },
-            'subject': {
-                'title': self.get_output_value('subject_title'),
+            "subject": {
+                "title": self.get_output_value("subject_title"),
             },
-            'classroom': {
-                'title': self.get_output_value('classroom_title'),
+            "classroom": {
+                "title": self.get_output_value("classroom_title"),
             },
-            'teacher': {
-                'full_name': self.get_output_value('teacher_fullname'),
+            "teacher": {
+                "full_name": self.get_output_value("teacher_fullname"),
             },
-            'subgroup': self.get_output_value('subgroup'),
+            "subgroup": self.get_output_value("subgroup"),
         }
