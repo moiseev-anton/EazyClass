@@ -6,11 +6,11 @@ from scheduler.models.abstract_models import TimestampedModel
 
 
 class Lesson(TimestampedModel):
-    group = models.ForeignKey('scheduler.Group', related_name='lessons', on_delete=models.CASCADE, null=True)
+    group = models.ForeignKey('scheduler.Group', related_name='lessons', on_delete=models.CASCADE, null=True, db_index=False)
     period = models.ForeignKey('scheduler.Period', related_name='lessons', on_delete=models.CASCADE, null=True)
     subject = models.ForeignKey('scheduler.Subject', related_name='lessons', on_delete=models.CASCADE, null=True)
-    teacher = models.ForeignKey('scheduler.Teacher', related_name='lessons', on_delete=models.CASCADE, null=True, blank=True)
-    classroom = models.ForeignKey('scheduler.Classroom', related_name='lessons', on_delete=models.CASCADE, null=True)
+    teacher = models.ForeignKey('scheduler.Teacher', related_name='lessons', on_delete=models.CASCADE, null=True, blank=True, db_index=False)
+    classroom = models.ForeignKey('scheduler.Classroom', related_name='lessons', on_delete=models.CASCADE, null=True, db_index=False)
     subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
     # + updated_at из TimestampedModel
@@ -21,8 +21,9 @@ class Lesson(TimestampedModel):
 
     class Meta:
         indexes = [
-            models.Index(fields=['period', 'group']),
-            models.Index(fields=['group', 'period', 'subgroup']),
+            models.Index(fields=["group", "period"]),
+            models.Index(fields=["teacher", "period"]),
+            models.Index(fields=["classroom", "period"]),
         ]
         verbose_name = 'Lesson'
         verbose_name_plural = 'Lessons'

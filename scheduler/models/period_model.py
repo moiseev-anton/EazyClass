@@ -23,7 +23,7 @@ class Period(models.Model):
     class Meta:
         unique_together = ("date", "lesson_number", "part")
         indexes = [
-            models.Index(fields=["date", "lesson_number"]),
+            models.Index(fields=["date", "lesson_number", "part"]),
         ]
         verbose_name = 'Period'
         verbose_name_plural = 'Periods'
