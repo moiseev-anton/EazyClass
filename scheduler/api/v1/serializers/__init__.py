@@ -1,7 +1,7 @@
 from .auth_serializers import AuthSerializer, AuthWithNonceSerializer, AuthResult
-from .deeplink_serializators import DeeplinkParamsSerializer, DeeplinkOutputSerializer
-from .faculty_serialiazer import FacultySerializer
 from .classroom_serializer import ClassroomSerializer
+from .deeplink_serializers import DeeplinkParamsSerializer, DeeplinkOutputSerializer
+from .faculty_serializer import FacultySerializer
 from .group_serializers import GroupSerializer
 from .lesson_serializer import LessonSerializer
 from .nonce_serializers import NonceSerializer
