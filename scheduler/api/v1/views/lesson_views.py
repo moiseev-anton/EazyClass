@@ -11,7 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from scheduler.api.filters import LessonFilter
+from scheduler.api.filters import LessonFilter, LessonByPeriodFilter
 from scheduler.api.mixins import JsonApiMixin
 from scheduler.api.v1.serializers import LessonSerializer
 from scheduler.api.viewsets import ReadOnlyModelViewSet
@@ -61,6 +61,17 @@ logger = logging.getLogger(__name__)
             200: LessonSerializer(many=True),
             400: OpenApiResponse(description="Bad Request"),
             403: OpenApiResponse(description="Forbidden"),
+            404: OpenApiResponse(description="Not Found"),
+        },
+    ),
+    by_period=extend_schema(
+        tags=["Lessons"],
+        summary="Get Lessons by period",
+        operation_id="lessons_by_period_list",
+        description="Returns a list of lessons by some period (date + lesson_number).",
+        responses={
+            200: LessonSerializer(many=True),
+            400: OpenApiResponse(description="Bad Request"),
             404: OpenApiResponse(description="Not Found"),
         },
     ),
@@ -133,4 +144,14 @@ class LessonViewSet(JsonApiMixin, ReadOnlyModelViewSet):
             raise ValidationError(
                 _("Invalid subscription type"), "invalid_subscription_type"
             )
+        return self.list(request)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="by-period",
+        filterset_class=LessonByPeriodFilter
+    )
+    def by_period(self, request):
+        """GET /lessons/by-period/?date=2025-05-10&lesson_number=3"""
         return self.list(request)

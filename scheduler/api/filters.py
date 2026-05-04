@@ -82,6 +82,15 @@ class LessonFilter(filters.FilterSet):
         return super().filter_queryset(queryset)
 
 
+class LessonByPeriodFilter(filters.FilterSet):
+    date = filters.DateFilter(field_name="period__date", required=True)
+    lesson_number = filters.NumberFilter(field_name="period__lesson_number", required=True)
+
+    class Meta:
+        model = Lesson
+        fields = ["date", "lesson_number"]
+
+
 class GroupFilter(filters.FilterSet):
     faculty = filters.ModelChoiceFilter(
         field_name="faculty",
