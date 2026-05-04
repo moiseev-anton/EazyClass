@@ -1,4 +1,5 @@
 from .auth_views import AuthView, AuthWithNonceView
+from .classroom_view import ClassroomViewSet
 from .deeplink_views import DeeplinkView
 from .faculty_view import FacultyViewSet
 from .group_views import GroupViewSet

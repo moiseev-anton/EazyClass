@@ -10,6 +10,7 @@ from scheduler.api.permissions import IsAdmin
 from scheduler.api.v1.views import (
     AuthView,
     AuthWithNonceView,
+    ClassroomViewSet,
     CustomTokenObtainPairView,
     CustomTokenRefreshView,
     DeeplinkView,
@@ -29,6 +30,7 @@ from scheduler.api.v1.views import (
 
 router = routers.DefaultRouter()
 router.register(r"lessons", LessonViewSet, basename="lessons")
+router.register(r"classrooms", ClassroomViewSet, basename="classrooms")
 router.register(r"groups", GroupViewSet, basename="groups")
 router.register(r"faculties", FacultyViewSet, basename="faculties")
 router.register(r"teachers", TeacherViewSet, basename="teachers")
