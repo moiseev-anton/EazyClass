@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
     list=extend_schema(
         tags=["Lessons"],
         summary="Get Lessons",
-        description="Returns a list of lessons.\n"
-        "At least one of 'group' or 'teacher' filter is required`",
+        description="Returns a list of lessons.\n\n"
+        "⚠️ At least one of 'group', 'teacher' or 'classroom' filter is required`",
         parameters=[
             OpenApiParameter(name="filter[search]", exclude=True),
         ],
@@ -96,8 +96,8 @@ class LessonViewSet(JsonApiMixin, ReadOnlyModelViewSet):
             super()
             .get_queryset()
             .filter(is_active=True)
-            .select_related("subject", "classroom", "period")
-            .order_by("period__date", "period__lesson_number", "subgroup")
+            .select_related("classroom", "group", "period", "subject", "teacher")
+            .order_by("period__date", "period__lesson_number", "period__part", "subgroup")
         )
 
     def filter_queryset(self, queryset):

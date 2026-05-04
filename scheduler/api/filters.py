@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from rest_framework.exceptions import ValidationError
 
-from scheduler.models import Lesson, Group, Faculty, Subscription, Teacher
+from scheduler.models import Lesson, Group, Faculty, Subscription, Teacher, Classroom
 
 
 class LessonFilter(filters.FilterSet):
@@ -44,9 +44,14 @@ class LessonFilter(filters.FilterSet):
         help_text=_("Filter lessons by teacher ID."),
     )
 
+    classroom = filters.ModelChoiceFilter(
+        queryset=Classroom.objects.filter(is_active=True),
+        help_text=_("Filter lessons by classroom ID."),
+    )
+
     class Meta:
         model = Lesson
-        fields = ["group", "teacher", "date_from", "date_to", "subgroup"]
+        fields = ["group", "teacher", "classroom", "date_from", "date_to", "subgroup"]
 
     def filter_queryset(self, queryset):
         view = self.request.parser_context.get("view")
@@ -56,10 +61,11 @@ class LessonFilter(filters.FilterSet):
         if action == "list":
             group = self.form.cleaned_data.get("group")
             teacher = self.form.cleaned_data.get("teacher")
+            classroom = self.form.cleaned_data.get("classroom")
 
-            if not (group or teacher):
+            if not (group or teacher or classroom):
                 raise ValidationError(
-                    _("At least one of 'group' or 'teacher' filter is required."),
+                    _("At least one of 'group', 'teacher' or 'classroom' filter is required."),
                     code="required",
                 )
 
