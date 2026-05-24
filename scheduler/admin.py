@@ -45,6 +45,10 @@ from scheduler.models import (
 )
 
 
+admin.site.site_header = "EazyClass Admin"
+admin.site.site_title = "EazyClass"
+admin.site.index_title = "Панель управления"
+
 # ---------------------------------------------------------------------------
 # Helper BaseAdmin classes
 # ---------------------------------------------------------------------------
@@ -89,7 +93,7 @@ class GroupAdmin(BaseActiveAdmin):
 
 @admin.register(Teacher)
 class TeacherAdmin(BaseActiveAdmin):
-    list_display = ('id', 'short_name', 'full_name', 'endpoint', 'lesson_count', 'is_active')
+    list_display = ('id', 'short_name', 'full_name', 'endpoint', 'lesson_count_link', 'is_active')
     list_display_links = ("short_name",)
     search_fields = ('full_name', 'short_name')
     list_filter = ('is_active', TeacherHasLessonsFilter)
@@ -99,16 +103,25 @@ class TeacherAdmin(BaseActiveAdmin):
         qs = super().get_queryset(request)
         return qs.annotate(_lesson_count=Count("lessons"))
 
-    def lesson_count(self, obj):
-        return obj._lesson_count
+    @admin.display(description="Lessons", ordering="_lesson_count")
+    def lesson_count_link(self, obj):
+        count = obj._lesson_count
 
-    lesson_count.short_description = "Lessons"
-    lesson_count.admin_order_field = "_lesson_count"
+        if count == 0:
+            return "0"
+
+        url = reverse("admin:scheduler_lesson_changelist")
+        return format_html(
+            '<a href="{}?teacher__id__exact={}">{}</a>',
+            url,
+            obj.id,
+            count,
+        )
 
 
 @admin.register(Subject)
 class SubjectAdmin(BaseActiveAdmin):
-    list_display = ('id', 'title', 'lesson_count', 'is_active')
+    list_display = ('id', 'title', 'lesson_count_link', 'is_active')
     list_display_links = ("title",)
     search_fields = ('title',)
     list_filter = ('is_active', SubjectHasLessonsFilter)
@@ -118,21 +131,49 @@ class SubjectAdmin(BaseActiveAdmin):
         qs = super().get_queryset(request)
         return qs.annotate(_lesson_count=Count("lessons"))
 
-    def lesson_count(self, obj):
-        return obj._lesson_count
+    @admin.display(description="Lessons", ordering="_lesson_count")
+    def lesson_count_link(self, obj):
+        count = obj._lesson_count
 
-    lesson_count.short_description = "Lessons"
-    lesson_count.admin_order_field = "_lesson_count"
+        if count == 0:
+            return "0"
+
+        url = reverse("admin:scheduler_lesson_changelist")
+        return format_html(
+            '<a href="{}?subject__id__exact={}">{}</a>',
+            url,
+            obj.id,
+            count,
+        )
 
 
 @admin.register(Classroom)
 class ClassroomAdmin(BaseActiveAdmin):
-    list_display = ('id', 'title', 'is_active')
+    list_display = ('id', 'title', 'lesson_count_link', 'is_active')
     list_display_links = ('title',)
     ordering = ('title',)
     search_fields = ('title',)
     list_filter = ('is_active', ClassroomHasLessonsFilter)
     ordering = ('title',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(_lesson_count=Count("lessons"))
+
+    @admin.display(description="Lessons", ordering="_lesson_count")
+    def lesson_count_link(self, obj):
+        count = obj._lesson_count
+
+        if count == 0:
+            return "0"
+
+        url = reverse("admin:scheduler_lesson_changelist")
+        return format_html(
+            '<a href="{}?classroom__id__exact={}">{}</a>',
+            url,
+            obj.id,
+            count,
+        )
 
 
 @admin.register(Lesson)
