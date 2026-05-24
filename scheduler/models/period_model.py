@@ -5,7 +5,7 @@ from scheduler.models.period_template_models import Timing
 
 
 class Period(models.Model):
-    lesson_number = models.PositiveIntegerField()
+    lesson_number = models.PositiveIntegerField(verbose_name="#")
     date = models.DateField()
     start_time = models.TimeField(default=None, null=True, blank=True)
     end_time = models.TimeField(default=None, null=True, blank=True)

@@ -1,4 +1,5 @@
-from .timing_form import TimingForm, TimingInlineFormSet
-from .period_template_form import PeriodTemplateForm
 from .lesson_admin_form import LessonAdminForm
+from .period_template_form import PeriodTemplateForm
+from .replace_related_field_form import ReplaceLessonRelatedFieldsForm
+from .timing_form import TimingForm, TimingInlineFormSet
 from .user_admin_form import UserCreationForm

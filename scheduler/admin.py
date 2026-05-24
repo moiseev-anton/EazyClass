@@ -4,11 +4,16 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from polymorphic.admin import (PolymorphicChildModelAdmin, PolymorphicChildModelFilter, PolymorphicParentModelAdmin)
+from polymorphic.admin import PolymorphicChildModelAdmin, PolymorphicChildModelFilter, PolymorphicParentModelAdmin
 from rangefilter.filters import DateRangeFilter
 
 # Local imports
-from scheduler.activities.admin_query_actions import make_active, make_inactive, toggle_active
+from scheduler.activities.admin_query_actions import (
+    make_active,
+    make_inactive,
+    replace_lesson_related_fields,
+    toggle_active
+)
 from scheduler.admin_filters import (
     ClassroomFilter,
     ClassroomHasLessonsFilter,
@@ -21,13 +26,7 @@ from scheduler.admin_filters import (
     TeacherHasLessonsFilter,
     UserHasSubscriptionFilter
 )
-from scheduler.forms import (
-    PeriodTemplateForm,
-    TimingForm,
-    TimingInlineFormSet,
-    LessonAdminForm,
-    UserCreationForm,
-)
+from scheduler.forms import (LessonAdminForm, PeriodTemplateForm, TimingForm, TimingInlineFormSet, UserCreationForm)
 from scheduler.models import (
     Classroom,
     Faculty,
@@ -69,7 +68,7 @@ class SocialAccountInline(admin.TabularInline):
 
 @admin.register(Faculty)
 class FacultyAdmin(BaseActiveAdmin):
-    list_display = ('short_title', 'title', 'is_active', 'updated_at', 'created_at', 'id')
+    list_display = ('id', 'short_title', 'title', 'is_active', 'updated_at', 'created_at')
     search_fields = ('title', 'short_title')
     readonly_fields = ('created_at', 'updated_at')
     list_filter = ('is_active',)
@@ -79,7 +78,8 @@ class FacultyAdmin(BaseActiveAdmin):
 
 @admin.register(Group)
 class GroupAdmin(BaseActiveAdmin):
-    list_display = ('title', 'grade', 'faculty', 'endpoint', 'is_active', 'updated_at', 'created_at', 'id')
+    list_display = ('id', 'title', 'grade', 'faculty', 'endpoint', 'is_active', 'updated_at', 'created_at')
+    list_display_links = ("title",)
     search_fields = ('title',)
     list_filter = (FacultyFilter, 'grade', 'is_active', GroupHasLessonsFilter)
     readonly_fields = ('created_at', 'updated_at')
@@ -89,7 +89,8 @@ class GroupAdmin(BaseActiveAdmin):
 
 @admin.register(Teacher)
 class TeacherAdmin(BaseActiveAdmin):
-    list_display = ('short_name', 'full_name', 'endpoint', 'lesson_count', 'is_active')
+    list_display = ('id', 'short_name', 'full_name', 'endpoint', 'lesson_count', 'is_active')
+    list_display_links = ("short_name",)
     search_fields = ('full_name', 'short_name')
     list_filter = ('is_active', TeacherHasLessonsFilter)
     ordering = ('full_name',)
@@ -102,19 +103,33 @@ class TeacherAdmin(BaseActiveAdmin):
         return obj._lesson_count
 
     lesson_count.short_description = "Lessons"
+    lesson_count.admin_order_field = "_lesson_count"
 
 
 @admin.register(Subject)
 class SubjectAdmin(BaseActiveAdmin):
-    list_display = ('id', 'title', 'is_active')
+    list_display = ('id', 'title', 'lesson_count', 'is_active')
+    list_display_links = ("title",)
     search_fields = ('title',)
     list_filter = ('is_active', SubjectHasLessonsFilter)
     ordering = ('title',)
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(_lesson_count=Count("lessons"))
+
+    def lesson_count(self, obj):
+        return obj._lesson_count
+
+    lesson_count.short_description = "Lessons"
+    lesson_count.admin_order_field = "_lesson_count"
+
 
 @admin.register(Classroom)
 class ClassroomAdmin(BaseActiveAdmin):
-    list_display = ('title', 'is_active')
+    list_display = ('id', 'title', 'is_active')
+    list_display_links = ('title',)
+    ordering = ('title',)
     search_fields = ('title',)
     list_filter = ('is_active', ClassroomHasLessonsFilter)
     ordering = ('title',)
@@ -123,7 +138,13 @@ class ClassroomAdmin(BaseActiveAdmin):
 @admin.register(Lesson)
 class LessonAdmin(BaseActiveAdmin):
     form = LessonAdminForm
-    list_display = ('id', 'period_date', 'period_lesson_number', 'group', 'teacher', 'classroom', 'subgroup', 'is_active', 'subject')
+    actions = [
+        make_active,
+        make_inactive,
+        toggle_active,
+        replace_lesson_related_fields,
+    ]
+    list_display = ('id', 'period_date', 'period_lesson_number', 'teacher',  'group', 'subgroup', 'classroom', 'subject', 'is_active')
     search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
     list_filter = (
         GroupFilter,
@@ -158,7 +179,7 @@ class LessonAdmin(BaseActiveAdmin):
     def period_lesson_number(self, obj):
         return obj.period.lesson_number if obj.period_id else None
     period_lesson_number.admin_order_field = 'period__lesson_number'
-    period_lesson_number.short_description = 'Lesson #'
+    period_lesson_number.short_description = '#'
 
 
 @admin.register(User)
