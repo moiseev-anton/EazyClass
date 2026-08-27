@@ -14,7 +14,7 @@ INITIALS_PATTERN = re.compile(
 class Teacher(models.Model):
     full_name = models.CharField(max_length=64, unique=True)
     short_name = models.CharField(max_length=30)
-    endpoint = models.CharField(max_length=128, blank=True, null=True)
+    endpoint = models.CharField(max_length=128, blank=True, default='')
     is_active = models.BooleanField(default=True)
 
     objects = TeacherManager()

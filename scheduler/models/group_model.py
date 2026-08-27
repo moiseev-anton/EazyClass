@@ -9,7 +9,7 @@ class Group(TimestampedModel):
     faculty = models.ForeignKey(
         "scheduler.Faculty", related_name="groups", on_delete=models.CASCADE, null=True
     )
-    endpoint = models.CharField(max_length=128) # эндпоинт страницы расписания
+    endpoint = models.CharField(max_length=128, blank=True, default='') # эндпоинт страницы расписания
     grade = models.PositiveSmallIntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     # + created_at из TimestampedModel
