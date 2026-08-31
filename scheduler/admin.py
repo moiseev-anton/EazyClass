@@ -24,6 +24,7 @@ from scheduler.admin_filters import (
     SubjectHasLessonsFilter,
     TeacherFilter,
     TeacherHasLessonsFilter,
+    TeacherNoLessonsSinceDateFilter,
     UserHasSubscriptionFilter
 )
 from scheduler.forms import (LessonAdminForm, PeriodTemplateForm, TimingForm, TimingInlineFormSet, UserCreationForm)
@@ -96,7 +97,11 @@ class TeacherAdmin(BaseActiveAdmin):
     list_display = ('id', 'short_name', 'full_name', 'endpoint', 'lesson_count_link', 'is_active')
     list_display_links = ("short_name",)
     search_fields = ('full_name', 'short_name')
-    list_filter = ('is_active', TeacherHasLessonsFilter)
+    list_filter = (
+        'is_active',
+        TeacherHasLessonsFilter,
+        ('lessons__period__date', TeacherNoLessonsSinceDateFilter),
+    )
     ordering = ('full_name',)
 
     def get_queryset(self, request):
