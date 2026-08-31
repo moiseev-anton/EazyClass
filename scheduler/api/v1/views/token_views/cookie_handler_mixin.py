@@ -24,6 +24,18 @@ class TokenCookieHandlerMixin:
         )
 
     @staticmethod
+    def _clear_refresh_cookie(response: Response, request) -> None:
+        response.set_cookie(
+            key="refresh_token",
+            value="",
+            httponly=True,
+            secure=True,
+            samesite="Lax",
+            max_age=0,
+            path="/api/",
+        )
+
+    @staticmethod
     def _remove_refresh_from_body(response: Response) -> None:
         if "refresh" in response.data:
             del response.data["refresh"]
