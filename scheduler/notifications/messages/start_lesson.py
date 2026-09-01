@@ -4,6 +4,7 @@ from .common import format_date_full_ru, format_time, replace_digits_to_emojis
 
 
 def format_lesson(lesson: Lesson, mode: LessonDisplayMode = LessonDisplayMode.FULL) -> str:
+    """Формирует HTML-блок одного урока с полями, заданными режимом отображения."""
     period = lesson.period
     number_emoji = replace_digits_to_emojis(period.lesson_number)
     part = f" | {replace_digits_to_emojis(period.part)}" if period.part else ""
@@ -31,6 +32,7 @@ def format_start_lesson_message(
     lessons: list[Lesson],
     mode: LessonDisplayMode = LessonDisplayMode.FULL
 ) -> str:
+    """Собирает уведомление о предстоящих уроках и упорядочивает их для показа."""
     if not lessons:
         return "Нет предстоящих уроков."
 
@@ -49,6 +51,7 @@ def format_start_lesson_message(
 
 
 def format_group_start_message(lessons: list[Lesson]):
+    """Формирует уведомление для группы: показывает преподавателя и подгруппу."""
     return format_start_lesson_message(
         lessons,
         mode=LessonDisplayMode.FOR_GROUP,
@@ -56,6 +59,7 @@ def format_group_start_message(lessons: list[Lesson]):
 
 
 def format_teacher_start_message(lessons: list[Lesson]):
+    """Формирует уведомление для преподавателя: показывает группу и подгруппу."""
     return format_start_lesson_message(
         lessons,
         mode=LessonDisplayMode.FOR_TEACHER,
@@ -63,6 +67,7 @@ def format_teacher_start_message(lessons: list[Lesson]):
 
 
 def lesson_sort_key(lesson: Lesson) -> tuple[str, str, int]:
+    """Возвращает ключ порядка: группа, подгруппа и идентификатор урока."""
     subgroup = str(lesson.subgroup or "0")
 
     return (
