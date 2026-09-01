@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum, StrEnum
+from enum import auto, Flag, StrEnum
 
 class KeyEnum(StrEnum):
     SCRAPED_LESSONS = "scrapy:scraped_lesson_items"
@@ -15,3 +15,14 @@ class Defaults:
     SUBGROUP = "0"
     PERIOD_PART = 0
     CLASSROOM = "дист"
+
+
+class LessonDisplayMode(Flag):
+    SHOW_GROUP = auto()
+    SHOW_TEACHER = auto()
+    SHOW_SUBGROUP = auto()
+
+    # Предустановленные режимы
+    FOR_GROUP = SHOW_TEACHER | SHOW_SUBGROUP
+    FOR_TEACHER = SHOW_GROUP | SHOW_SUBGROUP
+    FULL = SHOW_GROUP | SHOW_TEACHER | SHOW_SUBGROUP

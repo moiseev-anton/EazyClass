@@ -1,4 +1,5 @@
-from datetime import date as Date
+from datetime import time, date as Date
+from typing import Optional
 
 WEEKDAY_SHORT_RU = ("ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС")
 WEEKDAYS_RU = ("Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресение")
@@ -19,6 +20,10 @@ def format_date_short_ru(d: Date) -> str:
     weekday = WEEKDAY_SHORT_RU[d.weekday()]
     month = MONTHS_RU[d.month - 1]
     return f"{weekday}, {d.day} {month}"
+
+
+def format_time(value: Optional[time]) -> str:
+    return value.strftime("%H:%M") if value else "--:--"
 
 
 def replace_digits_to_emojis(value) -> str:

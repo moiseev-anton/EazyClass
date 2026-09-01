@@ -15,8 +15,8 @@ from scheduler.models import (
 from scheduler.models.social_account_model import PlatformValue
 from scheduler.notifications.messages import (
     format_refresh_lessons_message,
-    format_start_lesson_message_for_group,
-    format_start_lesson_message_for_teacher,
+    format_group_start_message,
+    format_teacher_start_message,
 )
 
 logger = logging.getLogger(__name__)
@@ -131,7 +131,7 @@ def collect_group_start(
         if not chats:
             continue
 
-        message = format_start_lesson_message_for_group(group_lessons)
+        message = format_group_start_message(group_lessons)
         notifications.append(NotificationItem(message=message, destinations=chats))
         logger.debug(f"Собрано {len(chats)} чатов для группы {group.title}")
 
@@ -158,17 +158,21 @@ def collect_teacher_start(
         )
     )
 
-    notifications = []
+    # Группировка уроков по учителям
+    #  (у одного учителя может быть больше одного урока одновременно).
+    lessons_by_teacher = defaultdict(list)
     for lesson in lessons:
-        teacher = lesson.teacher
-        if not teacher:
-            continue
+        if lesson.teacher:
+            lessons_by_teacher[lesson.teacher].append(lesson)
 
+    notifications = []
+
+    for teacher, teacher_lessons in lessons_by_teacher.items():
         chats = teacher_chats.get(teacher.id)
         if not chats:
             continue
 
-        message = format_start_lesson_message_for_teacher(lesson)
+        message = format_teacher_start_message(teacher_lessons)
         notifications.append(NotificationItem(message=message, destinations=chats))
         logger.debug(f"Собрано {len(chats)} чатов для преподавателя {teacher.short_name}")
 

@@ -1,22 +1,36 @@
+from enums import LessonDisplayMode
 from scheduler.models import Lesson
-from .common import format_date_full_ru, replace_digits_to_emojis
+from .common import format_date_full_ru, format_time, replace_digits_to_emojis
 
 
-def format_for_group(lessons: list[Lesson]) -> str:
-    """Генерирует текст уведомления о начале занятия для учебной группы.
-    Занятий может быть несколько, так как группы могут быть разделены на подгруппы.
-    Как правило, 1-2 занятия в сообщении.
+def format_lesson(lesson: Lesson, mode: LessonDisplayMode = LessonDisplayMode.FULL) -> str:
+    period = lesson.period
+    number_emoji = replace_digits_to_emojis(period.lesson_number)
+    part = f" | {replace_digits_to_emojis(period.part)}" if period.part else ""
+    start = format_time(period.start_time)
+    end = format_time(period.end_time)
 
-    Пример:
-        "Предстоящее занятие 🔔
-         Понедельник 10.10.2010
-         <blockquote>
-         1️⃣ 08:00  📍 2203
-         Математика
-         Иванова И.И.
-         <i>(1 подгруппа)</i> <- опционально
-         </blockquote>"
-    """
+    lines = [
+        f"{number_emoji}<b>{part} {start} - {end}</b> 📍{lesson.classroom or '---'}",
+        f"<b>{lesson.subject}</b>",
+    ]
+
+    if LessonDisplayMode.SHOW_SUBGROUP in mode and lesson.subgroup and lesson.subgroup != "0":
+        lines.append(f"{lesson.subgroup} подгруппа")
+
+    if LessonDisplayMode.SHOW_GROUP in mode and lesson.group:
+        lines.append(f"<i>{lesson.group.title}</i>")
+
+    if LessonDisplayMode.SHOW_TEACHER in mode and lesson.teacher:
+        lines.append(f"<i>{lesson.teacher.short_name}</i>")
+
+    return "\n".join(lines)
+
+
+def format_start_lesson_message(
+    lessons: list[Lesson],
+    mode: LessonDisplayMode = LessonDisplayMode.FULL
+) -> str:
     if not lessons:
         return "Нет предстоящих уроков."
 
@@ -26,54 +40,33 @@ def format_for_group(lessons: list[Lesson]) -> str:
         f"{date_str}",
     ]
 
-    # формируем отдельные блоки для каждого занятия
-    for lesson in lessons:
-        number = f"{replace_digits_to_emojis(lesson.period.lesson_number)}"
-        start_time = lesson.period.start_time.strftime("%H:%M")
-        classroom = getattr(lesson.classroom, "title", "—")
-        subject = getattr(lesson.subject, "title", "—")
-        teacher = getattr(lesson.teacher, "short_name", "—")
-        subgroup = f"<i>({lesson.subgroup} подгруппа)</i>" if lesson.subgroup != "0" else ""
+    for lesson in sorted(lessons, key=lesson_sort_key):
+        parts.append(f"<blockquote>"
+                     f"{format_lesson(lesson, mode=mode)}"
+                     f"</blockquote>")
 
-        parts.append(
-            "<blockquote>"
-            f"{number} {start_time}  📍 {classroom}\n"
-            f"<b>{subject}</b>\n"
-            f"<i>{teacher}</i>\n"
-            f"{subgroup}"
-            "</blockquote>"
-        )
     return "\n".join(parts)
 
 
-def format_for_teacher(lesson: Lesson) -> str:
-    """Генерирует текст уведомления о начале занятия для преподавателя группы.
+def format_group_start_message(lessons: list[Lesson]):
+    return format_start_lesson_message(
+        lessons,
+        mode=LessonDisplayMode.FOR_GROUP,
+    )
 
-        "Предстоящее занятие 🔔
-         Понедельник 10.10.2010
-         <blockquote>
-         1️⃣ 08:00  📍 2203
-         Математика
-         32 ГРПП
-         <i>(1 подгруппа)</i> <- опционально
-         </blockquote>"
-    """
 
-    number = f"{lesson.period.lesson_number}\ufe0f\u20e3"
-    date_str = format_date_full_ru(lesson.period.date)
-    start_time = lesson.period.start_time.strftime("%H:%M")
-    classroom = getattr(lesson.classroom, "title", "—")
-    subject = getattr(lesson.subject, "title", "—")
-    group = getattr(lesson.group, "title", "—")
-    subgroup = f"({lesson.subgroup} подгруппа)" if lesson.subgroup != "0" else ""
+def format_teacher_start_message(lessons: list[Lesson]):
+    return format_start_lesson_message(
+        lessons,
+        mode=LessonDisplayMode.FOR_TEACHER,
+    )
+
+
+def lesson_sort_key(lesson: Lesson) -> tuple[str, str, int]:
+    subgroup = str(lesson.subgroup or "0")
 
     return (
-        f"Предстоящее занятие 🔔 \n"
-        f"{date_str}\n"
-        "<blockquote>"
-        f"{number} {start_time}  📍 {classroom}\n"
-        f"<b>{subject}</b>\n"
-        f"<i>{group}</i>\n"
-        f"<i>{subgroup}</i>"
-        "</blockquote>"
+        lesson.group.title if lesson.group else "",
+        subgroup,
+        lesson.pk or 0,
     )
