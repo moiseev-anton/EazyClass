@@ -4,7 +4,13 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from polymorphic.admin import PolymorphicChildModelAdmin, PolymorphicChildModelFilter, PolymorphicParentModelAdmin
+from polymorphic.admin import (
+    PolymorphicChildModelAdmin,
+    PolymorphicChildModelFilter,
+    PolymorphicInlineSupportMixin,
+    PolymorphicParentModelAdmin,
+    StackedPolymorphicInline,
+)
 from rangefilter.filters import DateRangeFilter
 
 # Local imports
@@ -64,6 +70,24 @@ class SocialAccountInline(admin.TabularInline):
     """Inline для редактирования SocialAccount внутри UserAdmin."""
     model = SocialAccount
     extra = 0
+
+
+class SubscriptionInline(StackedPolymorphicInline):
+    """Полиморфная подписка пользователя на группу или преподавателя."""
+    model = Subscription
+    extra = 0
+    max_num = 1
+    validate_max = True
+
+    class TeacherSubscriptionInline(StackedPolymorphicInline.Child):
+        model = TeacherSubscription
+        autocomplete_fields = ("teacher",)
+
+    class GroupSubscriptionInline(StackedPolymorphicInline.Child):
+        model = GroupSubscription
+        autocomplete_fields = ("group",)
+
+    child_inlines = (TeacherSubscriptionInline, GroupSubscriptionInline)
 
 
 # ---------------------------------------------------------------------------
@@ -229,9 +253,9 @@ class LessonAdmin(BaseActiveAdmin):
 
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin):
+class UserAdmin(PolymorphicInlineSupportMixin, BaseUserAdmin):
     add_form = UserCreationForm
-    inlines = (SocialAccountInline,)
+    inlines = (SocialAccountInline, SubscriptionInline)
 
     list_display = ('id','username', 'first_name', 'last_name', 'notify_schedule_updates', 'notify_upcoming_lessons', 'subscriptions_link', 'last_login', 'updated_at', 'created_at', 'password_status', 'is_staff', 'is_active',)
     list_display_links = ('id', 'username')
@@ -294,7 +318,7 @@ class UserAdmin(BaseUserAdmin):
 class SocialAccountAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_link', 'platform', 'social_id', 'is_blocked', 'extra_data')
     list_editable = ('is_blocked',)
-    search_fields = ()
+    search_fields = ('social_id',)
     list_select_related = ('user',)
     autocomplete_fields = ('user',)
     list_filter = ('platform', 'is_blocked')
