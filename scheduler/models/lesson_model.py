@@ -11,6 +11,13 @@ class Lesson(TimestampedModel):
     subject = models.ForeignKey('scheduler.Subject', related_name='lessons', on_delete=models.CASCADE, null=True)
     teacher = models.ForeignKey('scheduler.Teacher', related_name='lessons', on_delete=models.CASCADE, null=True, blank=True, db_index=False)
     classroom = models.ForeignKey('scheduler.Classroom', related_name='lessons', on_delete=models.CASCADE, null=True, db_index=False)
+    annotation = models.ForeignKey(
+        'scheduler.LessonAnnotation',
+        related_name='lessons',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
     subgroup = models.CharField(max_length=1, default='0')
     is_active = models.BooleanField(default=True)
     # + updated_at из TimestampedModel
@@ -37,5 +44,6 @@ class Lesson(TimestampedModel):
             "subject_id": self.subject_id,
             "teacher_id": self.teacher_id,
             "classroom_id": self.classroom_id,
+            "annotation_id": self.annotation_id,
             "subgroup": self.subgroup,
         }

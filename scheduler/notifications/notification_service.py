@@ -36,7 +36,7 @@ class NotificationService:
         summary = StartNotificationSummary(period_str=str(period))
         lessons = (
             Lesson.objects.filter(period=period)
-            .select_related("group", "teacher", "subject", "classroom")
+            .select_related("group", "teacher", "subject", "classroom", "annotation")
         )
 
         if not lessons:

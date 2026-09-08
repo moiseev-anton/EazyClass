@@ -2,6 +2,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from scheduler.activities import fill_default_period_template
 from scheduler.forms import ReplaceLessonRelatedFieldsForm
@@ -35,7 +36,7 @@ def reset_timetable(modeladmin, request, queryset):
 def replace_lesson_related_fields(modeladmin, request, queryset):
     form = ReplaceLessonRelatedFieldsForm(request.POST or None)
 
-    for field_name in ("teacher", "classroom", "subject", "group", "period"):
+    for field_name in ("teacher", "classroom", "subject", "group", "period", "annotation"):
         db_field = Lesson._meta.get_field(field_name)
 
         widget = AutocompleteSelect(
@@ -49,7 +50,7 @@ def replace_lesson_related_fields(modeladmin, request, queryset):
     if "apply" in request.POST and form.is_valid():
         update_data = form.cleaned_data["update_data"]
 
-        updated_count = queryset.update(**update_data)
+        updated_count = queryset.update(**update_data, updated_at=timezone.now())
         changed_fields = ", ".join(update_data.keys())
 
         modeladmin.message_user(

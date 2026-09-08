@@ -1,3 +1,5 @@
+from html import escape
+
 from enums import LessonDisplayMode
 from scheduler.models import Lesson
 from .common import format_date_full_ru, format_time, replace_digits_to_emojis
@@ -10,10 +12,13 @@ def format_lesson(lesson: Lesson, mode: LessonDisplayMode = LessonDisplayMode.FU
     part = f" | {replace_digits_to_emojis(period.part)}" if period.part else ""
     start = format_time(period.start_time)
     end = format_time(period.end_time)
+    subject = str(lesson.subject)
+    if lesson.annotation is not None:
+        subject += f" ({lesson.annotation.title})"
 
     lines = [
         f"{number_emoji}<b>{part} {start} - {end}</b> 📍{lesson.classroom or '---'}",
-        f"<b>{lesson.subject}</b>",
+        f"<b>{escape(subject)}</b>",
     ]
 
     if LessonDisplayMode.SHOW_SUBGROUP in mode and lesson.subgroup and lesson.subgroup != "0":

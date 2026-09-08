@@ -107,7 +107,7 @@ class LessonViewSet(JsonApiMixin, ReadOnlyModelViewSet):
             super()
             .get_queryset()
             .filter(is_active=True)
-            .select_related("classroom", "group", "period", "subject", "teacher")
+            .select_related("classroom", "group", "period", "subject", "teacher", "annotation")
             .order_by("period__date", "period__lesson_number", "period__part", "subgroup")
         )
 

@@ -117,6 +117,12 @@ class TeacherNoLessonsSinceDateFilter(DateRangeFilter):
 # Autocomplete filters
 # ---------------------------------------------------------------------------
 
+class LessonAnnotationFilter(AutocompleteFilter):
+    """Filter lessons by `annotation` using autocomplete."""
+    title = 'Annotation'
+    field_name = 'annotation'
+
+
 class GroupFilter(AutocompleteFilter):
     """Filter lessons by `group` using autocomplete."""
     title = 'Group'

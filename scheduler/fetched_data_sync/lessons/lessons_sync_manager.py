@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
-from scheduler.models import Classroom, Lesson, Period, Subject, Teacher
+from scheduler.models import Classroom, Lesson, LessonAnnotation, Period, Subject, Teacher
 from utils import RedisClientManager
 from enums import Defaults, KeyEnum
 
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 MAX_SUBJECT_TITLE_LENGTH = Subject._meta.get_field('title').max_length
 MAX_CLASSROOM_TITLE_LENGTH = Classroom._meta.get_field('title').max_length
 MAX_TEACHER_FULLNAME_LENGTH = Teacher._meta.get_field('full_name').max_length
+MAX_ANNOTATION_TITLE_LENGTH = LessonAnnotation._meta.get_field('title').max_length
 
 
 ComparisonSummary = Dict[str, List[Dict[str, Any]]]
@@ -43,6 +44,7 @@ class LessonsSyncManager:
         "subject_id",
         "classroom_id",
         "teacher_id",
+        "annotation_id",
         "updated_at",
     ]
 
@@ -104,9 +106,15 @@ class LessonsSyncManager:
             ("full_name",),
             skip_if=lambda d: d.get("full_name") is None
         )
+        annotations = RelatedObjectsMap(
+            LessonAnnotation,
+            ("title",),
+            skip_if=lambda d: d.get("title") is None,
+        )
 
         for item in lesson_items:
             teachers.add(item["teacher"])
+            annotations.add(item["annotation"])
             classrooms.add(item["classroom"])
             subjects.add(item["subject"])
             periods.add(item["period"])
@@ -116,11 +124,13 @@ class LessonsSyncManager:
             f"периодов={len(periods.pending_keys)}, "
             f"учителей={len(teachers.pending_keys)}, "
             f"предметов={len(subjects.pending_keys)}, "
-            f"кабинетов={len(classrooms.pending_keys)}"
+            f"кабинетов={len(classrooms.pending_keys)}, "
+            f"примечаний={len(annotations.pending_keys)}"
         )
 
         # Map IDs (bulk resolve)
         teachers.resolve_pending_keys()
+        annotations.resolve_pending_keys()
         classrooms.resolve_pending_keys()
         subjects.resolve_pending_keys()
         periods.resolve_pending_keys()
@@ -130,7 +140,8 @@ class LessonsSyncManager:
             f"id периодов={len(periods.existing_mappings)}, "
             f"id учителей={len(teachers.existing_mappings)}, "
             f"id предметов={len(subjects.existing_mappings)}, "
-            f"id кабинетов={len(classrooms.existing_mappings)}"
+            f"id кабинетов={len(classrooms.existing_mappings)}, "
+            f"id примечаний={len(annotations.existing_mappings)}"
         )
 
         update_time = timezone.now()
@@ -142,6 +153,7 @@ class LessonsSyncManager:
                     subgroup=item["subgroup"],
                     period_id=periods.get_or_map_id(item["period"]),
                     teacher_id=teachers.get_or_map_id(item["teacher"]),
+                    annotation_id=annotations.get_or_map_id(item["annotation"]),
                     classroom_id=classrooms.get_or_map_id(item["classroom"]),
                     subject_id=subjects.get_or_map_id(item["subject"]),
                     updated_at=update_time,
@@ -285,7 +297,7 @@ class LessonsSyncManager:
         """
         Обрабатывает поля уроков:
             - Подставляет дефолты для subject, classroom, subgroup
-            - Оставляет teacher как есть (None если нет)
+            - Оставляет teacher и annotation без значения, если они пусты
             - Применяет truncate по макс. длине для строк
             - Преобразует строки дат в date-объекты в уроках (использует кэш дат)
         """
@@ -314,6 +326,11 @@ class LessonsSyncManager:
             item["teacher"]["full_name"] = (
                 cls._truncate(teacher_fullname, MAX_TEACHER_FULLNAME_LENGTH)
             )
+
+            annotation = item.get("annotation") or {}
+            item["annotation"] = {
+                "title": cls._truncate(annotation.get("title"), MAX_ANNOTATION_TITLE_LENGTH)
+            }
 
             subgroup = item.get("subgroup")
             item["subgroup"] = str(subgroup) if isinstance(subgroup, int) else Defaults.SUBGROUP

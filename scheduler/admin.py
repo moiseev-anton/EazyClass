@@ -26,6 +26,7 @@ from scheduler.admin_filters import (
     FacultyFilter,
     GroupFilter,
     GroupHasLessonsFilter,
+    LessonAnnotationFilter,
     SubjectFilter,
     SubjectHasLessonsFilter,
     TeacherFilter,
@@ -40,6 +41,7 @@ from scheduler.models import (
     Group,
     GroupSubscription,
     Lesson,
+    LessonAnnotation,
     Period,
     PeriodTemplate,
     SocialAccount,
@@ -205,6 +207,15 @@ class ClassroomAdmin(BaseActiveAdmin):
         )
 
 
+@admin.register(LessonAnnotation)
+class LessonAnnotationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title')
+    list_display_links = ('title',)
+    search_fields = ('title',)
+    ordering = ('title',)
+    list_per_page = 50
+
+
 @admin.register(Lesson)
 class LessonAdmin(BaseActiveAdmin):
     form = LessonAdminForm
@@ -214,27 +225,28 @@ class LessonAdmin(BaseActiveAdmin):
         toggle_active,
         replace_lesson_related_fields,
     ]
-    list_display = ('id', 'period_date', 'period_lesson_number', 'teacher',  'group', 'subgroup', 'classroom', 'subject', 'is_active')
+    list_display = ('id', 'period_date', 'period_lesson_number', 'teacher',  'group', 'subgroup', 'classroom', 'subject', 'annotation', 'is_active')
     search_fields = ('group__title', 'subject__title', 'teacher__full_name', 'classroom__title')
     list_filter = (
         GroupFilter,
         TeacherFilter,
         SubjectFilter,
         ClassroomFilter,
+        LessonAnnotationFilter,
         ('period__date', DateRangeFilter),
         'period__lesson_number',
         'subgroup',
         'is_active',
     )
-    list_select_related = ('period', 'group', 'teacher', 'classroom', 'subject')
-    autocomplete_fields = ('group', 'teacher', 'classroom', 'subject', )
+    list_select_related = ('period', 'group', 'teacher', 'classroom', 'subject', 'annotation')
+    autocomplete_fields = ('group', 'teacher', 'classroom', 'subject', 'annotation')
     list_display_links = ('id', 'subject')
     ordering = ('-period__date', 'period__lesson_number', 'group',)
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
         (None, {
-            'fields': ('date', 'lesson_number', 'group', 'subject', 'teacher', 'classroom', 'subgroup', 'is_active')
+            'fields': ('date', 'lesson_number', 'group', 'subject', 'teacher', 'classroom', 'subgroup', 'annotation', 'is_active')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')

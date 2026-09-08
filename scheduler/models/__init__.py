@@ -10,3 +10,4 @@ from .subscription_model import Subscription, TeacherSubscription, GroupSubscrip
 from .teacher_model import Teacher
 from .user_model import User
 from .broadcast_model import Broadcast
+from .lesson_annotation_model import LessonAnnotation

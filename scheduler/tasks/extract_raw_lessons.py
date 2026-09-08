@@ -135,6 +135,9 @@ def process_lessons_csv(
                     "teacher": {
                         "full_name": teacher_full,
                     },
+                    "annotation": {
+                        "title": (row.get("annotation") or "").strip() or None,
+                    },
                     "subgroup": int(row["subgroup"]) if (row.get("subgroup") or "").strip() else None,
                 }
 

@@ -25,6 +25,9 @@ class LessonSerializer(json_api_serializers.ModelSerializer):
     end_time = json_api_serializers.TimeField(source="period.end_time", read_only=True)
     subject = json_api_serializers.CharField(source="subject.title", read_only=True)
     classroom = json_api_serializers.CharField(source="classroom.title", read_only=True)
+    annotation = json_api_serializers.CharField(
+        source="annotation.title", read_only=True, allow_null=True
+    )
     group = json_api_serializers.ResourceRelatedField(queryset=Group.objects.all())
     teacher = json_api_serializers.ResourceRelatedField(queryset=Teacher.objects.all())
 
@@ -39,6 +42,7 @@ class LessonSerializer(json_api_serializers.ModelSerializer):
             "end_time",
             "subject",
             "classroom",
+            "annotation",
             "subgroup",
             "group",
             "teacher",
