@@ -246,7 +246,7 @@ class LessonAdmin(BaseActiveAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('date', 'lesson_number', 'group', 'subject', 'teacher', 'classroom', 'subgroup', 'annotation', 'is_active')
+            'fields': ('date', 'lesson_number', 'part', 'group', 'subject', 'teacher', 'classroom', 'subgroup', 'annotation', 'is_active')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
