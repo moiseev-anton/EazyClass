@@ -7,6 +7,7 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from scrapy.exceptions import CloseSpider
 
+from scheduler.dtos.lesson_sync_range import LessonSyncRange
 from scheduler.models import Group
 from scrapy_app.response_processor import ResponseProcessor
 from utils import RedisClientManager
@@ -21,7 +22,7 @@ class ScheduleSpider(scrapy.Spider):
     name = "schedule_spider"
     base_url = settings.BASE_SCRAPING_URL
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, cache_scope: str | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         try:
             self.redis_client = RedisClientManager.get_client("scrapy")
@@ -29,6 +30,7 @@ class ScheduleSpider(scrapy.Spider):
             self.logger.error(f"Не удалось получить Redis клиент: {e}")
             raise CloseSpider("Redis client initialization failed")
 
+        self.cache_scope = cache_scope or LessonSyncRange.from_offsets().cache_scope
         self.lessons = []
         self.scraped_groups = {}
         self.unchanged_groups = set()
@@ -59,7 +61,7 @@ class ScheduleSpider(scrapy.Spider):
         self.logger.info(f"Главная страница получена: {response.url}")
 
         try:
-            processor = ResponseProcessor(response, self.redis_client)
+            processor = ResponseProcessor(response, self.redis_client, cache_scope=self.cache_scope)
             processor.validate_page()
             self.main_page_hash = processor.get_content_hash()
             self.logger.info(f"Валидация главной страницы прошла успешно. Хеш: {self.main_page_hash}")
@@ -101,7 +103,7 @@ class ScheduleSpider(scrapy.Spider):
         group_id = response.meta.get("group_id")
         self.logger.info(f"Получен ответ от :{response.url}(group_id:{group_id})")
         try:
-            processor = ResponseProcessor(response, self.redis_client)
+            processor = ResponseProcessor(response, self.redis_client, cache_scope=self.cache_scope)
 
             if not processor.is_content_changed():
                 self.logger.info(f"Содержимое страницы группы:{group_id} не изменилось")
@@ -174,7 +176,7 @@ class ScheduleSpider(scrapy.Spider):
 
     def _separate_groups(self, group_endpoints):
         # Получаем хеш главной страницы и проверяем синхронизированные группы
-        set_key = f"{KeyEnum.SYNCED_GROUPS_PREFIX}{self.main_page_hash}"
+        set_key = f"{KeyEnum.SYNCED_GROUPS_PREFIX}{self.cache_scope}{self.main_page_hash}"
         synced_groups = self.redis_client.smembers(set_key)
         self.logger.info(f"synced_groups: {synced_groups}")
 

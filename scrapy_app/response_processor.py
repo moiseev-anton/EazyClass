@@ -21,7 +21,8 @@ class ResponseProcessor:
     HTML_SNIPPET_LIMIT = 200
     FIELD_ORDER = ('lesson_number', 'subject_title', 'classroom_title', 'teacher_fullname', 'subgroup',)
 
-    def __init__(self, response: 'scrapy.http.Response', redis_client: Optional['redis.client.Redis'] = None):
+    def __init__(self, response: 'scrapy.http.Response', redis_client: Optional['redis.client.Redis'] = None, *, cache_scope: str = ''):
+        self.cache_scope = cache_scope
         self.response = response
         self.url = response.url
         self.group_id = response.meta.get('group_id')
@@ -120,7 +121,7 @@ class ResponseProcessor:
         if self.group_id is None:
             raise ValueError(f"Невозможно выполнить проверку изменения контента без group_id (url: {self.url})")
 
-        redis_key = f'{KeyEnum.PAGE_HASH_PREFIX}{self.group_id}'
+        redis_key = f'{KeyEnum.PAGE_HASH_PREFIX}{self.cache_scope}{self.group_id}'
         try:
             if previous_hash := self.redis_client.get(redis_key):
                 return self.content_hash != previous_hash

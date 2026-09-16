@@ -4,6 +4,7 @@ from django.conf import settings
 
 from celery import chain, shared_task
 
+from scheduler.dtos.lesson_sync_range import LessonSyncRange
 from scheduler.tasks.scraping import run_schedule_spider
 from scheduler.tasks.synchronisation import sync_lessons
 from scheduler.tasks.notification import (
@@ -39,23 +40,28 @@ def refresh_teachers(self, base_url: str = BASE_URL, page_path:str = TEACHERS_PA
         raise self.retry(exc=e)
 
 
-# Цепочка: spider -> sync -> telegram_notifications
+# Resolve once so scraping and synchronization use the same range across midnight.
 @shared_task(queue="periodic_tasks")
-def run_lessons_refresh_pipeline():
-        chain(
-            run_schedule_spider.s(),
-            sync_lessons.s(),
-            send_lessons_refresh_notifications.s(),
-            send_admin_report.s(),
-        ).apply_async()
+def run_lessons_refresh_pipeline(*, start_day_offset=0, end_day_offset=None):
+    date_range = LessonSyncRange.from_offsets(
+        start_day_offset=start_day_offset, end_day_offset=end_day_offset
+    )
+    chain(
+        run_schedule_spider.s(cache_scope=date_range.cache_scope),
+        sync_lessons.s(_resolved_range=date_range.to_dict()),
+        send_lessons_refresh_notifications.s(),
+        send_admin_report.s(),
+    ).apply_async()
 
 
-# Цепочка: file_rider -> sync -> telegram_notifications
 @shared_task(queue="periodic_tasks")
-def run_lessons_refresh_by_google_docs():
-        chain(
-            process_google_schedule.s(),
-            sync_lessons.s(),
-            send_lessons_refresh_notifications.s(),
-            send_admin_report.s(),
-        ).apply_async()
+def run_lessons_refresh_by_google_docs(*, start_day_offset=0, end_day_offset=None):
+    date_range = LessonSyncRange.from_offsets(
+        start_day_offset=start_day_offset, end_day_offset=end_day_offset
+    )
+    chain(
+        process_google_schedule.s(),
+        sync_lessons.s(_resolved_range=date_range.to_dict()),
+        send_lessons_refresh_notifications.s(),
+        send_admin_report.s(),
+    ).apply_async()
