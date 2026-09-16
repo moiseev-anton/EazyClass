@@ -38,9 +38,9 @@ class SpiderRunner:
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, queue="periodic_tasks")
-def run_schedule_spider(self):
+def run_schedule_spider(self, cache_scope: str | None = None):
     try:
-        runner = SpiderRunner(ScheduleSpider)
+        runner = SpiderRunner(ScheduleSpider, cache_scope=cache_scope)
         runner.run()
     except Exception as e:
         logger.error(f"Ошибка при запуске паука: {e}")

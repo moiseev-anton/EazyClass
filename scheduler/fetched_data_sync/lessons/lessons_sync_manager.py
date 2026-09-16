@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
+from scheduler.dtos.lesson_sync_range import LessonSyncRange
 from scheduler.models import Classroom, Lesson, LessonAnnotation, Period, Subject, Teacher
 from utils import RedisClientManager
 from enums import Defaults, KeyEnum
@@ -50,9 +51,12 @@ class LessonsSyncManager:
 
     EMPTY_SUMMARY: ComparisonSummary = {"added": [], "updated": [], "removed": []}
 
-    def __init__(self, redis_client=None, start_sync_day: Optional[date] = None):
+    def __init__(self, redis_client=None, start_sync_day: Optional[date] = None,
+                 end_sync_day: Optional[date] = None):
+        self.date_range = LessonSyncRange(start_sync_day or timezone.localdate(), end_sync_day)
+        self.start_sync_day = self.date_range.start
+        self.end_sync_day = self.date_range.end
         self.redis_client = redis_client or RedisClientManager.get_client("scrapy")
-        self.start_sync_day = start_sync_day or date.today()
 
     def update_schedule(self) -> ComparisonSummary:
         """Основной пайплайн: fetch → process → apply → serialize."""
@@ -98,6 +102,9 @@ class LessonsSyncManager:
         self, lesson_items: List[Dict[str, Any]], scraped_groups: Dict[str, str]
     ) -> List[Lesson]:
         """Process: gather → map → create. Returns new_lessons и mappers (for reuse if needed)."""
+        lesson_items = [item for item in lesson_items
+                        if str(item["group_id"]) in scraped_groups
+                        and self.date_range.contains(item["period"]["date"])]
         classrooms = RelatedObjectsMap(Classroom, ("title",))
         subjects = RelatedObjectsMap(Subject, ("title",))
         periods = RelatedObjectsMap(Period, ("date", "lesson_number", "part"))
@@ -147,18 +154,17 @@ class LessonsSyncManager:
         update_time = timezone.now()
         new_lessons = []
         for item in lesson_items:
-            if str(item["group_id"]) in scraped_groups and item["period"]["date"] >= self.start_sync_day:
-                lesson = Lesson(
-                    group_id=item["group_id"],
-                    subgroup=item["subgroup"],
-                    period_id=periods.get_or_map_id(item["period"]),
-                    teacher_id=teachers.get_or_map_id(item["teacher"]),
-                    annotation_id=annotations.get_or_map_id(item["annotation"]),
-                    classroom_id=classrooms.get_or_map_id(item["classroom"]),
-                    subject_id=subjects.get_or_map_id(item["subject"]),
-                    updated_at=update_time,
-                )
-                new_lessons.append(lesson)
+            lesson = Lesson(
+                group_id=item["group_id"],
+                subgroup=item["subgroup"],
+                period_id=periods.get_or_map_id(item["period"]),
+                teacher_id=teachers.get_or_map_id(item["teacher"]),
+                annotation_id=annotations.get_or_map_id(item["annotation"]),
+                classroom_id=classrooms.get_or_map_id(item["classroom"]),
+                subject_id=subjects.get_or_map_id(item["subject"]),
+                updated_at=update_time,
+            )
+            new_lessons.append(lesson)
 
         logger.debug(f"Собрали {len(new_lessons)} объектов уроков")
         return new_lessons
@@ -168,6 +174,8 @@ class LessonsSyncManager:
     ) -> Dict[str, List[Lesson]]:
         """Compare: filter existing + bulk_compare."""
         periods = Period.objects.filter(date__gte=self.start_sync_day)
+        if self.end_sync_day is not None:
+            periods = periods.filter(date__lte=self.end_sync_day)
         groups = scraped_groups.keys()
         existing_lessons = Lesson.objects.filter(
             period__in=periods, group__in=groups, is_active=True
@@ -226,7 +234,7 @@ class LessonsSyncManager:
             with self.redis_client.pipeline() as pipe:
                 for group_id, page_hash in scraped_groups.items():
                     pipe.setex(
-                        f"{KeyEnum.PAGE_HASH_PREFIX}{group_id}",
+                        f"{KeyEnum.PAGE_HASH_PREFIX}{self.date_range.cache_scope}{group_id}",
                         self.PAGE_HASH_TIMEOUT,
                         page_hash,
                     )
@@ -243,7 +251,7 @@ class LessonsSyncManager:
             logger.info("Хеш главной страницы отсутствует → множество не обновляется")
             return
 
-        set_key = f"{KeyEnum.SYNCED_GROUPS_PREFIX}{main_hash}"
+        set_key = f"{KeyEnum.SYNCED_GROUPS_PREFIX}{self.date_range.cache_scope}{main_hash}"
         successfully_synced_ids = {group_id for group_id in scraped_groups.keys()} | unchanged_groups
 
         try:
