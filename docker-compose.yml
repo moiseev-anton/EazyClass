@@ -53,6 +53,8 @@ services:
         --log-level info
         --access-logfile -
         --error-logfile -
+    environment:
+      LOG_SERVICE: django
     env_file:
       - .env
     expose:
@@ -87,10 +89,11 @@ services:
       celery -A eazyclass worker
         --pool=prefork
         --concurrency=1
-        --loglevel=info
     volumes:
       - ../../worker_data:/worker_input
       - ./rclone:/root/.config/rclone
+    environment:
+      LOG_SERVICE: celery-worker
     env_file:
       - .env
     depends_on:
@@ -114,8 +117,9 @@ services:
     container_name: celery_beat
     command: >
       celery -A eazyclass beat
-        --loglevel=info
         --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      LOG_SERVICE: celery-beat
     env_file:
       - .env
     depends_on:
@@ -143,6 +147,8 @@ services:
         --port=5555
         --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}
         --url_prefix=/flower
+    environment:
+      LOG_SERVICE: flower
     env_file:
       - .env
     expose:

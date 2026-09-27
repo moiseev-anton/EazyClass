@@ -76,8 +76,8 @@ CLOSESPIDER_ERRORCOUNT = 20   # количество ошибок после к�
 
 LOG_ENABLED = True
 LOG_LEVEL = "INFO"
-LOG_CONFIG = None
-LOG_STDOUT = True
+# The runner owns logging; don't redirect stdout into logging recursively.
+LOG_STDOUT = False
 
 
 # Enable and configure HTTP caching (disabled by default)

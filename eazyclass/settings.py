@@ -17,6 +17,8 @@ from pathlib import Path
 from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
+from eazyclass.logging_config import build_logging_config
+
 load_dotenv(os.getenv("ENV_FILE", ".env.dev"))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -209,78 +211,14 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-
-    "formatters": {
-        "default": {
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-        },
-
-    },
-
-    "root": {
-        "handlers": ["console"],
-        "level": "WARNING",
-    },
-
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-
-        "django.request": {
-            "handlers": ["console"],
-            "level": "ERROR",
-            "propagate": False,
-        },
-
-        "django.server": {
-            "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-
-        "celery": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-
-        "scrapy": {
-            "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-
-        "scrapy_app": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-
-        "scheduler": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-
-        "utils": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-    },
-}
+# One configuration for Django, Celery and the Scrapy child process.
+LOGGING = build_logging_config(
+    debug=DEBUG,
+    log_format=os.getenv("LOG_FORMAT") or None,
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    service=os.getenv("LOG_SERVICE", "eazyclass"),
+    environment=os.getenv("LOG_ENVIRONMENT") or None,
+)
 
 REDIS_CONFIG = {
     "default": os.getenv("REDIS_DEFAULT_CACHE_URL"),

@@ -3,6 +3,8 @@ import logging
 from django.core.cache import caches
 from rest_framework import serializers
 
+from eazyclass.logging_config import safe_error_context
+
 logger = logging.getLogger(__name__)
 cache = caches["auth"]
 
@@ -25,6 +27,6 @@ class NonceSerializer(serializers.Serializer):
             logger.error(
                 "Не удалось привязать одноразовый код авторизации к пользователю",
                 extra={"event": "auth.nonce.bind_failed", "user_id": user_id,
-                       "error_type": type(e).__name__},
+                       **safe_error_context(e)},
             )
             return "failed"

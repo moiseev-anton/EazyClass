@@ -1,7 +1,14 @@
 from __future__ import absolute_import, unicode_literals
 import os
 from celery import Celery
+from celery.signals import setup_logging, worker_process_init
 from kombu import Queue
+
+from eazyclass.logging_config import configure_service_logging
+
+# Owning setup_logging prevents Celery from replacing the shared formatters.
+setup_logging.connect(configure_service_logging, weak=False)
+worker_process_init.connect(configure_service_logging, weak=False)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'eazyclass.settings')
 

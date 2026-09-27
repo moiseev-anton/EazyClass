@@ -5,6 +5,8 @@ from celery import shared_task
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
+from eazyclass.logging_config import configure_service_logging
+
 from scrapy_app.spiders import ScheduleSpider
 
 logger = logging.getLogger(__name__)
@@ -26,7 +28,10 @@ class SpiderRunner:
             "scrapy_app.settings"
         )
 
-        process = CrawlerProcess(settings=get_project_settings())
+        configure_service_logging(service="scrapy")
+        process = CrawlerProcess(settings=get_project_settings(), install_root_handler=False)
+        # Scrapy configures library levels even with install_root_handler=False.
+        configure_service_logging(service="scrapy")
         process.crawl(self.spider_cls, **self.spider_kwargs)
         process.start()
 

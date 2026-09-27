@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
+from eazyclass.logging_config import safe_error_context
 from scheduler.api.mixins import PlainApiViewMixin
 from scheduler.authentication import CustomRefreshToken
 from .cookie_handler_mixin import TokenCookieHandlerMixin
@@ -89,7 +90,7 @@ class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
             except Exception as e:
                 logger.warning(
                     "Не удалось удалить refresh-токен из списка разрешённых",
-                    extra={"event": "auth.refresh.whitelist_remove_failed", "error_type": type(e).__name__},
+                    extra={"event": "auth.refresh.whitelist_remove_failed", **safe_error_context(e)},
                 )
                 # не падаем — куку всё равно надо удалить
 
@@ -107,7 +108,7 @@ class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
         except Exception as e:
             logger.error(
                 "Не удалось завершить выход пользователя",
-                extra={"event": "auth.logout.failed", "error_type": type(e).__name__},
+                extra={"event": "auth.logout.failed", **safe_error_context(e)},
             )
             return Response(
                 {"detail": "Internal server error during logout"},

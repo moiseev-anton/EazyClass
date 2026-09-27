@@ -1,4 +1,5 @@
 import logging
+
 from typing import Any, Optional
 
 from django.contrib.auth import get_user_model
@@ -11,6 +12,7 @@ from rest_framework_simplejwt.exceptions import TokenError, AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings
 
+from eazyclass.logging_config import safe_error_context
 from scheduler.authentication import CustomRefreshToken
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,7 @@ class BaseTokenSerializer(json_api_serializers.Serializer):
         # Exception messages/chains can contain credentials or cache keys.
         logger.error(
             "Сервис авторизации не смог выполнить операцию",
-            extra={"event": "auth.service.failed", "error_type": type(exc).__name__},
+            extra={"event": "auth.service.failed", **safe_error_context(exc)},
         )
         raise APIException(self.error_messages["service_unavailable"])
 
@@ -94,7 +96,7 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
         except Exception as e:
             logger.warning(
                 "Не удалось сократить время действия одноразового кода авторизации",
-                extra={"event": "auth.nonce.ttl_update_failed", "error_type": type(e).__name__},
+                extra={"event": "auth.nonce.ttl_update_failed", **safe_error_context(e)},
             )
 
 

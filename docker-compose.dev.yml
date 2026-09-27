@@ -28,6 +28,8 @@ services:
       - .:/app:delegated
     ports:
       - "8000:8000"
+    environment:
+      LOG_SERVICE: django
     env_file:
       - .env.dev
     depends_on:
@@ -41,11 +43,13 @@ services:
       dockerfile: Dockerfile
       target: backup-tools
     container_name: celery_worker
-    command: celery -A eazyclass worker --pool=prefork --concurrency=1 --loglevel=debug # заменить потом на info
+    command: celery -A eazyclass worker --pool=prefork --concurrency=1
     volumes:
       - .:/app:delegated
       - ./data:/worker_input
       - ./rclone:/root/.config/rclone
+    environment:
+      LOG_SERVICE: celery-worker
     env_file:
       - .env.dev
     depends_on:
@@ -58,9 +62,11 @@ services:
       dockerfile: Dockerfile
       target: backup-tools
     container_name: celery_beat
-    command: celery -A eazyclass beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A eazyclass beat --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - .:/app:delegated
+    environment:
+      LOG_SERVICE: celery-beat
     env_file:
       - .env.dev
     depends_on:
@@ -78,6 +84,8 @@ services:
       - .:/app:delegated
     ports:
       - "5555:5555"
+    environment:
+      LOG_SERVICE: flower
     env_file:
       - .env.dev
     depends_on:
