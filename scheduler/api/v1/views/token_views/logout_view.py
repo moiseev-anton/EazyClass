@@ -87,7 +87,10 @@ class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
             try:
                 refresh.remove_from_whitelist()
             except Exception as e:
-                logger.warning("auth.refresh.whitelist_remove_failed error_type=%s", type(e).__name__)
+                logger.warning(
+                    "Не удалось удалить refresh-токен из списка разрешённых",
+                    extra={"event": "auth.refresh.whitelist_remove_failed", "error_type": type(e).__name__},
+                )
                 # не падаем — куку всё равно надо удалить
 
             # Удаляем куку (если она была)
@@ -102,7 +105,10 @@ class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
             return response
 
         except Exception as e:
-            logger.error("auth.logout.failed error_type=%s", type(e).__name__)
+            logger.error(
+                "Не удалось завершить выход пользователя",
+                extra={"event": "auth.logout.failed", "error_type": type(e).__name__},
+            )
             return Response(
                 {"detail": "Internal server error during logout"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

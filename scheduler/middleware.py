@@ -27,7 +27,8 @@ class RequestLoggingMiddleware:
         match = getattr(request, "resolver_match", None)
         route = getattr(match, "route", None) or "<unresolved>"
         logger.info(
-            "http.request.completed method=%s route=%s status_code=%s",
-            request.method, route, response.status_code,
+            "HTTP-запрос обработан",
+            extra={"event": "http.request.completed", "method": request.method,
+                   "route": route, "status_code": response.status_code},
         )
         return response

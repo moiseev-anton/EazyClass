@@ -58,10 +58,6 @@ class AuthView(JsonApiMixin, views.APIView):
             # важно для возможной обработки nonce в RegisterWithNonceView
             request.user = auth_result.user
 
-        logger.info(
-            f"User {auth_result.user.id} {'created' if auth_result.created else 'retrieved'} via bot auth"
-        )
-
         if not auth_result.created:
             serializer.update(auth_result.social_account)
 
@@ -69,6 +65,11 @@ class AuthView(JsonApiMixin, views.APIView):
             auth_result.social_account, context={"created": auth_result.created}
         )
         response_data = serializer.data
+        logger.info(
+            "Пользователь создан через бота" if auth_result.created else "Пользователь авторизован через бота",
+            extra={"event": "auth.bot.completed", "user_id": auth_result.user.id,
+                   "user_created": auth_result.created},
+        )
 
         return Response(response_data, status=auth_result.status_code)
 

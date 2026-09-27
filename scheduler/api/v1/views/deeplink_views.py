@@ -75,8 +75,9 @@ class DeeplinkView(PlainApiViewMixin, views.APIView):
         response_serializer = DeeplinkOutputSerializer({**data, "nonce": nonce})
 
         logger.debug(
-            "Generated deeplink",
+            "Ссылка для авторизации через бота создана",
             extra={
+                "event": "auth.deeplink.created",
                 "platform": validated_platform,
             },
         )

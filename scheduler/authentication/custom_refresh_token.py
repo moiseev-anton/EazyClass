@@ -69,7 +69,11 @@ class CustomRefreshToken(Token):
         exp = self.payload["exp"]
         timeout = max(exp - time.time(), 1)  # Минимальное время хранения — 1 сек
         cache.set(jti, True, timeout=timeout)
-        logger.debug("auth.refresh.whitelist_added")
+        logger.debug(
+            "Refresh-токен добавлен в список разрешённых",
+            extra={"event": "auth.refresh.whitelist_added",
+                   "user_id": self.payload.get(api_settings.USER_ID_CLAIM)},
+        )
 
     def remove_from_whitelist(self, old_jti=None) -> None:
         """

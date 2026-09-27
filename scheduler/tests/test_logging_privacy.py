@@ -42,8 +42,9 @@ def test_http_logs_only_route_and_result(caplog, resolved):
     request.resolver_match = SimpleNamespace(route="auth/<str:value>/") if resolved else None
     response = HttpResponse(status=401)
     assert RequestLoggingMiddleware(lambda _: response)(request) is response
-    assert "status_code=401" in caplog.text
-    assert ("auth/<str:value>/" if resolved else "<unresolved>") in caplog.text
+    record = next(r for r in caplog.records if getattr(r, "event", None) == "http.request.completed")
+    assert record.status_code == 401
+    assert record.route == ("auth/<str:value>/" if resolved else "<unresolved>")
     assert_private(caplog, SECRET, NONCE)
 
 
@@ -77,8 +78,9 @@ def test_nonce_result_without_nonce_or_exception_payload(caplog, monkeypatch, fa
     records = [r for r in caplog.records if r.name == nonce_serializers.__name__]
     assert len(records) == 1
     assert records[0].levelno == (logging.ERROR if failed else logging.INFO)
+    assert records[0].user_id == "42"
     if failed:
-        assert "RuntimeError" in caplog.text
+        assert records[0].error_type == "RuntimeError"
     assert_private(caplog, SECRET, NONCE)
 
 
@@ -93,7 +95,7 @@ def test_auth_service_error_does_not_log_exception_chain(caplog):
                 raise RuntimeError(NONCE)
             except RuntimeError as exc:
                 serializer._handle_service_exception(exc)
-    assert "RuntimeError" in caplog.text
+    assert any(getattr(r, "error_type", None) == "RuntimeError" for r in caplog.records)
     assert_private(caplog, SECRET, NONCE)
 
 
@@ -103,7 +105,7 @@ def test_nonce_ttl_error_does_not_log_cache_key(caplog, monkeypatch):
     cache.expire.side_effect = RuntimeError(f"{NONCE}: {SECRET}")
     monkeypatch.setattr(token_serializers, "cache", cache)
     token_serializers.CustomTokenObtainPairSerializer()._reduce_nonce_ttl(NONCE)
-    assert "RuntimeError" in caplog.text
+    assert any(getattr(r, "error_type", None) == "RuntimeError" for r in caplog.records)
     assert_private(caplog, SECRET, NONCE)
 
 
@@ -162,5 +164,5 @@ def test_logout_errors_do_not_log_credentials(caplog, monkeypatch, stage):
     view._clear_refresh_cookie = Mock()
     response = view.post(SimpleNamespace(COOKIES={"refresh_token": SECRET}))
     assert response.status_code == (500 if stage == "construct" else 200)
-    assert "RuntimeError" in caplog.text
+    assert any(getattr(r, "error_type", None) == "RuntimeError" for r in caplog.records)
     assert_private(caplog, SECRET, NONCE)
