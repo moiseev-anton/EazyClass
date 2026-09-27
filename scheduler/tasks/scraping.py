@@ -6,6 +6,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
 from eazyclass.logging_config import configure_service_logging
+from eazyclass.logging_context import get_context, logging_context
 
 from scrapy_app.spiders import ScheduleSpider
 
@@ -19,7 +20,12 @@ class SpiderRunner:
         self.spider_cls = spider_cls
         self.spider_kwargs = spider_kwargs
 
-    def _crawl(self):
+    def _crawl(self, context=None):
+        # Explicit transport works without relying on fork inheritance.
+        with logging_context(context or {}):
+            self._crawl_with_logging()
+
+    def _crawl_with_logging(self):
         """Запуск паука."""
         import os
 
@@ -37,7 +43,7 @@ class SpiderRunner:
 
     def run(self):
         """Запуск отдельного процесса для работы паука."""
-        process = Process(target=self._crawl)
+        process = Process(target=self._crawl, args=(get_context(),))
         process.start()
         process.join()
 

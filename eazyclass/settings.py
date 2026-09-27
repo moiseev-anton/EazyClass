@@ -61,6 +61,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 ]
 
 CORS_ALLOW_CREDENTIALS = False
+CORS_EXPOSE_HEADERS = ["X-Request-ID"]
 
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -101,6 +102,7 @@ if DEBUG:
 
 
 MIDDLEWARE = [
+    "scheduler.middleware.RequestLoggingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     # 'django.middleware.locale.LocaleMiddleware',
@@ -116,7 +118,6 @@ MIDDLEWARE = [
 if DEBUG:
     MIDDLEWARE += [
         "debug_toolbar.middleware.DebugToolbarMiddleware",
-        "scheduler.middleware.RequestLoggingMiddleware",
     ]
 
 

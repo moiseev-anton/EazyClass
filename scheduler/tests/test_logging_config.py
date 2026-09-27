@@ -110,7 +110,9 @@ from scheduler.tasks.scraping import SpiderRunner
 class Probe(scrapy.Spider):
     name = "probe"
     start_urls = []
-SpiderRunner(Probe)._crawl()''',
+    def closed(self, reason):
+        logging.getLogger("scrapy_app.probe").info("Паук завершён", extra={"event": "test.spider_context"})
+SpiderRunner(Probe)._crawl({"run_id": "spider-run", "task_id": "spider-task", "attempt": 2})''',
     }[framework]
     result = subprocess.run(
         [sys.executable, "-c", script.replace("FRAMEWORK_SETUP", setup)],
@@ -126,3 +128,10 @@ SpiderRunner(Probe)._crawl()''',
     assert len({r["logger"] for r in probes}) == 4
     assert all(r["user_id"] == 42 for r in probes)
     assert all(r["service"] == ("scrapy" if framework == "scrapy" else "test") for r in probes)
+    if framework == "scrapy":
+        inside = [r for r in records if r.get("event") == "test.spider_context"]
+        assert len(inside) == 1
+        assert inside[0]["run_id"] == "spider-run"
+        assert inside[0]["task_id"] == "spider-task"
+        assert inside[0]["attempt"] == 2
+        assert all("run_id" not in r for r in probes)

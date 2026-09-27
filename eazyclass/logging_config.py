@@ -122,8 +122,10 @@ def build_logging_config(*, debug=False, log_format=None, level="INFO",
         }},
         "handlers": {"console": {
             "class": "logging.StreamHandler", "formatter": "event",
+            "filters": ["context"],
             "stream": "ext://sys.stderr",
         }},
+        "filters": {"context": {"()": "eazyclass.logging_context.ContextFilter"}},
         "root": {"handlers": ["console"], "level": "WARNING"},
         "loggers": {name: {"handlers": [], "level": value, "propagate": True}
                     for name, value in levels.items()},
