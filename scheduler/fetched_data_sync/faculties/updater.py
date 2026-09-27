@@ -1,5 +1,3 @@
-import logging
-
 from django.db import transaction
 from django.utils import timezone
 
@@ -7,11 +5,6 @@ from scheduler.fetched_data_sync.utils import fetch_page_content
 from scheduler.fetched_data_sync.faculties.parser import parse_faculties_page
 from scheduler.fetched_data_sync.dto import FacultyData
 from scheduler.models import Faculty, Group
-
-logger = logging.getLogger(__name__)
-
-HTML_SNIPPET_LIMIT = 200
-
 
 def refresh_faculties_and_groups(base_url: str, endpoint: str):
     """Главная функция обновления факультетов и групп."""
@@ -22,11 +15,6 @@ def refresh_faculties_and_groups(base_url: str, endpoint: str):
     # Код ответа 200 не гарантирует корректность страницы.
     # TODO: Рассмотреть возможность проверки валидности страницы по наличию конкретных тегов
     if not faculties:
-        html_preview = html[:HTML_SNIPPET_LIMIT].decode(errors="ignore")
-        logger.error(
-            "Страница факультетов невалидна: не найдено ни одного факультета. "
-            f"Превью HTML:\n{html_preview}"
-        )
         raise RuntimeError("Факультеты не найдены — обновление отменено")
 
     faculty_ids = set()
@@ -61,8 +49,8 @@ def refresh_faculties_and_groups(base_url: str, endpoint: str):
 
         # Деактивируем отсутствующие
         f_count = Faculty.objects.filter(is_active=True).exclude(id__in=faculty_ids).update(is_active=False)
-        logger.info(f"Деактивировано {f_count} факультетов.")
         g_count = Group.objects.filter(is_active=True).exclude(id__in=group_ids).update(is_active=False)
-        logger.info(f"Деактивировано {g_count} групп.")
 
-    logger.info(f"Получено: факультетов={len(faculty_ids)}, групп={len(group_ids)}")
+    # Return only after the transaction committed; the task owns the final log.
+    return {"faculties_count": len(faculty_ids), "groups_count": len(group_ids),
+            "deactivated_faculties_count": f_count, "deactivated_groups_count": g_count}

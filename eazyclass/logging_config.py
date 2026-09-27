@@ -18,6 +18,7 @@ CONTEXT_FIELDS = frozenset({
     "success_count", "failed_count", "skipped_count", "retry_delay_seconds",
     "groups_count", "parsed_count", "unchanged_count", "pending_count", "lessons_count", "stage",
     "request_attempt",
+    "faculties_count", "deactivated_faculties_count", "deactivated_groups_count", "unmatched_count",
 })
 STACK_FIELDS = frozenset({"error_type", "frames", "file", "line", "function"})
 

@@ -94,6 +94,7 @@ def test_config_defaults_and_validation():
     assert build_logging_config(debug=True)["loggers"]["scheduler"]["level"] == "DEBUG"
     assert build_logging_config(debug=False)["loggers"]["scheduler"]["level"] == "INFO"
     assert build_logging_config(debug=True, level="INFO")["loggers"]["scheduler"]["level"] == "INFO"
+    assert build_logging_config(debug=True, level="DEBUG")["loggers"]["scheduler"]["level"] == "DEBUG"
     assert build_logging_config(debug=True)["formatters"]["event"]["style"] == "text"
     assert build_logging_config()["formatters"]["event"]["style"] == "json"
     assert build_logging_config(log_format="text_verbose")["formatters"]["event"]["style"] == "text_verbose"
@@ -160,7 +161,7 @@ import django
 django.setup()
 from django.conf import settings
 from eazyclass.logging_config import build_logging_config
-settings.LOGGING = build_logging_config(debug=True, log_format="json")
+settings.LOGGING = build_logging_config(debug=True, log_format="json", level="DEBUG")
 import scrapy
 from scheduler.tasks.scraping import SpiderRunner
 

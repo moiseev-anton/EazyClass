@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def refresh_teachers_endpoints(base_url: str, page_path: str):
-    """Главная функция обновления факультетов и групп."""
+    """Обновляет адреса страниц сопоставленных преподавателей."""
     html = fetch_page_content(f"{base_url}{page_path}")
     teachers_map = parse_teachers_page(html, page_path)
     db_teachers = Teacher.objects.filter(is_active=True)
@@ -17,6 +17,7 @@ def refresh_teachers_endpoints(base_url: str, page_path: str):
     teacher_lookup = build_teacher_lookup(db_teachers)
 
     updated_count = 0
+    unmatched_count = 0
 
     for name, endpoint in teachers_map.items():
         normalized_name = normalize_person_name(name)
@@ -25,8 +26,12 @@ def refresh_teachers_endpoints(base_url: str, page_path: str):
                 teacher.endpoint = endpoint
                 teacher.save(update_fields=["endpoint"])
                 updated_count += 1
+        else:
+            unmatched_count += 1
 
-    logger.info(f"Обновлено {updated_count} записей преподавателей")
+    return {"count": len(teachers_map), "updated_count": updated_count,
+            "unchanged_count": len(teachers_map) - updated_count - unmatched_count,
+            "unmatched_count": unmatched_count}
 
 
 def build_teacher_lookup(
@@ -49,9 +54,9 @@ def build_teacher_lookup(
             lookup[norm_name] = items[0]
         else:
             logger.warning(
-                "Обнаружена коллизия имен Teacher (%s): %s",
-                norm_name,
-                ", ".join(f"[ID:{t.id} {t.short_name}]" for t in items),
+                "Неоднозначное имя преподавателя: %s записей исключены из сопоставления",
+                len(items),
+                extra={"event": "reference.teachers.ambiguous", "count": len(items)},
             )
 
     return lookup
