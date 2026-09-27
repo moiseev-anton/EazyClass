@@ -69,7 +69,6 @@ class AuthView(JsonApiMixin, views.APIView):
             auth_result.social_account, context={"created": auth_result.created}
         )
         response_data = serializer.data
-        logger.info(response_data)
 
         return Response(response_data, status=auth_result.status_code)
 

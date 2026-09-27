@@ -30,7 +30,8 @@ class BaseTokenSerializer(json_api_serializers.Serializer):
 
     def _handle_service_exception(self, exc):
         """Логирование и обработка сервисных исключений"""
-        logger.exception(str(exc))
+        # Exception messages/chains can contain credentials or cache keys.
+        logger.error("auth.service.failed error_type=%s", type(exc).__name__)
         raise APIException(self.error_messages["service_unavailable"])
 
     def _validate_user(self, user_id: str):
@@ -88,7 +89,7 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
         try:
             cache.expire(nonce, self.NONCE_TTL_REDUCTION)
         except Exception as e:
-            logger.warning(f"Failed to reduce nonce TTL: {str(e)}")
+            logger.warning("auth.nonce.ttl_update_failed error_type=%s", type(e).__name__)
 
 
 class TelegramTokenObtainSerializer(BaseTokenSerializer):

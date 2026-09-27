@@ -32,7 +32,6 @@ class HMACAuthentication(BaseAuthentication):
         body_hash = hashlib.sha256(request.body).hexdigest()
 
         data = f"{method}\n{full_path}\n{timestamp}\n{platform}\n{social_id}\n{body_hash}".encode("utf-8")
-        logger.info(data)
         # Получаем HMAC и сравниваем
         expected_signature = hmac.new(
             hmac_secret.encode("utf-8"), data, hashlib.sha256

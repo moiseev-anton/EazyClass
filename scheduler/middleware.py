@@ -22,20 +22,12 @@ class RequestLoggingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        headers = '\n'.join([f'{k}: {v}' for k, v in request.headers.items()])
-
-        msg = ('\n=== Incoming Request ===\n'
-               f"Method: {request.method}\n"
-               f"Path: {request.get_full_path()}\n"
-               "Headers:\n") + headers
-        # Логируем метод, путь, заголовки и тело
-        logger.info(msg)
-
-        if request.body:
-            try:
-                logger.debug("Body: %s", request.body.decode("utf-8"))
-            except Exception:
-                logger.warning("Could not decode request body")
-
         response = self.get_response(request)
+        # Use the declared route, never user-provided URL values or credentials.
+        match = getattr(request, "resolver_match", None)
+        route = getattr(match, "route", None) or "<unresolved>"
+        logger.info(
+            "http.request.completed method=%s route=%s status_code=%s",
+            request.method, route, response.status_code,
+        )
         return response

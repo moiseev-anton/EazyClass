@@ -68,8 +68,8 @@ class CustomRefreshToken(Token):
         jti = self.payload[api_settings.JTI_CLAIM]
         exp = self.payload["exp"]
         timeout = max(exp - time.time(), 1)  # Минимальное время хранения — 1 сек
-        logger.info(f'Пробуем сохранить токен в белом листе: jti={jti}, exp={exp}, timeout={timeout}')
         cache.set(jti, True, timeout=timeout)
+        logger.debug("auth.refresh.whitelist_added")
 
     def remove_from_whitelist(self, old_jti=None) -> None:
         """
@@ -85,6 +85,5 @@ class CustomRefreshToken(Token):
         Создает токен и сразу добавляет в белый список.
         """
         token = super().for_user(user)  # type: ignore
-        logger.info("Токен создан. Переходим к проверке в белом листе")
         token.add_to_whitelist()  # type: ignore
         return token  # type: ignore

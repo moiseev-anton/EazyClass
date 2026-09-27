@@ -78,7 +78,6 @@ class DeeplinkView(PlainApiViewMixin, views.APIView):
             "Generated deeplink",
             extra={
                 "platform": validated_platform,
-                "nonce": str(nonce),
             },
         )
 

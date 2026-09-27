@@ -15,8 +15,9 @@ class NonceSerializer(serializers.Serializer):
         nonce = str(self.validated_data["nonce"])
         try:
             cache.set(nonce, user_id, timeout=timeout)
-            logger.error(f"Nonce {nonce} bound for user {user_id}.")
+            logger.info("auth.nonce.bound")
             return "authenticated"
         except Exception as e:
-            logger.error(f"Failed to bind nonce {nonce} for user {user_id}: {str(e)}")
+            # Cache exceptions may include the nonce or connection credentials.
+            logger.error("auth.nonce.bind_failed error_type=%s", type(e).__name__)
             return "failed"
