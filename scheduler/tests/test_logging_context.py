@@ -170,11 +170,11 @@ def test_nested_eager_task_restores_parent_context():
     @app.task
     def parent():
         before = get_context()
-        child_context = child.apply().get()
+        child_context = child.apply().get(disable_sync_subtasks=False)
         assert get_context() == before
         return before, child_context
 
-    outer, inner = parent.apply().get()
+    outer, inner = parent.apply().get(disable_sync_subtasks=False)
     assert outer["task_id"] != inner["task_id"]
     assert get_context() == {}
     app.close()
@@ -184,6 +184,7 @@ def test_spider_runner_transports_snapshot_and_restores_context(monkeypatch):
     from scheduler.tasks import scraping
 
     process_factory = Mock()
+    process_factory.return_value.exitcode = 0
     monkeypatch.setattr(scraping, "Process", process_factory)
     runner = scraping.SpiderRunner(Mock())
     crawl = Mock(side_effect=lambda: get_context())
@@ -200,6 +201,7 @@ def test_spider_runner_transports_snapshot_and_restores_context(monkeypatch):
     assert observed == [expected]
     assert get_context() == {}
     crawl.side_effect = RuntimeError("failed to start spider")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(SystemExit) as failure:
         runner._crawl(snapshot)
+    assert failure.value.code == 1
     assert get_context() == {}

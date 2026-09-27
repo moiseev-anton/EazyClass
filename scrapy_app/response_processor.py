@@ -86,7 +86,7 @@ class ResponseProcessor:
                 else:
                     raise ValueError(f"Некорректная структура таблицы")
 
-            logger.info(f'Получено {len(self.lessons)} уроков для group_id: {self.group_id}.')
+            logger.debug(f'Получено {len(self.lessons)} уроков для group_id: {self.group_id}.')
             return self.lessons
         except Exception as e:
             raise RuntimeError(f"Ошибка парсинга страницы {self.url} (group_id: {self.group_id}): {e}")
@@ -122,16 +122,10 @@ class ResponseProcessor:
             raise ValueError(f"Невозможно выполнить проверку изменения контента без group_id (url: {self.url})")
 
         redis_key = f'{KeyEnum.PAGE_HASH_PREFIX}{self.cache_scope}{self.group_id}'
-        try:
-            if previous_hash := self.redis_client.get(redis_key):
-                return self.content_hash != previous_hash
-            return True
-
-        except (ConnectionError, TimeoutError) as e:
-            logger.error(f"Ошибка соединения с Redis при проверке хеша ({self._log_context}): {e}")
-        except Exception as e:
-            logger.error(f"Неизвестная ошибка при проверке изменения контента страницы ({self._log_context}): {e}")
-        return False
+        # A cache failure must reach the spider's group-error handler;
+        # it is not evidence that the page is unchanged.
+        previous_hash = self.redis_client.get(redis_key)
+        return self.content_hash != previous_hash if previous_hash else True
 
     def _log_context(self) -> str:
         return "no group_id" if self.group_id is None else f"group_id={self.group_id}"

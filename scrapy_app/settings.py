@@ -78,6 +78,8 @@ LOG_ENABLED = True
 LOG_LEVEL = "INFO"
 # The runner owns logging; don't redirect stdout into logging recursively.
 LOG_STDOUT = False
+# Avoid the full dependency-version dump on every scheduled crawl.
+LOG_VERSIONS = []
 
 
 # Enable and configure HTTP caching (disabled by default)

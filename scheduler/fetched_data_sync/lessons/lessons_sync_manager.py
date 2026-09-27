@@ -9,6 +9,8 @@ from bulk_sync import bulk_compare
 from django.db import transaction
 from django.utils import timezone
 
+from eazyclass.logging_config import safe_error_context
+
 from scheduler.fetched_data_sync.lessons.related_objects_map import RelatedObjectsMap
 from scheduler.dtos.lesson_sync_range import LessonSyncRange
 from scheduler.models import Classroom, Lesson, LessonAnnotation, Period, Subject, Teacher
@@ -63,7 +65,7 @@ class LessonsSyncManager:
         data = self._fetch_data()
 
         if not data.scraped_groups:
-            logger.info("Перечень групп пуст.")
+            logger.debug("Перечень групп пуст.")
             if data.unchanged_groups:
                 self._update_synced_groups_set(data.scraped_groups, data.unchanged_groups)
             return self.EMPTY_SUMMARY
@@ -88,7 +90,7 @@ class LessonsSyncManager:
         scraped_groups = orjson.loads(groups_json)
         unchanged_groups = set(orjson.loads(unchanged_json) or [])
 
-        logger.info("Данные скрайпинга загружены из Redis")
+        logger.debug("Данные скрайпинга загружены из Redis")
 
         lesson_items = self._normalize_lessons_fields(lesson_items)
 
@@ -126,7 +128,7 @@ class LessonsSyncManager:
             subjects.add(item["subject"])
             periods.add(item["period"])
 
-        logger.info(
+        logger.debug(
             f"Собраны уникальные элементы для маппинга: "
             f"периодов={len(periods.pending_keys)}, "
             f"учителей={len(teachers.pending_keys)}, "
@@ -142,7 +144,7 @@ class LessonsSyncManager:
         subjects.resolve_pending_keys()
         periods.resolve_pending_keys()
 
-        logger.info(
+        logger.debug(
             f"Маппинг уникальных элементов завершен: "
             f"id периодов={len(periods.existing_mappings)}, "
             f"id учителей={len(teachers.existing_mappings)}, "
@@ -205,7 +207,7 @@ class LessonsSyncManager:
         to_update = comparison_result["updated"]
         to_create = comparison_result["added"]
 
-        logger.info(
+        logger.debug(
             f"Изменения по урокам: "
             f"для удаления={len(to_delete)}, "
             f"для обновления={len(to_update)}, "
@@ -222,7 +224,7 @@ class LessonsSyncManager:
             Lesson.objects.bulk_create(
                 to_create, batch_size=self.BATCH_SIZE, ignore_conflicts=False
             )
-        logger.info("Изменения отражены в БД.")
+        logger.debug("Изменения отражены в БД.")
 
     def _save_to_redis(self, scraped_groups: Dict[str, str], unchanged_groups: Set[str]) -> None:
         self._save_page_hashes(scraped_groups)
@@ -239,16 +241,19 @@ class LessonsSyncManager:
                         page_hash,
                     )
                 pipe.execute()
-            logger.info(f"Хеши страниц сохранены для {len(scraped_groups)} групп")
+            logger.debug(f"Хеши страниц сохранены для {len(scraped_groups)} групп")
         except Exception as e:
-            logger.warning(f"Не удалось сохранить хеши страниц в Redis: {e}", exc_info=True)
+            logger.warning(
+                "Изменения занятий сохранены, но кеш страниц не обновлён; возможна повторная обработка",
+                extra={"event": "schedule.sync.cache_failed", "reason": "page_hashes", **safe_error_context(e)},
+            )
 
     def _update_synced_groups_set(self, scraped_groups: Dict[str, str], unchanged_groups: Set[str]) -> None:
         """Добавляет успешно обработанные группы в set по хешу главной страницы"""
         main_hash = self.redis_client.get(KeyEnum.MAIN_PAGE_HASH)
 
         if not main_hash:
-            logger.info("Хеш главной страницы отсутствует → множество не обновляется")
+            logger.debug("Хеш главной страницы отсутствует → множество не обновляется")
             return
 
         set_key = f"{KeyEnum.SYNCED_GROUPS_PREFIX}{self.date_range.cache_scope}{main_hash}"
@@ -259,11 +264,14 @@ class LessonsSyncManager:
             self.redis_client.expire(set_key, self.PAGE_HASH_TIMEOUT)
 
             total_now = self.redis_client.scard(set_key)
-            logger.info(
+            logger.debug(
                 f"Множество {set_key} обновлено: добавлено {added} новых, всего теперь {total_now}"
             )
         except redis.RedisError as e:
-            logger.warning(f"Не удалось обновить множество синхронизированных групп {set_key}: {e}")
+            logger.warning(
+                "Не удалось отметить обработанные группы в кеше; возможна повторная обработка",
+                extra={"event": "schedule.sync.cache_failed", "reason": "synced_groups", **safe_error_context(e)},
+            )
 
     @staticmethod
     def _serialize_summary(

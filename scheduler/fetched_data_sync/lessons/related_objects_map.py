@@ -66,7 +66,7 @@ class RelatedObjectsMap:
             with transaction.atomic():
                 new_objects = self.create_new_objects()
                 self.model.objects.bulk_create(new_objects)
-                logger.info(f"Создано {len(new_objects)} новых записей '{self.model.__name__}'")
+                logger.debug(f"Создано {len(new_objects)} новых записей '{self.model.__name__}'")
 
             self.fetch_existing_mappings()
 
@@ -82,10 +82,6 @@ class RelatedObjectsMap:
         for item in self.pending_keys:
             obj = self.model(**dict(zip(self.fields, item)))
             if hasattr(obj, 'pre_save_actions'):
-                try:
-                    obj.pre_save_actions()
-                except Exception as e:
-                    logger.error(f"Ошибка в pre_save_actions для {obj}: {e}")
-                    raise
+                obj.pre_save_actions()
             new_objects.append(obj)
         return new_objects

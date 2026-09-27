@@ -17,13 +17,13 @@ def make_record(**extra):
     return record
 
 
-@pytest.mark.parametrize("style", ["json", "text"])
+@pytest.mark.parametrize("style", ["json", "text", "text_verbose"])
 def test_formats_include_human_message_event_and_context(style):
     output = EventFormatter(style=style).format(make_record(
         event="auth.bot.completed", user_id=42, user_created=False,
     ))
     assert "Пользователь 42 авторизован" in output
-    assert "auth.bot.completed" in output
+    assert ("auth.bot.completed" in output) == (style != "text")
     assert "user_id" in output
     if style == "json":
         data = json.loads(output)
@@ -76,12 +76,24 @@ def test_formats_escape_newlines_and_support_legacy_records():
     for style in ("text", "json"):
         output = EventFormatter(style=style).format(record)
         assert len(output.splitlines()) == 1
-        assert "log.message" in output
+        assert ("log.message" in output) == (style == "json")
+
+
+def test_compact_text_hides_repeated_metadata_but_full_formats_keep_it():
+    record = make_record(event="auth.bot.completed", run_id="12345678-1234-1234-1234-123456789012",
+                         task_id="task-full-id", request_id="request-full-id", attempt=2)
+    compact = EventFormatter().format(record)
+    assert "run=12345678" in compact and "attempt=2" in compact
+    for value in (record.run_id, "task-full-id", "request-full-id", "scheduler.test", "development"):
+        assert value not in compact
+        for style in ("json", "text_verbose"):
+            assert value in EventFormatter(style=style).format(record)
 
 
 def test_config_defaults_and_validation():
     assert build_logging_config(debug=True)["formatters"]["event"]["style"] == "text"
     assert build_logging_config()["formatters"]["event"]["style"] == "json"
+    assert build_logging_config(log_format="text_verbose")["formatters"]["event"]["style"] == "text_verbose"
     for args in ({"log_format": "invalid"}, {"level": "invalid"}):
         with pytest.raises(ValueError):
             build_logging_config(**args)

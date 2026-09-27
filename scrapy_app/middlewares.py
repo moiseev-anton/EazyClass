@@ -50,7 +50,7 @@ class EazyScrapySpiderMiddleware:
             yield item_or_request
 
     def spider_opened(self, spider):
-        spider.logger.info("Spider opened: %s" % spider.name)
+        spider.logger.debug("Spider opened: %s" % spider.name)
 
 
 class EazyScrapyDownloaderMiddleware:
@@ -70,7 +70,7 @@ class EazyScrapyDownloaderMiddleware:
         # middleware.
         active = getattr(spider.crawler.engine.downloader, 'active', None)
         active_count = len(active) if active is not None else 'unknown'
-        spider.logger.info(f"Отправка запроса → {request.url}  active={active_count}")
+        spider.logger.debug("Отправлен запрос страницы; активных запросов: %s", active_count, extra={"event": "schedule.scrape.request", "group_id": request.meta.get("group_id")})
 
         # Must either:
         # - return None: continue processing this request
@@ -100,4 +100,4 @@ class EazyScrapyDownloaderMiddleware:
         pass
 
     def spider_opened(self, spider):
-        spider.logger.info("Spider opened: %s" % spider.name)
+        spider.logger.debug("Spider opened: %s" % spider.name)

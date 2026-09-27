@@ -16,8 +16,44 @@ CONTEXT_FIELDS = frozenset({
     "group_id", "period_id", "start_date", "end_date", "error_type",
     "error_stack", "count", "added_count", "updated_count", "removed_count",
     "success_count", "failed_count", "skipped_count", "retry_delay_seconds",
+    "groups_count", "parsed_count", "unchanged_count", "pending_count", "lessons_count", "stage",
 })
 STACK_FIELDS = frozenset({"error_type", "frames", "file", "line", "function"})
+
+
+class CeleryEventFilter(logging.Filter):
+    """Keep routine task bookkeeping on DEBUG and never print result payloads."""
+    def __init__(self):
+        super().__init__()
+        from celery.app import trace
+        self.events = {
+            trace.LOG_RECEIVED: ("celery.task.received", "Задача получена", True),
+            trace.LOG_SUCCESS: ("celery.task.completed", "Задача выполнена", True),
+            trace.LOG_RETRY: ("celery.task.retry", "Запрошен повтор задачи", False),
+            trace.LOG_FAILURE: ("celery.task.failed", "Задача завершилась ошибкой", False),
+            trace.LOG_REJECTED: ("celery.task.rejected", "Задача отклонена", False),
+            trace.LOG_IGNORED: ("celery.task.ignored", "Задача пропущена", False),
+        }
+
+    def filter(self, record):
+        if record.name not in {"celery.app.trace", "celery.worker.strategy"}:
+            return True
+        event = self.events.get(record.msg) if isinstance(record.msg, str) else None
+        payload = getattr(record, "data", None)
+        if event is None or not isinstance(payload, dict):
+            return True
+        event_name, message, routine = event
+        if routine:
+            if not logging.getLogger("scheduler").isEnabledFor(logging.DEBUG):
+                return False
+            record.levelno, record.levelname = logging.DEBUG, "DEBUG"
+        record.event = event_name
+        record.task_id = payload.get("id")
+        record.task_name = payload.get("name")
+        record.msg = message + ": %s"
+        record.args = (str(record.task_name).rsplit(".", 1)[-1],)
+        record.__dict__.pop("data", None)
+        return True
 
 
 def safe_error_context(exc):
@@ -85,6 +121,8 @@ class EventFormatter(logging.Formatter):
         # Never use cached exc_text or stack_info: they may include source/secrets.
         if self.output_style == "json":
             return json.dumps(data, ensure_ascii=False, allow_nan=False)
+        if self.output_style == "text":
+            return self._compact_text(data)
         message = json.dumps(data.pop("message"), ensure_ascii=False)
         timestamp, level = data.pop("timestamp"), data.pop("level")
         logger_name = data.pop("logger")
@@ -94,12 +132,46 @@ class EventFormatter(logging.Formatter):
         )
         return f"{timestamp} [{level}] {logger_name}: {message} {context}"
 
+    @staticmethod
+    def _compact_text(data):
+        # Local reading: message first. Full identifiers/metadata remain available
+        # in JSON and text_verbose; shortened references aren't unique identifiers.
+        message = json.dumps(data["message"], ensure_ascii=False)[1:-1]
+        details = []
+        for field, label in (("run_id", "run"), ("request_id", "req")):
+            if data.get(field):
+                short_id = json.dumps(str(data[field])[:8], ensure_ascii=False)[1:-1]
+                details.append(f"{label}={short_id}")
+                break
+        for field in ("user_id", "group_id", "period_id", "method", "route", "status_code", "duration_ms"):
+            if field in data:
+                details.append(f"{field}={json.dumps(data[field], ensure_ascii=False)}")
+        if type(data.get("attempt")) is int and data["attempt"] > 1:
+            details.append(f"attempt={data['attempt']}")
+        if data.get("error_stack"):
+            errors = []
+            for item in data["error_stack"] if isinstance(data["error_stack"], list) else []:
+                if not isinstance(item, dict):
+                    continue
+                frames = item.get("frames", [])
+                location = frames[-1] if isinstance(frames, list) and frames and isinstance(frames[-1], dict) else {}
+                errors.append("%s@%s:%s(%s)" % (
+                    item.get("error_type"), location.get("file", "?"),
+                    location.get("line", "?"), location.get("function", "?"),
+                ))
+            # JSON-escape metadata as well, so external strings can't add lines.
+            details.append(json.dumps(" <- ".join(errors), ensure_ascii=False)[1:-1])
+        elif data.get("error_type"):
+            details.append(json.dumps(data["error_type"], ensure_ascii=False))
+        suffix = " | " + " ".join(details) if details else ""
+        return f"{data['timestamp'][11:23]} [{data['level']}] {message}{suffix}"
+
 
 def build_logging_config(*, debug=False, log_format=None, level="INFO",
                          service="eazyclass", environment=None):
     output_style = log_format or ("text" if debug else "json")
-    if output_style not in {"text", "json"}:
-        raise ValueError("LOG_FORMAT must be text or json")
+    if output_style not in {"text", "text_verbose", "json"}:
+        raise ValueError("LOG_FORMAT must be text, text_verbose or json")
     level = level.upper()
     if level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         raise ValueError("LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR or CRITICAL")
@@ -122,10 +194,13 @@ def build_logging_config(*, debug=False, log_format=None, level="INFO",
         }},
         "handlers": {"console": {
             "class": "logging.StreamHandler", "formatter": "event",
-            "filters": ["context"],
+            "filters": ["context", "celery_events"],
             "stream": "ext://sys.stderr",
         }},
-        "filters": {"context": {"()": "eazyclass.logging_context.ContextFilter"}},
+        "filters": {
+            "context": {"()": "eazyclass.logging_context.ContextFilter"},
+            "celery_events": {"()": "eazyclass.logging_config.CeleryEventFilter"},
+        },
         "root": {"handlers": ["console"], "level": "WARNING"},
         "loggers": {name: {"handlers": [], "level": value, "propagate": True}
                     for name, value in levels.items()},
