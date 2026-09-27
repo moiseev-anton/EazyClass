@@ -91,6 +91,9 @@ def test_compact_text_hides_repeated_metadata_but_full_formats_keep_it():
 
 
 def test_config_defaults_and_validation():
+    assert build_logging_config(debug=True)["loggers"]["scheduler"]["level"] == "DEBUG"
+    assert build_logging_config(debug=False)["loggers"]["scheduler"]["level"] == "INFO"
+    assert build_logging_config(debug=True, level="INFO")["loggers"]["scheduler"]["level"] == "INFO"
     assert build_logging_config(debug=True)["formatters"]["event"]["style"] == "text"
     assert build_logging_config()["formatters"]["event"]["style"] == "json"
     assert build_logging_config(log_format="text_verbose")["formatters"]["event"]["style"] == "text_verbose"
@@ -147,3 +150,81 @@ SpiderRunner(Probe)._crawl({"run_id": "spider-run", "task_id": "spider-task", "a
         assert inside[0]["task_id"] == "spider-task"
         assert inside[0]["attempt"] == 2
         assert all("run_id" not in r for r in probes)
+
+
+def test_scrapy_timeout_retries_keep_debug_requests_and_context():
+    script = '''
+import logging
+from contextvars import Context
+import django
+django.setup()
+from django.conf import settings
+from eazyclass.logging_config import build_logging_config
+settings.LOGGING = build_logging_config(debug=True, log_format="json")
+import scrapy
+from scheduler.tasks.scraping import SpiderRunner
+
+class TimeoutHandler:
+    def download_request(self, request, spider):
+        from twisted.internet import reactor
+        from twisted.internet.defer import Deferred
+        from twisted.internet.error import TimeoutError
+        pending = Deferred()
+        def timeout():
+            logging.getLogger("scrapy_app.probe").debug("Timeout callback", extra={"event": "test.callback"})
+            pending.errback(TimeoutError())
+        reactor.callLater(0.001, Context().run, timeout)
+        return pending
+
+class Probe(scrapy.Spider):
+    name = "schedule_spider"
+    custom_settings = {
+        "DOWNLOAD_HANDLERS": {"https": "__main__.TimeoutHandler"},
+        "ROBOTSTXT_OBEY": False, "TELNETCONSOLE_ENABLED": False,
+        "AUTOTHROTTLE_ENABLED": False, "DOWNLOAD_DELAY": 0,
+        "RETRY_TIMES": 2,
+    }
+    async def start(self):
+        yield scrapy.Request("https://example.invalid/view.php?id=00312", errback=self.failed)
+    def failed(self, failure):
+        self.logger.error("Request failed", extra={"event": "test.failed"})
+        return []
+    def closed(self, reason):
+        self.logger.info("Closed", extra={"event": "test.closed"})
+
+SpiderRunner(Probe)._crawl({"run_id": "timeout-run", "task_id": "timeout-task", "attempt": 2})
+Context().run(lambda: logging.getLogger("scrapy_app.probe").info("After", extra={"event": "test.after"}))
+'''
+    result = subprocess.run(
+        [sys.executable, "-c", script], cwd=Path(__file__).resolve().parents[2],
+        env={**os.environ, "DJANGO_SETTINGS_MODULE": "scheduler.tests.logging_settings",
+             "PYTHONIOENCODING": "utf-8"},
+        capture_output=True, text=True, encoding="utf-8", timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    records = [json.loads(line) for line in result.stderr.splitlines()]
+    requests = [r for r in records if r.get("event") == "schedule.scrape.request"]
+    assert [r["request_attempt"] for r in requests] == [1, 2, 3], result.stderr
+    assert all("https://example.invalid/view.php?id=00312" in r["message"] for r in requests)
+    callbacks = [r for r in records if r.get("event") == "test.callback"]
+    assert len(callbacks) == 3
+    assert len([r for r in records if r.get("event") == "test.failed"]) == 1
+    assert len([r for r in records if r.get("event") == "test.closed"]) == 1
+    for record in records:
+        if record.get("event") == "test.after":
+            assert "run_id" not in record
+        else:
+            assert record["run_id"] == "timeout-run", record
+            assert record["task_id"] == "timeout-task", record
+            assert record["attempt"] == 2, record
+
+
+@pytest.mark.parametrize("url, expected", [
+    ("https://user:secret@example.org/view.php?id=00312&token=secret#secret",
+     "https://example.org/view.php?id=00312"),
+    ("https://example.org/view.php?id=secret", "https://example.org/view.php"),
+    ("https://[::1]:8000/view.php?id=12", "https://[::1]:8000/view.php?id=12"),
+])
+def test_schedule_request_url_keeps_only_public_query_fields(url, expected):
+    from scrapy_app.middlewares import safe_schedule_url
+    assert safe_schedule_url(url) == expected

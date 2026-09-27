@@ -216,7 +216,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGGING = build_logging_config(
     debug=DEBUG,
     log_format=os.getenv("LOG_FORMAT") or None,
-    level=os.getenv("LOG_LEVEL", "INFO"),
+    level=os.getenv("LOG_LEVEL") or None,
     service=os.getenv("LOG_SERVICE", "eazyclass"),
     environment=os.getenv("LOG_ENVIRONMENT") or None,
 )

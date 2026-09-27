@@ -17,6 +17,7 @@ CONTEXT_FIELDS = frozenset({
     "error_stack", "count", "added_count", "updated_count", "removed_count",
     "success_count", "failed_count", "skipped_count", "retry_delay_seconds",
     "groups_count", "parsed_count", "unchanged_count", "pending_count", "lessons_count", "stage",
+    "request_attempt",
 })
 STACK_FIELDS = frozenset({"error_type", "frames", "file", "line", "function"})
 
@@ -167,12 +168,12 @@ class EventFormatter(logging.Formatter):
         return f"{data['timestamp'][11:23]} [{data['level']}] {message}{suffix}"
 
 
-def build_logging_config(*, debug=False, log_format=None, level="INFO",
+def build_logging_config(*, debug=False, log_format=None, level=None,
                          service="eazyclass", environment=None):
     output_style = log_format or ("text" if debug else "json")
     if output_style not in {"text", "text_verbose", "json"}:
         raise ValueError("LOG_FORMAT must be text, text_verbose or json")
-    level = level.upper()
+    level = (level or ("DEBUG" if debug else "INFO")).upper()
     if level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         raise ValueError("LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR or CRITICAL")
     # Each hierarchy propagates to exactly one root handler. Third-party debug

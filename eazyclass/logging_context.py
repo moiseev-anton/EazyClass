@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 
 _context = ContextVar("logging_context", default=None)
+_process_context = {}
 REQUEST_HEADER = "eazyclass_request_id"
 RUN_HEADER = "eazyclass_run_id"
 
@@ -34,9 +35,26 @@ def logging_context(context):
 
 class ContextFilter(logging.Filter):
     def filter(self, record):
-        for key, value in get_context().items():
+        for key, value in {**_process_context, **get_context()}.items():
             record.__dict__.setdefault(key, value)
         return True
+
+
+@contextmanager
+def process_logging_context(context):
+    """Fallback ONLY for a dedicated, single-crawl subprocess.
+
+    Twisted may invoke callbacks in an empty Context. The process belongs to
+    one crawl, so its immutable-by-convention snapshot also covers callbacks.
+    Never use this scope around HTTP requests or concurrent worker tasks.
+    """
+    global _process_context
+    previous = _process_context
+    _process_context = dict(context)
+    try:
+        yield
+    finally:
+        _process_context = previous
 
 
 def _uuid(value):
@@ -91,3 +109,4 @@ def task_context_finished(task=None, **kwargs):
 def clear_worker_context(**kwargs):
     # A fork must not inherit a previous operation's context.
     _context.set(None)
+    _process_context.clear()

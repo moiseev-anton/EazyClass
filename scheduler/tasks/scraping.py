@@ -6,7 +6,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
 from eazyclass.logging_config import configure_service_logging, safe_error_context
-from eazyclass.logging_context import get_context, logging_context
+from eazyclass.logging_context import get_context, logging_context, process_logging_context
 
 from scrapy_app.spiders import ScheduleSpider
 
@@ -22,7 +22,7 @@ class SpiderRunner:
 
     def _crawl(self, context=None):
         # Explicit transport works without relying on fork inheritance.
-        with logging_context(context or {}):
+        with logging_context(context or {}), process_logging_context(context or {}):
             try:
                 self._crawl_with_logging()
             except Exception as exc:

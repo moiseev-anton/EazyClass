@@ -4,9 +4,24 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
+
+
+def safe_schedule_url(url):
+    """Public schedule endpoint: omit credentials, fragment and unknown query fields."""
+    parts = urlsplit(url)
+    if parts.scheme not in {"http", "https"}:
+        return "<non-http URL>"
+    hostname = parts.hostname or ""
+    if ":" in hostname:
+        hostname = f"[{hostname}]"
+    host = hostname + (f":{parts.port}" if parts.port else "")
+    query = urlencode([(key, value) for key, value in parse_qsl(parts.query)
+                       if key == "id" and value.isascii() and value.isdigit() and len(value) <= 32])
+    return urlunsplit((parts.scheme, host, parts.path, query, ""))
 
 
 class EazyScrapySpiderMiddleware:
@@ -70,7 +85,13 @@ class EazyScrapyDownloaderMiddleware:
         # middleware.
         active = getattr(spider.crawler.engine.downloader, 'active', None)
         active_count = len(active) if active is not None else 'unknown'
-        spider.logger.debug("Отправлен запрос страницы; активных запросов: %s", active_count, extra={"event": "schedule.scrape.request", "group_id": request.meta.get("group_id")})
+        request_attempt = request.meta.get("retry_times", 0) + 1
+        spider.logger.debug(
+            "Отправка запроса %s; попытка %s, активных запросов: %s",
+            safe_schedule_url(request.url), request_attempt, active_count,
+            extra={"event": "schedule.scrape.request", "group_id": request.meta.get("group_id"),
+                   "request_attempt": request_attempt},
+        )
 
         # Must either:
         # - return None: continue processing this request
