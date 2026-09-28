@@ -66,7 +66,10 @@ class RelatedObjectsMap:
             with transaction.atomic():
                 new_objects = self.create_new_objects()
                 self.model.objects.bulk_create(new_objects)
-                logger.debug(f"Создано {len(new_objects)} новых записей '{self.model.__name__}'")
+
+            logger.info("Создано %s новых записей '%s'", len(new_objects), self.model.__name__,
+                        extra={"event": "schedule.sync.related_created", "model": self.model.__name__,
+                               "added_count": len(new_objects)})
 
             self.fetch_existing_mappings()
 

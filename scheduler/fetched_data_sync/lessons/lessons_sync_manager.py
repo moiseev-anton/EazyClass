@@ -144,13 +144,19 @@ class LessonsSyncManager:
         subjects.resolve_pending_keys()
         periods.resolve_pending_keys()
 
-        logger.debug(
+        logger.info(
             f"Маппинг уникальных элементов завершен: "
             f"id периодов={len(periods.existing_mappings)}, "
             f"id учителей={len(teachers.existing_mappings)}, "
             f"id предметов={len(subjects.existing_mappings)}, "
             f"id кабинетов={len(classrooms.existing_mappings)}, "
-            f"id примечаний={len(annotations.existing_mappings)}"
+            f"id примечаний={len(annotations.existing_mappings)}",
+            extra={"event": "schedule.sync.mapping_completed",
+                   "periods_count": len(periods.existing_mappings),
+                   "teachers_count": len(teachers.existing_mappings),
+                   "subjects_count": len(subjects.existing_mappings),
+                   "classrooms_count": len(classrooms.existing_mappings),
+                   "annotations_count": len(annotations.existing_mappings)},
         )
 
         update_time = timezone.now()
