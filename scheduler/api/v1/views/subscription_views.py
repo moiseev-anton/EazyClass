@@ -1,4 +1,6 @@
 import logging
+from django.db import transaction
+from eazyclass.logging_context import get_context
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions
@@ -20,7 +22,28 @@ from scheduler.models import Subscription, GroupSubscription, TeacherSubscriptio
 logger = logging.getLogger(__name__)
 
 
+class SubscriptionLoggingMixin:
+    def perform_create(self, serializer):
+        instance = serializer.save(user=self.request.user)
+        self._log_change(instance, "saved", "Подписка сохранена; предыдущая подписка заменена, если была")
+
+    def perform_destroy(self, instance):
+        extra = self._subscription_context(instance)
+        instance.delete()
+        transaction.on_commit(lambda: logger.info(
+            "Подписка удалена", extra={"event": "api.subscription.deleted", **extra}))
+
+    def _log_change(self, instance, event, message):
+        extra = self._subscription_context(instance)
+        transaction.on_commit(lambda: logger.info(message, extra={"event": f"api.subscription.{event}", **extra}))
+
+    def _subscription_context(self, instance):
+        return {**get_context(), "user_id": self.request.user.pk,
+                "model": type(instance).__name__, "subscription_id": instance.pk}
+
+
 class GroupSubscriptionViewSet(
+    SubscriptionLoggingMixin,
     JsonApiMixin,
     mixins.CreateModelMixin,  # POST
     # mixins.UpdateModelMixin,  # PATCH
@@ -34,9 +57,6 @@ class GroupSubscriptionViewSet(
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
     @extend_schema(
         tags=["Subscriptions"],
@@ -66,6 +86,7 @@ class GroupSubscriptionViewSet(
 
 
 class TeacherSubscriptionViewSet(
+    SubscriptionLoggingMixin,
     JsonApiMixin,
     mixins.CreateModelMixin,  # POST
     # mixins.UpdateModelMixin,  # PATCH
@@ -79,9 +100,6 @@ class TeacherSubscriptionViewSet(
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
     @extend_schema(
         tags=["Subscriptions"],

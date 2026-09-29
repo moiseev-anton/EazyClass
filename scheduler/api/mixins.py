@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework_json_api.parsers import JSONParser as JSONAPIParser
 from rest_framework_json_api.renderers import JSONRenderer as JSONAPIRenderer
 from rest_framework_json_api.utils import get_included_resources
+from eazyclass.logging_config import safe_error_context
 
 logger = logging.getLogger(__name__)
 
@@ -102,9 +103,10 @@ class ETagMixin:
                     reverse_rels[accessor] = accessor
 
         except Exception as e:
-            logger.warning(f"Error extracting reverse relations: {e}")
+            logger.warning("Не удалось определить обратные связи для ETag",
+                           extra={"event": "api.etag.relations_failed", **safe_error_context(e)})
 
-        logger.info(f"[ETagMixin] Reverse_relations fields: {reverse_rels}")
+        logger.debug("Определены обратные связи для ETag: %s", reverse_rels)
         return reverse_rels
 
     def get_valid_included_fields(self) -> dict[str, str]:
@@ -135,7 +137,8 @@ class ETagMixin:
                 )
                 related_model = serializer_cls.Meta.model
             except Exception as e:
-                logger.warning(f"[ETagMixin] Failed to load serializer '{name}': {e}")
+                logger.warning("Не удалось загрузить сериализатор связи для ETag",
+                               extra={"event": "api.etag.serializer_failed", **safe_error_context(e)})
                 continue
 
             if related_model is None or not hasattr(related_model, "updated_at"):
@@ -171,7 +174,7 @@ class ETagMixin:
             if relation_path:
                 valid_included[name] = relation_path
 
-        logger.info(f"[ETagMixin] Valid included fields: {valid_included}")
+        logger.debug("Определены включённые связи для ETag: %s", valid_included)
         return valid_included
 
     def get_aggregates(self, relations: dict[str, str]) -> Dict:
@@ -200,7 +203,7 @@ class ETagMixin:
             rel_max = stats.get(f"{rel}_max")
             if rel_max > max_updated:
                 max_updated = rel_max
-        logger.info(f"Добавляем total_count={total_count}, max_updated={max_updated}")
+        logger.debug("Статистика ETag: записей %s, последнее обновление %s", total_count, max_updated)
         return total_count, max_updated
 
     def _get_id_hash(self, qs):
@@ -240,7 +243,7 @@ class ETagMixin:
 
         max_updated = main_stats["max_updated"]
         total_count = main_stats["count"]
-        logger.info(f"Main stats: max_updated={max_updated}, total_count={total_count}")
+        logger.debug("Основная статистика ETag: обновление %s, записей %s", max_updated, total_count)
 
         # === Reverse relations ===
         reverse_rels = self.get_reverse_relations_from_serializer()
@@ -256,7 +259,7 @@ class ETagMixin:
         if forward_rels:
             fwd_aggregates = self.get_aggregates(forward_rels)
             fwd_stats = qs.aggregate(**fwd_aggregates)
-            logger.info(f"Forward stats: {fwd_stats}")
+            logger.debug("Статистика прямых связей ETag: %s", fwd_stats)
             total_count, max_updated = self.update_counts_and_max(
                 forward_rels, fwd_stats, total_count, max_updated
             )
@@ -265,7 +268,7 @@ class ETagMixin:
         if reverse_rels:
             rev_aggregates = self.get_aggregates(reverse_rels)
             rev_stats = qs.aggregate(**rev_aggregates)
-            logger.info(f"Reverse stats: {rev_stats}")
+            logger.debug("Статистика обратных связей ETag: %s", rev_stats)
             total_count, max_updated = self.update_counts_and_max(
                 reverse_rels, rev_stats, total_count, max_updated
             )
@@ -303,8 +306,9 @@ class ETagMixin:
         new_etag = self.generate_etag(many, weak=True)
         client_etag = self.request.META.get("HTTP_IF_NONE_MATCH", "").strip('"')
         is_matched = client_etag == new_etag
-        logger.info(
-            f"ETag ({'list' if many else 'retrieve'}): Client={client_etag}, New={new_etag}, Matched={is_matched}"
+        logger.debug(
+            "Проверка ETag: совпадение %s", is_matched,
+            extra={"event": "api.etag.checked"},
         )
         return new_etag, is_matched
 

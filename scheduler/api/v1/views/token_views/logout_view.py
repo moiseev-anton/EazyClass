@@ -78,31 +78,37 @@ class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
         refresh_str = self._get_refresh_token_from_request(request)
 
         if not refresh_str:
+            self._log_completion(request, "no_refresh_token")
             # Если токена вообще нет — считаем, что уже разлогинен
             return self._success_response(detail="Already logged out")
 
         try:
             refresh = CustomRefreshToken(refresh_str)
+            revoked = True
 
             # Удаляем из белого списка
             try:
                 refresh.remove_from_whitelist()
             except Exception as e:
+                revoked = False
                 logger.warning(
-                    "Не удалось удалить refresh-токен из списка разрешённых",
-                    extra={"event": "auth.refresh.whitelist_remove_failed", **safe_error_context(e)},
+                    "Refresh-токен не отозван: не удалось обновить список разрешённых; будет очищена cookie",
+                    extra={"event": "auth.refresh.whitelist_remove_failed", "outcome": "partial", **safe_error_context(e)},
                 )
                 # не падаем — куку всё равно надо удалить
 
             # Удаляем куку (если она была)
             response = self._success_response(detail="Logout successful")
             self._clear_refresh_cookie(response, request)
+            if revoked:
+                self._log_completion(request, "refresh_revoked")
             return response
 
         except TokenError:
             # Токен битый / истёк / невалидный → просто чистим куку
             response = self._success_response(detail="Logout successful (invalid token)")
             self._clear_refresh_cookie(response, request)
+            self._log_completion(request, "invalid_refresh_cookie_cleared")
             return response
 
         except Exception as e:
@@ -114,6 +120,17 @@ class LogoutView(TokenCookieHandlerMixin, PlainApiViewMixin, APIView):
                 {"detail": "Internal server error during logout"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @staticmethod
+    def _log_completion(request, reason):
+        descriptions = {
+            "no_refresh_token": "refresh-токен отсутствует",
+            "refresh_revoked": "refresh-токен отозван, cookie очищена",
+            "invalid_refresh_cookie_cleared": "refresh-токен недействителен, cookie очищена",
+        }
+        logger.info("Выход пользователя обработан: %s", descriptions[reason],
+                    extra={"event": "auth.logout.completed", "reason": reason,
+                           "user_id": getattr(getattr(request, "user", None), "pk", None), "outcome": "success"})
 
     @staticmethod
     def _get_refresh_token_from_request(request) -> str | None:

@@ -24,6 +24,7 @@ CONTEXT_FIELDS = frozenset({
     "notification_id", "planned_count", "processed_count", "blocked_count", "retry_count",
     "stage_duration_ms", "network_failed_count", "api_failed_count", "other_failed_count",
     "recipient_id",
+    "subscription_id",
 })
 STACK_FIELDS = frozenset({"error_type", "frames", "file", "line", "function"})
 

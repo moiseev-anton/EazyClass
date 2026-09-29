@@ -8,9 +8,9 @@ from urllib.parse import parse_qsl
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed
 
 from scheduler.models.social_account_model import Platform
+from scheduler.authentication.logging import authentication_rejected
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class TelegramWebAppAuthentication(BaseAuthentication):
         try:
             scheme, init_data = header.split(" ", 1)
         except ValueError:
-            raise AuthenticationFailed("Invalid Authorization header")
+            raise authentication_rejected("Invalid Authorization header", "twa_invalid_header")
 
         if scheme.lower() != self.keyword:
             return None
@@ -48,7 +48,7 @@ class TelegramWebAppAuthentication(BaseAuthentication):
 
         received_hash = parsed.pop("hash", None)
         if not received_hash:
-            raise AuthenticationFailed("Missing hash")
+            raise authentication_rejected("Missing hash", "twa_missing_hash")
 
         data_check_string = "\n".join(
             f"{k}={v}" for k, v in sorted(parsed.items())
@@ -65,15 +65,13 @@ class TelegramWebAppAuthentication(BaseAuthentication):
         ).hexdigest()
 
         if not hmac.compare_digest(calculated_hash, received_hash):
-            logger.info("TWA auth: signature mismatch")
-            raise AuthenticationFailed("Invalid Telegram signature")
+            raise authentication_rejected("Invalid Telegram signature", "twa_signature_mismatch")
 
         auth_date = int(parsed.get("auth_date", 0))
         age = time.time() - auth_date
 
         if age > self.max_age_seconds:
-            logger.info("TWA auth: initData expired")
-            raise AuthenticationFailed("initData expired")
+            raise authentication_rejected("initData expired", "twa_expired")
 
         return parsed
 
@@ -98,8 +96,10 @@ class TelegramWebAppAuthentication(BaseAuthentication):
             extra_data=telegram_user,
         )
 
-        logger.info(
-            f"TWA auth: user {'created' if created else 'loaded'} id={user.id}"
+        logger.log(
+            logging.INFO if created else logging.DEBUG,
+            "Пользователь создан через Telegram WebApp" if created else "Пользователь определён через Telegram WebApp",
+            extra={"event": "auth.twa.user_resolved", "user_id": user.id, "user_created": created},
         )
 
         return user

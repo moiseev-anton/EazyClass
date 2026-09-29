@@ -271,7 +271,7 @@ REST_FRAMEWORK = {
         "scheduler.authentication.HMACAuthentication",
         "rest_framework.authentication.SessionAuthentication", # для админов
     ),
-    "EXCEPTION_HANDLER": "rest_framework_json_api.exceptions.exception_handler",
+    "EXCEPTION_HANDLER": "scheduler.api.exceptions.logging_exception_handler",
     "DEFAULT_METADATA_CLASS": "rest_framework_json_api.metadata.JSONAPIMetadata",
     "DEFAULT_FILTER_BACKENDS": (
         "rest_framework_json_api.filters.QueryParameterValidationFilter",

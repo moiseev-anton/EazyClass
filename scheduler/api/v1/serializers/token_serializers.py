@@ -37,7 +37,9 @@ class BaseTokenSerializer(json_api_serializers.Serializer):
             "Сервис авторизации не смог выполнить операцию",
             extra={"event": "auth.service.failed", **safe_error_context(exc)},
         )
-        raise APIException(self.error_messages["service_unavailable"])
+        error = APIException(self.error_messages["service_unavailable"])
+        error._logging_reported = True
+        raise error from exc
 
     def _validate_user(self, user_id: str):
         """Проверка существования и активности пользователя"""
@@ -52,6 +54,8 @@ class BaseTokenSerializer(json_api_serializers.Serializer):
             raise AuthenticationFailed(
                 self.error_messages["no_active_account"], "no_active_account"
             )
+        except AuthenticationFailed:
+            raise
         except Exception as e:
             self._handle_service_exception(e)
 
@@ -68,6 +72,8 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
         try:
             user_id = cache.get(nonce)
             if not user_id:
+                logger.debug("Ожидается подтверждение авторизации через бота",
+                             extra={"event": "auth.nonce.pending", "outcome": "pending"})
                 return {
                     "success": False,
                     "message": self.error_messages["auth_in_progress"],
@@ -81,11 +87,16 @@ class CustomTokenObtainPairSerializer(BaseTokenSerializer):
 
             self._reduce_nonce_ttl(nonce)
 
-            return {
+            result = {
                 "success": True,
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
             }
+            logger.info("Токены для входа через бота выданы",
+                        extra={"event": "auth.tokens.issued", "user_id": user.pk, "outcome": "success", "method": "nonce"})
+            return result
+        except APIException:
+            raise
         except Exception as e:
             self._handle_service_exception(e)
 
@@ -114,11 +125,14 @@ class TelegramTokenObtainSerializer(BaseTokenSerializer):
         if api_settings.UPDATE_LAST_LOGIN:
             update_last_login(None, user)
 
-        return {
+        result = {
             "success": True,
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         }
+        logger.info("Токены для входа через Telegram WebApp выданы",
+                    extra={"event": "auth.tokens.issued", "user_id": user.pk, "outcome": "success", "method": "telegram_webapp"})
+        return result
 
 
 class CustomTokenRefreshSerializer(BaseTokenSerializer, TokenRefreshSerializer):
@@ -137,9 +151,13 @@ class CustomTokenRefreshSerializer(BaseTokenSerializer, TokenRefreshSerializer):
             if api_settings.ROTATE_REFRESH_TOKENS:
                 data.update(self._rotate_refresh_token(refresh))
 
+            logger.debug("Токены доступа обновлены",
+                         extra={"event": "auth.tokens.refreshed", "user_id": user_id, "outcome": "success"})
             return data
         except TokenError as e:
             raise AuthenticationFailed(str(e), "invalid_token")
+        except APIException:
+            raise
         except Exception as e:
             self._handle_service_exception(e)
 

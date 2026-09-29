@@ -6,9 +6,9 @@ import time
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed
 
 from scheduler.models import SocialAccount
+from scheduler.authentication.logging import authentication_rejected
 
 logger = logging.getLogger(__name__)
 
@@ -39,39 +39,38 @@ class HMACAuthentication(BaseAuthentication):
         return hmac.compare_digest(expected_signature, signature)
 
     def authenticate(self, request):
-        logger.info("Начинаем авторизацию по HMAC")
         signature = request.headers.get("X-Signature")
         timestamp = request.headers.get("X-Timestamp")
         platform = request.headers.get("X-Platform")  # "telegram" или "vk"
         social_id = request.headers.get("X-Social-ID")  # ID в соцсети
 
         if not all([platform, signature, timestamp, social_id]):
-            logger.info("HMAC Failed: Нет всех необходимых заголовков")
+            logger.debug("HMAC-аутентификация пропущена: отсутствуют необходимые заголовки",
+                         extra={"event": "auth.hmac.skipped", "reason": "missing_headers"})
             return None  # Даем шанс другим методам аутентификации
 
         # Проверка временной метки
         try:
             if abs(time.time() - int(timestamp)) > HMAC_TIMEOUT:
-                logger.info("HMAC Failed: Timestamp out of range")
-                raise AuthenticationFailed("Timestamp out of range.")
+                raise authentication_rejected("Timestamp out of range.", "hmac_timestamp_out_of_range")
         except ValueError:
-            logger.info("HMAC Failed: Invalid timestamp format.")
-            raise AuthenticationFailed("Invalid timestamp format.")
+            raise authentication_rejected("Invalid timestamp format.", "hmac_invalid_timestamp")
 
         # Проверяем HMAC-подпись
         if not self._verify_hmac_signature(
             request, platform, social_id, timestamp, signature
         ):
-            logger.info("HMAC Failed: Подписи не совпадают.")
-            raise AuthenticationFailed("Invalid HMAC signature.")
+            raise authentication_rejected("Invalid HMAC signature.", "hmac_signature_mismatch")
 
         try:
             social_account = SocialAccount.objects.select_related("user").get(
                 platform=platform, social_id=social_id
             )
-            logger.info("HMAC Success")
+            logger.debug("Подпись HMAC проверена, пользователь найден",
+                         extra={"event": "auth.hmac.verified", "user_id": social_account.user.pk})
             return social_account.user, "hmac"
 
         except SocialAccount.DoesNotExist:
-            logger.info("HMAC Failed: Пользователь не получен из БД.")
+            logger.debug("Подпись HMAC проверена, связанный аккаунт не найден",
+                         extra={"event": "auth.hmac.anonymous", "reason": "account_not_found"})
             return AnonymousUser(), "hmac"
