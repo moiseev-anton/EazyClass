@@ -17,13 +17,11 @@ class RedisClientManager:
         """
         if alias not in settings.REDIS_CONFIG:
             msg = f"Настройки подключения для '{alias}' не найдены в settings.REDIS_CONFIG."
-            logger.error(msg)
             raise ValueError(msg)
 
         if alias not in RedisClientManager._clients:
-            logger.debug("Создаётся Redis-клиент: %s", alias)
+            logger.debug("Создаётся Redis-клиент", extra={"event": "redis.client.created"})
             redis_url = settings.REDIS_CONFIG[alias]
             RedisClientManager._clients[alias] = redis.from_url(redis_url, decode_responses=True)
 
-        logger.debug(f'Получаем готовый redis клиент {alias}')
         return RedisClientManager._clients[alias]

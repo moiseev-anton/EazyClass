@@ -1,5 +1,3 @@
-import logging
-
 from django.http import HttpResponse
 from django.views.defaults import (
     page_not_found as django_page_not_found,
@@ -16,9 +14,6 @@ from rest_framework.exceptions import (
 from rest_framework.request import Request as DRFRequest
 from rest_framework_json_api.exceptions import exception_handler
 from rest_framework_json_api.renderers import JSONRenderer
-
-logger = logging.getLogger(__name__)
-
 
 class MockView:
     """Фейковое представление для обработки ошибок без view."""
@@ -47,7 +42,6 @@ def handle_django_error(request, drf_exception, default_view, exception=None):
     if wants_json(request):
         context = {"request": DRFRequest(request), "view": MOCK_VIEW}
         drf_response = exception_handler(drf_exception, context)
-        logger.info(drf_response.data)
         renderer = JSONRenderer()
         renderer_context = {
             "request": request,

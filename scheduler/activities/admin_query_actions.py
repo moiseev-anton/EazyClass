@@ -1,3 +1,8 @@
+import logging
+
+from django.db import transaction
+from eazyclass.logging_context import get_context
+
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.widgets import AutocompleteSelect
@@ -9,26 +14,47 @@ from scheduler.forms import ReplaceLessonRelatedFieldsForm
 from scheduler.models import Lesson
 
 
+logger = logging.getLogger(__name__)
+
+
+def log_admin_action(request, model, action, message, **fields):
+    """Report committed changes only, retaining the HTTP context for the callback."""
+    context = {**get_context(), "event": f"admin.{action}", "user_id": request.user.pk,
+               "model": model.__name__, **fields}
+    if "count" in fields:
+        message += f"; обработано записей: {fields['count']}"
+    if "changed_fields" in fields:
+        message += f"; поля: {fields['changed_fields']}"
+    transaction.on_commit(lambda: logger.info(message, extra=context))
+
+
 @admin.action(description="Сделать активными выбранные записи")
 def make_active(modeladmin, request, queryset):
-    queryset.update(is_active=True)
+    count = queryset.update(is_active=True)
+    log_admin_action(request, queryset.model, "activated", "Выполнена массовая активация записей", count=count)
 
 
 @admin.action(description="Сделать НЕ активными выбранные записи")
 def make_inactive(modeladmin, request, queryset):
-    queryset.update(is_active=False)
+    count = queryset.update(is_active=False)
+    log_admin_action(request, queryset.model, "deactivated", "Выполнена массовая деактивация записей", count=count)
 
 
 @admin.action(description="Переключить активность выбранных записей")
+@transaction.atomic
 def toggle_active(modeladmin, request, queryset):
+    count = 0
     for obj in queryset:
         obj.is_active = not obj.is_active
         obj.save()
+        count += 1
+    log_admin_action(request, queryset.model, "activity_toggled", "Переключена активность записей", count=count)
 
 
 @admin.action(description="Сбросить шаблон звонков к стандартному виду")
 def reset_timetable(modeladmin, request, queryset):
     fill_default_period_template()
+    log_admin_action(request, queryset.model, "timetable_reset", "Шаблон звонков сброшен к стандартному виду")
     modeladmin.message_user(request, "Шаблон звонков сброшен к стандартному виду.")
 
 
@@ -52,6 +78,8 @@ def replace_lesson_related_fields(modeladmin, request, queryset):
 
         updated_count = queryset.update(**update_data, updated_at=timezone.now())
         changed_fields = ", ".join(update_data.keys())
+        log_admin_action(request, queryset.model, "lessons_updated", "Выполнена массовая замена полей занятий",
+                         count=updated_count, changed_fields=changed_fields)
 
         modeladmin.message_user(
             request,

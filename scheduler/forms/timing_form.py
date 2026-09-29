@@ -101,7 +101,8 @@ class TimingForm(forms.ModelForm):
         """
         timing = self.instance
         if not timing.pk:  # Если объект еще не сохранен
-            logger.warning("Объект Timing еще не сохранен. Пропускаем синхронизацию.")
+            logger.debug("Синхронизация дней недели отложена: Timing ещё не сохранён",
+                         extra={"event": "timing.weekdays.deferred"})
             return
 
         current_days = set(timing.weekdays.values_list('day_of_week', flat=True))
