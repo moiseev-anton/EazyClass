@@ -103,6 +103,22 @@ def test_config_defaults_and_validation():
             build_logging_config(**args)
 
 
+def test_compact_http_keeps_full_structured_data():
+    record = make_record(event="http.request.completed", method="GET", route="api/v1/schema/",
+                         status_code=200, duration_ms=100.106, query={}, request_id="12345678-full-id")
+    text = EventFormatter(style="text").format(record)
+    assert "GET api/v1/schema/ → 200, 100.1 ms | req=12345678" in text
+    assert all(value not in text for value in ('method=', 'route=', 'status_code=', 'duration_ms=', 'query={}'))
+    data = json.loads(EventFormatter(style="json").format(record))
+    for field in ('method', 'route', 'status_code', 'duration_ms', 'query', 'request_id'):
+        assert data[field] == getattr(record, field)
+    record.route = 'route\nforged-line'
+    record.query = {'filter[group]': '12\r\nforged-query'}
+    text = EventFormatter(style="text").format(record)
+    assert len(text.splitlines()) == 1
+    assert 'query=' in text
+
+
 @pytest.mark.parametrize("framework", ["django", "celery", "scrapy"])
 def test_framework_setup_outputs_each_event_once_in_json(framework):
     # Isolate logging global state and Twisted's reactor from pytest/Django.

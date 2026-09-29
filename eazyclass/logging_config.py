@@ -159,6 +159,13 @@ class EventFormatter(logging.Formatter):
         # Local reading: message first. Full identifiers/metadata remain available
         # in JSON and text_verbose; shortened references aren't unique identifiers.
         message = json.dumps(data["message"], ensure_ascii=False)[1:-1]
+        http_fields = set()
+        if data["event"] == "http.request.completed":
+            summary = f"{data.get('method', '?')} {data.get('route', '?')} → {data.get('status_code', '?')}"
+            if type(data.get("duration_ms")) in (int, float):
+                summary += f", {data['duration_ms']:.1f} ms"
+            message = json.dumps(summary, ensure_ascii=False)[1:-1]
+            http_fields = {"method", "route", "status_code", "duration_ms"}
         details = []
         for field, label in (("run_id", "run"), ("request_id", "req")):
             if data.get(field):
@@ -170,6 +177,8 @@ class EventFormatter(logging.Formatter):
                       "lesson_number", "subgroup", "period_id", "method", "route", "query", "status_code", "duration_ms",
                       "size_bytes", "exit_code", "timeout_seconds"):
             if field in data:
+                if field in http_fields or (field == "query" and not data[field]):
+                    continue
                 details.append(f"{field}={json.dumps(data[field], ensure_ascii=False)}")
         if type(data.get("attempt")) is int and data["attempt"] > 1:
             details.append(f"attempt={data['attempt']}")
