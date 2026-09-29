@@ -7,6 +7,8 @@ from django.conf import settings
 from django.utils.timezone import make_aware, now
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
+from eazyclass.logging_config import safe_error_context
+
 from scheduler.dtos import NotificationItem, PipelineSummary, StartNotificationSummary
 from scheduler.dtos.summary_dtos.base_summary_dto import BaseSummary
 from scheduler.models import Period, SocialAccount
@@ -17,12 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 def send_upcoming_lesson_notifications(period_id: int):
+    logger.info("Начинается подготовка рассылки о занятиях",
+                extra={"event": "notification.preparing", "period_id": period_id})
     try:
-        try:
-            period: Period = Period.objects.get(pk=period_id)
-        except Period.DoesNotExist:
-            logger.warning(f"Период {period_id} не найден — уведомления не будут отправлены.")
-            raise
+        period: Period = Period.objects.get(pk=period_id)
+        logger.info(
+            "Определён период рассылки: %s",
+            period,
+            extra={"event": "notification.period_loaded", "period_id": period.pk},
+        )
 
         notifier = TelegramNotifier(settings.TELEGRAM_BOT_TOKEN)
         notification_service = NotificationService(notifier)
@@ -30,11 +35,11 @@ def send_upcoming_lesson_notifications(period_id: int):
 
         if blocked := summary.blocked_chat_ids:
             marked_count = SocialAccount.objects.mark_chats_blocked(platform=notifier.platform, chat_ids=blocked)
-        logger.info(f"Отправлены уведомления для периода {period_id}")
 
         return summary.model_dump()
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logger.error("Подготовка или обработка результатов рассылки о занятиях завершилась ошибкой",
+                     extra={"event": "notification.task_failed", "period_id": period_id, **safe_error_context(e)})
         raise
 
 
@@ -43,8 +48,6 @@ def process_upcoming_lesson_notification(period_id: int, periodic_task_id: int |
     try:
         summary = send_upcoming_lesson_notifications(period_id)
         send_admin_report(summary)
-    except Exception as e:
-        logger.error(f"Ошибка в цепочке рассылки для {period_id}: {e}", exc_info=True)
     finally:
         if periodic_task_id:
             PeriodicTask.objects.filter(id=periodic_task_id).delete()
@@ -74,7 +77,7 @@ def plan_upcoming_lesson_notifications():
             timezone=settings.TIME_ZONE,
         )
         if created:
-            logger.info(f"Создан новый CrontabSchedule: {run_hour}:{run_minute}")
+            logger.debug("Создано время запуска рассылки: %s:%s", run_hour, run_minute)
 
         task_name = f"Telegram-рассылка [{period}]"
 
@@ -94,10 +97,11 @@ def plan_upcoming_lesson_notifications():
         periodic_task.save()
 
         if task_created:
-            logger.info(f'Создана одноразовая задача "{task_name}"')
+            logger.debug("Создана одноразовая задача рассылки", extra={"period_id": period.id})
             tasks_count += 1
 
-    logger.info(f"Создано {tasks_count} задач для Telegram-рассылки")
+    logger.info("Запланировано %s новых задач рассылки", tasks_count,
+                extra={"event": "notification.planned", "count": tasks_count})
 
 
 # fmt: off
@@ -120,6 +124,8 @@ update_summary_test = {
 
 @shared_task(queue="periodic_tasks")
 def send_lessons_refresh_notifications(summary_dict: dict) -> dict:
+    logger.info("Начинается подготовка рассылки об изменении расписания",
+                extra={"event": "notification.preparing"})
     pipeline_summary = PipelineSummary.deserialize(summary_dict)
     refreshed_lessons_summary = pipeline_summary.sync_summary
 
@@ -132,7 +138,6 @@ def send_lessons_refresh_notifications(summary_dict: dict) -> dict:
             platform=Platform.TELEGRAM, chat_ids=chat_ids
         )
 
-    logger.info(f"Итоги рассылки: {notify_summary}")
     pipeline_summary.notification_summary = notify_summary
     return pipeline_summary.model_dump()
 
@@ -147,10 +152,10 @@ def send_admin_report(summary_dict: dict):
      а мы располагаем только chat_id для основного бота.
     """
     try:
-        logger.info("Отправка отчёта админу...")
+        logger.info("Начинается подготовка отчёта администраторам",
+                    extra={"event": "notification.admin_report.preparing"})
         summary = BaseSummary.deserialize(summary_dict)
 
-        logger.info(f"Отчет: {summary}")
         report_text = summary.to_message()
         staff_chat_ids = SocialAccount.objects.get_staff_chat_ids(platform=Platform.TELEGRAM)
         notification = NotificationItem(message=report_text, destinations=staff_chat_ids)
@@ -159,4 +164,6 @@ def send_admin_report(summary_dict: dict):
         notifier.send_notification(notification)
         return summary_dict
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logger.error("Подготовка или отправка отчёта администраторам завершилась ошибкой",
+                     extra={"event": "notification.admin_report.failed", **safe_error_context(e)})
+        raise

@@ -25,9 +25,6 @@ class NotificationService:
             refresh_summary, platform=self._platform
         )
 
-        if not notifications:
-            return self.notifier.create_empty_summary()
-
         notify_summary = self.notifier.send_notifications(notifications)
         return notify_summary
 
@@ -40,14 +37,16 @@ class NotificationService:
         )
 
         if not lessons:
-            logger.info(f"Нет уроков для периода {period}")
+            logger.info("Рассылка пропущена: нет занятий для периода %s", period.pk,
+                        extra={"event": "notification.skipped", "reason": "no_lessons", "period_id": period.pk})
             return summary
 
         notifications = collectors.collect_group_start(lessons, platform=self._platform)
         notifications += collectors.collect_teacher_start(lessons, platform=self._platform)
 
         if not notifications:
-            logger.info(f"Нет подписчиков для уведомлений для периода {period}")
+            logger.info("Рассылка пропущена: нет подписчиков для периода %s", period.pk,
+                        extra={"event": "notification.skipped", "reason": "no_subscribers", "period_id": period.pk})
             return summary
 
         notify_summary = self.notifier.send_notifications(notifications)
@@ -56,5 +55,4 @@ class NotificationService:
         summary.notifications_count = len(notifications)
         summary.merge_from(notify_summary)
 
-        logger.info(f"Отправлено {summary.success_count} уведомлений для периода {period}")
         return summary

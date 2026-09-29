@@ -60,17 +60,17 @@ def collect_refresh_notifications(
 
     # Получаем адресатов
     group_chats = GroupSubscription.objects.get_subscriber_chat_ids_for_updates(group_ids, platform)
-    logger.debug(f"group_chats: {group_chats}")
+    logger.debug("Получены адресаты для %s групп", len(group_chats))
     teacher_chats = TeacherSubscription.objects.get_subscriber_chat_ids_for_updates(
         teacher_ids, platform
     )
-    logger.debug(f"teacher_chats: {teacher_chats}")
+    logger.debug("Получены адресаты для %s преподавателей", len(teacher_chats))
 
     # Названия
     group_names = dict(Group.objects.filter(id__in=group_chats.keys()).values_list("id", "title"))
-    logger.debug(f"group_names: {group_names}")
+    logger.debug("Загружены названия %s групп", len(group_names))
     teacher_names = dict(Teacher.objects.filter(id__in=teacher_chats.keys()).values_list("id", "short_name"))
-    logger.debug(f"teacher_names: {teacher_names}")
+    logger.debug("Загружены имена %s преподавателей", len(teacher_names))
 
     # Словарь period_id -> date
     period_dates = Period.objects.get_date_map(period_ids)
@@ -133,7 +133,7 @@ def collect_group_start(
 
         message = format_group_start_message(group_lessons)
         notifications.append(NotificationItem(message=message, destinations=chats))
-        logger.debug(f"Собрано {len(chats)} чатов для группы {group.title}")
+        logger.debug("Собрано %s адресатов группы", len(chats), extra={"group_id": group.pk})
 
     return notifications
 
@@ -174,6 +174,6 @@ def collect_teacher_start(
 
         message = format_teacher_start_message(teacher_lessons)
         notifications.append(NotificationItem(message=message, destinations=chats))
-        logger.debug(f"Собрано {len(chats)} чатов для преподавателя {teacher.short_name}")
+        logger.debug("Собрано %s адресатов преподавателя", len(chats))
 
     return notifications
