@@ -53,7 +53,7 @@ class GroupSubscriptionViewSet(
     queryset = GroupSubscription.objects.all().order_by("pk")
     serializer_class = GroupSubscriptionSerializer
     permission_classes = [IsAuthenticated]
-    http_method_names = ["post", "patch", "delete"]
+    http_method_names = ["post", "delete"]
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
@@ -96,7 +96,7 @@ class TeacherSubscriptionViewSet(
     queryset = TeacherSubscription.objects.all().order_by("pk")
     permission_classes = [IsAuthenticated]
     serializer_class = TeacherSubscriptionSerializer
-    http_method_names = ["post", "patch", "delete"]
+    http_method_names = ["post", "delete"]
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)

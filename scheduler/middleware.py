@@ -23,6 +23,39 @@ class Clear304BodyMiddleware:
 
 
 class RequestLoggingMiddleware:
+    # Only known non-credential parameters on resource endpoints. Authentication
+    # and unknown routes deliberately have no query values in their logs.
+    COMMON_QUERY_FIELDS = frozenset({"page[number]", "page[size]", "sort", "include", "format"})
+    RESOURCE_QUERY_FIELDS = {
+        "lessons": {"filter[group]", "filter[teacher]", "filter[classroom]", "filter[date_from]",
+                    "filter[date_to]", "filter[date]", "filter[lesson_number]", "filter[subgroup]"},
+        "groups": {"filter[faculty]", "filter[grade]"},
+        "teachers": {"filter[starts_with]"},
+        "subscription": {"filter[group]", "filter[teacher]"},
+        "classrooms": set(), "faculties": set(), "users": set(), "social-accounts": set(),
+        "group-subscriptions": set(), "teacher-subscriptions": set(),
+    }
+
+    @classmethod
+    def _query_for_log(cls, request):
+        match = getattr(request, "resolver_match", None)
+        view = getattr(match, "func", None)
+        basename = getattr(view, "initkwargs", {}).get("basename")
+        if basename not in cls.RESOURCE_QUERY_FIELDS:
+            return {}
+        allowed = cls.COMMON_QUERY_FIELDS | cls.RESOURCE_QUERY_FIELDS[basename]
+        # Preserve repeated values, with bounds on both count and size.
+        query = {}
+        for name in sorted(allowed):
+            if name in request.GET:
+                values = request.GET.getlist(name)
+                query[name] = [value[:100] for value in values[:3]]
+                if len(values) > 3:
+                    query[name].append("[truncated]")
+                if len(values) == 1:
+                    query[name] = query[name][0]
+        return query
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -47,6 +80,7 @@ class RequestLoggingMiddleware:
         extra = {
             "event": "http.request.completed", "method": request.method,
             "route": getattr(match, "route", None) or "<unresolved>",
+            "query": RequestLoggingMiddleware._query_for_log(request),
             "status_code": status_code,
             "duration_ms": round((perf_counter() - started) * 1000, 3),
         }

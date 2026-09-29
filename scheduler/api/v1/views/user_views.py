@@ -1,4 +1,6 @@
 import logging
+from django.db import transaction
+from eazyclass.logging_context import get_context
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import mixins, viewsets
@@ -38,6 +40,24 @@ class UserViewSet(
     http_method_names = ["get", "patch"]
 
     queryset = User.objects.filter(is_active=True)
+    LOGGABLE_PROFILE_FIELDS = frozenset({
+        "username", "first_name", "last_name", "notify_schedule_updates", "notify_upcoming_lessons",
+    })
+
+    def perform_update(self, serializer):
+        fields = self.LOGGABLE_PROFILE_FIELDS.intersection(serializer.validated_data)
+        before = {field: getattr(serializer.instance, field) for field in fields}
+        instance = serializer.save()
+        changed = sorted(field for field in fields if before[field] != getattr(instance, field))
+        context = {**get_context(), "user_id": instance.pk, "changed_fields": ", ".join(changed)}
+        if changed:
+            transaction.on_commit(lambda: logger.info(
+                "Профиль пользователя обновлён; изменены поля: %s", context["changed_fields"],
+                extra={"event": "api.profile.updated", **context}))
+        else:
+            transaction.on_commit(lambda: logger.debug(
+                "Обновление профиля обработано без изменения полей",
+                extra={"event": "api.profile.unchanged", **context}))
 
     @extend_schema(
         tags=["User"],

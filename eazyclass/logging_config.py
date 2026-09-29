@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Explicit output schema: never serialize arbitrary LogRecord extras or objects.
 CONTEXT_FIELDS = frozenset({
-    "event", "user_id", "user_created", "platform", "method", "route",
+    "event", "user_id", "user_created", "platform", "method", "route", "query",
     "status_code", "duration_ms", "outcome", "reason", "attempt",
     "request_id", "task_id", "run_id", "task_name", "queue",
     "group_id", "period_id", "start_date", "end_date", "error_type",
@@ -25,6 +25,8 @@ CONTEXT_FIELDS = frozenset({
     "stage_duration_ms", "network_failed_count", "api_failed_count", "other_failed_count",
     "recipient_id",
     "subscription_id",
+    "teacher_id", "classroom_id", "lesson_id", "lesson_number", "subgroup",
+    "subscription_group_id", "subscription_teacher_id", "changed_fields",
 })
 STACK_FIELDS = frozenset({"error_type", "frames", "file", "line", "function"})
 
@@ -122,7 +124,19 @@ class EventFormatter(logging.Formatter):
         }
         for key in sorted(CONTEXT_FIELDS):
             if key in record.__dict__:
-                data[key] = _safe_value(record.__dict__[key])
+                value = record.__dict__[key]
+                if key == "query" and type(value) is dict:
+                    # Middleware already selects permitted parameter names. Keep
+                    # their repeated string values structured, without opening
+                    # arbitrary nested dictionaries to the formatter.
+                    data[key] = {
+                        name[:64]: (items[:100] if type(items) is str else
+                                    [item[:100] for item in items[:4] if type(item) is str])
+                        for name, items in list(value.items())[:20]
+                        if type(name) is str and type(items) in (str, list)
+                    }
+                else:
+                    data[key] = _safe_value(value)
         data.setdefault("event", "log.message")
         if record.exc_info and record.exc_info[1] is not None:
             data.update(safe_error_context(record.exc_info[1]))
@@ -151,7 +165,9 @@ class EventFormatter(logging.Formatter):
                 short_id = json.dumps(str(data[field])[:8], ensure_ascii=False)[1:-1]
                 details.append(f"{label}={short_id}")
                 break
-        for field in ("user_id", "group_id", "period_id", "method", "route", "status_code", "duration_ms"):
+        for field in ("user_id", "group_id", "teacher_id", "classroom_id", "lesson_id",
+                      "subscription_group_id", "subscription_teacher_id", "start_date", "end_date",
+                      "lesson_number", "subgroup", "period_id", "method", "route", "query", "status_code", "duration_ms"):
             if field in data:
                 details.append(f"{field}={json.dumps(data[field], ensure_ascii=False)}")
         if type(data.get("attempt")) is int and data["attempt"] > 1:

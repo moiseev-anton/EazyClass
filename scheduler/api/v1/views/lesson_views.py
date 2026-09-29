@@ -15,7 +15,7 @@ from scheduler.api.filters import LessonFilter, LessonByPeriodFilter
 from scheduler.api.mixins import JsonApiMixin
 from scheduler.api.v1.serializers import LessonSerializer
 from scheduler.api.viewsets import ReadOnlyModelViewSet
-from scheduler.models import Lesson, Subscription, Group, Teacher
+from scheduler.models import Lesson, Subscription, GroupSubscription, TeacherSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class LessonViewSet(JsonApiMixin, ReadOnlyModelViewSet):
         )
 
     def filter_queryset(self, queryset):
-        """Отключает фильтры для действия 'retrieve', чтобы запрос по ID не требовал параметров."""
+        """Запрос по ID не требует фильтров списка."""
         if self.action == "retrieve":
             return queryset
         return super().filter_queryset(queryset)
@@ -125,24 +125,28 @@ class LessonViewSet(JsonApiMixin, ReadOnlyModelViewSet):
     )
     def get_me(self, request):
         """Возвращает список уроков для текущего пользователя на основе его подписки."""
-        subscription = (
-            Subscription.objects.filter(user=request.user)
-            .select_related("content_type")
-            .first()
-        )
+        subscription = Subscription.objects.filter(user=request.user).first()
         if not subscription:
             raise NotFound(_("Subscription not found"), "subscription_not_found")
 
-        model_class = subscription.content_type.model_class()
-        if model_class == Group:
-            self.queryset = self.get_queryset().filter(group_id=subscription.object_id)
-        elif model_class == Teacher:
+        if isinstance(subscription, GroupSubscription):
+            self.queryset = self.get_queryset().filter(group_id=subscription.group_id)
+        elif isinstance(subscription, TeacherSubscription):
             self.queryset = self.get_queryset().filter(
-                teacher_id=subscription.object_id
+                teacher_id=subscription.teacher_id
             )
         else:
             raise ValidationError(
                 _("Invalid subscription type"), "invalid_subscription_type"
+            )
+        if request.method == "GET":
+            field = subscription.subscription_object_field
+            logger.info(
+                "Запрошено расписание по подписке: %s %s",
+                field,
+                getattr(subscription, f"{field}_id"),
+                extra={"event": "api.lessons.subscription", "user_id": request.user.pk,
+                       f"{field}_id": getattr(subscription, f"{field}_id")},
             )
         return self.list(request)
 

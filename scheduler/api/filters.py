@@ -64,10 +64,12 @@ class LessonFilter(filters.FilterSet):
             classroom = self.form.cleaned_data.get("classroom")
 
             if not (group or teacher or classroom):
-                raise ValidationError(
+                error = ValidationError(
                     _("At least one of 'group', 'teacher' or 'classroom' filter is required."),
                     code="required",
                 )
+                error._log_reason = "schedule_target_required"
+                raise error
 
         # Проверка дат работает всегда
         date_from = self.form.cleaned_data.get("date_from")
@@ -75,9 +77,13 @@ class LessonFilter(filters.FilterSet):
 
         if date_from and date_to:
             if date_to < date_from:
-                raise ValidationError(_("End date must be after start date."))
+                error = ValidationError(_("End date must be after start date."))
+                error._log_reason = "schedule_date_order"
+                raise error
             if (date_to - date_from) > timedelta(days=31):
-                raise ValidationError(_("Date range cannot exceed 31 days."))
+                error = ValidationError(_("Date range cannot exceed 31 days."))
+                error._log_reason = "schedule_range_too_long"
+                raise error
 
         return super().filter_queryset(queryset)
 

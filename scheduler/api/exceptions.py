@@ -28,6 +28,12 @@ REASON_LABELS = {
     "twa_missing_hash": "отсутствует подпись Telegram WebApp",
     "twa_signature_mismatch": "подпись Telegram WebApp не прошла проверку",
     "twa_expired": "данные Telegram WebApp устарели",
+    "subscription_not_found": "подписка для личного расписания не найдена",
+    "invalid_subscription_type": "тип подписки не поддерживается",
+    "invalid_starts_with": "фильтр преподавателей должен содержать одну букву",
+    "schedule_target_required": "не выбрана группа, преподаватель или кабинет",
+    "schedule_date_order": "конец периода раньше начала",
+    "schedule_range_too_long": "период расписания превышает 31 день",
 }
 
 
@@ -49,7 +55,9 @@ def logging_exception_handler(exc, context):
     }.get(response.status_code, "server_error" if server_error else "request_rejected")
     # Only fixed, known codes: never log validation details or arbitrary values.
     codes = exc.get_codes() if hasattr(exc, "get_codes") else None
-    if isinstance(codes, str) and codes in {"no_active_account", "invalid_token", "not_authenticated", "permission_denied", "throttled"}:
+    if isinstance(codes, list) and len(codes) == 1:
+        codes = codes[0]
+    if isinstance(codes, str) and codes in REASON_LABELS:
         reason = codes
     elif isinstance(exc, JWTAuthenticationFailed) and isinstance(exc.detail, dict):
         code = exc.detail.get("code")
