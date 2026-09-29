@@ -3,6 +3,8 @@ from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
 from rest_framework.exceptions import ValidationError
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 from scheduler.models import Lesson, Group, Faculty, Subscription, Teacher, Classroom
 
@@ -132,20 +134,20 @@ class TeacherFilter(filters.FilterSet):
 
 class SubscriptionFilter(filters.FilterSet):
     # фильтры для целевого объекта
-    group = filters.ModelChoiceFilter(
+    group = extend_schema_field(OpenApiTypes.INT)(filters.ModelChoiceFilter(
         field_name="groupsubscription__group",  # reverse relation для GroupSubscription
         queryset=Group.objects.filter(is_active=True),
         to_field_name="id",
         help_text="Filter by group ID",
         distinct=True,
-    )
-    teacher = filters.ModelChoiceFilter(
+    ))
+    teacher = extend_schema_field(OpenApiTypes.INT)(filters.ModelChoiceFilter(
         field_name="teachersubscription__teacher",  # reverse relation для TeacherSubscription
         queryset=Teacher.objects.filter(is_active=True),
         to_field_name="id",
         help_text="Filter by teacher ID",
         distinct=True,
-    )
+    ))
 
     class Meta:
         model = Subscription
