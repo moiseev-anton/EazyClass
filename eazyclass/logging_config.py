@@ -24,7 +24,7 @@ CONTEXT_FIELDS = frozenset({
     "notification_id", "planned_count", "processed_count", "blocked_count", "retry_count",
     "stage_duration_ms", "network_failed_count", "api_failed_count", "other_failed_count",
     "recipient_id",
-    "subscription_id",
+    "subscription_id", "size_bytes", "retention_days", "exit_code", "timeout_seconds",
     "teacher_id", "classroom_id", "lesson_id", "lesson_number", "subgroup",
     "subscription_group_id", "subscription_teacher_id", "changed_fields",
 })
@@ -167,7 +167,8 @@ class EventFormatter(logging.Formatter):
                 break
         for field in ("user_id", "group_id", "teacher_id", "classroom_id", "lesson_id",
                       "subscription_group_id", "subscription_teacher_id", "start_date", "end_date",
-                      "lesson_number", "subgroup", "period_id", "method", "route", "query", "status_code", "duration_ms"):
+                      "lesson_number", "subgroup", "period_id", "method", "route", "query", "status_code", "duration_ms",
+                      "size_bytes", "exit_code", "timeout_seconds"):
             if field in data:
                 details.append(f"{field}={json.dumps(data[field], ensure_ascii=False)}")
         if type(data.get("attempt")) is int and data["attempt"] > 1:
