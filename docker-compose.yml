@@ -51,7 +51,6 @@ services:
         --bind 0.0.0.0:8000
         --workers 3
         --log-level info
-        --access-logfile -
         --error-logfile -
     environment:
       LOG_SERVICE: django
@@ -203,6 +202,11 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: certbot
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
     depends_on:
       - nginx
     volumes:

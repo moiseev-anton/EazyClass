@@ -75,6 +75,8 @@ class RequestLoggingMiddleware:
 
     @staticmethod
     def _log_result(request, started, status_code, exc=None):
+        if exc is None and not logger.isEnabledFor(logging.DEBUG):
+            return
         # Use the declared route, never user-provided URL values or credentials.
         match = getattr(request, "resolver_match", None)
         extra = {
@@ -87,4 +89,4 @@ class RequestLoggingMiddleware:
         if exc is not None:
             logger.error("Обработка HTTP-запроса прервана ошибкой", extra={**extra, **safe_error_context(exc)})
         else:
-            logger.info("HTTP-запрос обработан", extra=extra)
+            logger.debug("HTTP-запрос обработан", extra=extra)

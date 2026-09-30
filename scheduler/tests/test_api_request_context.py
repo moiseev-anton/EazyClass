@@ -15,6 +15,26 @@ from scheduler.api.v1.views.user_views import UserViewSet
 from scheduler.middleware import RequestLoggingMiddleware
 from scheduler.models import Group, GroupSubscription, Teacher, TeacherSubscription, User
 from eazyclass.logging_config import EventFormatter
+from eazyclass.logging_context import get_context
+
+
+@pytest.mark.parametrize('status', [200, 400, 500])
+@pytest.mark.parametrize('level', [logging.INFO, logging.DEBUG])
+def test_access_level_preserves_request_context(caplog, status, level):
+    from django.http import HttpResponse
+    caplog.set_level(level)
+    request = APIRequestFactory().get('/test/')
+    captured = {}
+    def respond(request):
+        captured.update(get_context())
+        logging.getLogger('scheduler.test').info('Application event', extra={'event': 'test.application'})
+        return HttpResponse(status=status)
+    response = RequestLoggingMiddleware(respond)(request)
+    assert response['X-Request-ID'] == captured['request_id']
+    assert get_context() == {}
+    events = [r for r in caplog.records if getattr(r, 'event', '') == 'http.request.completed']
+    assert len(events) == int(level == logging.DEBUG)
+    assert any(getattr(r, 'event', '') == 'test.application' for r in caplog.records)
 
 
 def request_lessons(action, params, user=None, etag=None, **kwargs):
@@ -32,7 +52,7 @@ def request_lessons(action, params, user=None, etag=None, **kwargs):
 
 @pytest.mark.django_db
 def test_schedule_access_context_survives_etag_and_omits_raw_query(caplog):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     group = Group.objects.create(title='A1')
     params = {'filter[group]': group.pk, 'filter[date_from]': '2026-09-01',
               'filter[date_to]': '2026-09-07', 'filter[subgroup]': '1',
@@ -53,7 +73,7 @@ def test_schedule_access_context_survives_etag_and_omits_raw_query(caplog):
 @pytest.mark.django_db
 @pytest.mark.parametrize('kind', ['group', 'teacher'])
 def test_my_schedule_logs_subscription_target(caplog, kind):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     user = User.objects.create(username='test')
     if kind == 'group':
         target = Group.objects.create(title='A1')
@@ -71,7 +91,7 @@ def test_my_schedule_logs_subscription_target(caplog, kind):
 
 @pytest.mark.django_db
 def test_period_schedule_context(caplog):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     response = request_lessons('by_period', {'filter[date]': '2026-09-01',
                                            'filter[lesson_number]': '3'})
     assert response.status_code == 200
@@ -84,7 +104,7 @@ def test_period_schedule_context(caplog):
 def test_invalid_dates_appear_only_in_request_parameters(monkeypatch, caplog):
     from rest_framework.settings import api_settings
     monkeypatch.setattr(api_settings, 'EXCEPTION_HANDLER', logging_exception_handler)
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     response = request_lessons('list', {'filter[date_from]': 'invalid-date',
                                       'filter[date_to]': '2026-09-07'})
     assert response.status_code == 400
@@ -95,7 +115,7 @@ def test_invalid_dates_appear_only_in_request_parameters(monkeypatch, caplog):
 
 def test_query_logging_preserves_repeats_and_excludes_secrets(caplog):
     from django.http import HttpResponse
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     request = APIRequestFactory().get('/lessons/', {
         'filter[group]': ['12', '13'], 'filter[date_from]': 'bad\r\ndate',
         'include': 'x' * 500, 'token': 'private-token', 'nonce': 'private-nonce',
@@ -118,7 +138,7 @@ def test_query_logging_preserves_repeats_and_excludes_secrets(caplog):
 def test_me_without_subscription_has_no_selection(monkeypatch, caplog):
     from rest_framework.settings import api_settings
     monkeypatch.setattr(api_settings, 'EXCEPTION_HANDLER', logging_exception_handler)
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     user = User.objects.create(username='no-subscription')
     response = request_lessons('get_me', {'filter[date_from]': '2026-09-01',
                                         'filter[date_to]': '2026-09-07'}, user=user)
@@ -131,7 +151,7 @@ def test_me_without_subscription_has_no_selection(monkeypatch, caplog):
 def test_detail_logs_id_without_list_filters(monkeypatch, caplog):
     from rest_framework.settings import api_settings
     monkeypatch.setattr(api_settings, 'EXCEPTION_HANDLER', logging_exception_handler)
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     response = request_lessons('retrieve', {}, pk='123')
     assert response.status_code == 404
     assert caplog.records[-1].event == 'http.request.completed'

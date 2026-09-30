@@ -38,7 +38,8 @@ def captured_logs():
         handler.close()
 
 
-def test_http_response_and_inner_logs_share_id_and_context_is_cleared(captured_logs):
+def test_http_response_and_inner_logs_share_id_and_context_is_cleared(captured_logs, caplog):
+    caplog.set_level(logging.DEBUG, logger="scheduler.middleware")
     def view(request):
         request.resolver_match = SimpleNamespace(route="api/items/<int:pk>/")
         logging.getLogger("scheduler.test").info("Внутри запроса")
