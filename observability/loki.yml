@@ -52,6 +52,9 @@ query_range:
         max_size_mb: 32
 
 ingester:
+  # Loki accepts out-of-order entries up to half this age (six hours).
+  # Match Alloy's 5h55m collection window; idle/full chunks still flush earlier.
+  max_chunk_age: 12h
   wal:
     enabled: true
     dir: /loki/wal

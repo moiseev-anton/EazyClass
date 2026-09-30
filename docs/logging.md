@@ -4,6 +4,7 @@
 `docker-compose.observability.yml`, Docker API и файл cron → Alloy → Loki → Grafana.
 Инструкция, ограничения доставки и хранения: [observability/README.md](../observability/README.md).
 На production стек ещё не развёрнут; дашборды и оповещения — следующий этап.
+Подготовлены отдельные лимиты ресурсов и [инструкция запуска на сервере](../observability/PRODUCTION.md).
 
 ## Назначение и текущий этап
 

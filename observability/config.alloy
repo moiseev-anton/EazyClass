@@ -58,9 +58,9 @@ loki.process "containers" {
     action_on_failure = "skip"
   }
   // Initial Docker history can span years; collect only recent records.
-  // Keep below Loki's default one-hour out-of-order window.
+  // Keep below the six-hour out-of-order window in loki.yml.
   stage.drop {
-    older_than          = "55m"
+    older_than          = "5h55m"
     drop_counter_reason = "outside_collection_window"
   }
   stage.labels {
@@ -93,7 +93,7 @@ loki.process "certbot" {
     action_on_failure = "skip"
   }
   stage.drop {
-    older_than          = "55m"
+    older_than          = "5h55m"
     drop_counter_reason = "outside_collection_window"
   }
   forward_to = [loki.write.local.receiver]
@@ -104,6 +104,7 @@ loki.write "local" {
     url               = "http://loki:3100/loki/api/v1/push"
     min_backoff_period = "1s"
     max_backoff_period = "30s"
-    max_backoff_retries = 20
+    // About an hour of retry delays; not a durable queue or a delivery guarantee.
+    max_backoff_retries = 120
   }
 }

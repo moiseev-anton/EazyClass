@@ -1,0 +1,24 @@
+# Use together with docker-compose.observability.yml on the Linux server.
+# Initial ceilings for a 2 CPU / 4 GiB host; adjust after measuring peak load.
+services:
+  loki:
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 0.75
+  alloy:
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.25
+    environment:
+      OBS_ENVIRONMENT: production
+    volumes:
+      - type: bind
+        source: /var/log
+        target: /var/log/host
+        read_only: true
+        bind:
+          create_host_path: false
+  grafana:
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 0.5
