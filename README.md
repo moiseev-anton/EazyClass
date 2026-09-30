@@ -6,6 +6,7 @@ EazyClass — серверная часть системы для работы �
 пользовательские подписки и рассылку уведомлений.
 
 Правила, карта событий и этапы улучшения логирования: [docs/logging.md](docs/logging.md).
+Локальный сбор Alloy → Loki → Grafana: [observability/README.md](observability/README.md).
 
 ## Возможности
 

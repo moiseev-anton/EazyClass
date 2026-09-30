@@ -2,6 +2,9 @@
 venv/
 .env.dev
 .env
+observability/.env
+observability/host-logs/*
+!observability/host-logs/.gitkeep
 .htpasswd
 
 # Игнорирование папок __pycache__ и скомпилированных файлов

@@ -65,3 +65,4 @@ CHANGELOG.md
 # Директории, которые нужны только на хосте
 nginx/
 certbot/
+observability/

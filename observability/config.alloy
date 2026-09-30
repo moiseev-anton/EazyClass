@@ -1,0 +1,109 @@
+logging {
+  level  = "info"
+  format = "json"
+}
+
+// Discover this application and the observability stack, not all host workloads.
+discovery.docker "project" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+  filter {
+    name = "label"
+    values = ["com.docker.compose.project=" + sys.env("APP_COMPOSE_PROJECT")]
+  }
+}
+
+discovery.docker "observability" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=" + sys.env("OBS_COMPOSE_PROJECT")]
+  }
+}
+
+discovery.relabel "logs" {
+  targets = array.concat(discovery.docker.project.targets, discovery.docker.observability.targets)
+  // The host cron file already contains certbot's output and the wrapper stages.
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "certbot"
+    action        = "drop"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.logs.output
+  labels     = {"environment" = sys.env("OBS_ENVIRONMENT")}
+  forward_to = [loki.process.containers.receiver]
+}
+
+loki.process "containers" {
+  // Keep original lines, including non-JSON library logs; parse only known fields.
+  stage.json {
+    expressions = {"log_level" = "level", "log_timestamp" = "timestamp"}
+  }
+  stage.timestamp {
+    source            = "log_timestamp"
+    format            = "RFC3339Nano"
+    action_on_failure = "skip"
+  }
+  // Initial Docker history can span years; collect only recent records.
+  // Keep below Loki's default one-hour out-of-order window.
+  stage.drop {
+    older_than          = "55m"
+    drop_counter_reason = "outside_collection_window"
+  }
+  stage.labels {
+    values = {"level" = "log_level"}
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+local.file_match "certbot" {
+  path_targets = [{
+    "__path__"    = "/var/log/host/certbot-renew.log",
+    "service"     = "certbot",
+    "environment" = sys.env("OBS_ENVIRONMENT"),
+  }]
+  sync_period = "10s"
+}
+
+loki.source.file "certbot" {
+  targets    = local.file_match.certbot.targets
+  forward_to = [loki.process.certbot.receiver]
+}
+
+loki.process "certbot" {
+  stage.regex {
+    expression = "^(?P<timestamp>\\S+) "
+  }
+  stage.timestamp {
+    source            = "timestamp"
+    format            = "RFC3339"
+    action_on_failure = "skip"
+  }
+  stage.drop {
+    older_than          = "55m"
+    drop_counter_reason = "outside_collection_window"
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url               = "http://loki:3100/loki/api/v1/push"
+    min_backoff_period = "1s"
+    max_backoff_period = "30s"
+    max_backoff_retries = 20
+  }
+}

@@ -2,3 +2,5 @@
 # Иначе CRLF может сломать выполнение Bash-скриптов и чтение конфигурации в Linux.
 certbot/*.sh text eol=lf
 certbot/logrotate.conf text eol=lf
+observability/*.alloy text eol=lf
+observability/*.yml text eol=lf
