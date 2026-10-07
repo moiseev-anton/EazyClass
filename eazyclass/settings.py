@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     "rangefilter",
     "admin_auto_filters",
     "scheduler",
+    "schedule_ingestion",
     "scrapy_app",
     "utils",
     "drf_spectacular",
