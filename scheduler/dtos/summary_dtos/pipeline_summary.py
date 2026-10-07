@@ -1,4 +1,5 @@
 from typing import Any, Callable, Dict, List, Optional, Union
+from html import escape
 
 from scheduler.dtos.summary_dtos.base_summary_dto import BaseSummary, register_summary
 
@@ -10,6 +11,7 @@ class PipelineSummary(BaseSummary):
     spider_result: Optional[dict] = None
     sync_summary: Optional[dict] = None
     notification_summary: Optional[Union[dict, BaseSummary]] = None
+    publication: Optional[dict] = None
 
     def model_dump(self, **kwargs):
         """Автоматически сериализует вложенные summary-модели."""
@@ -102,7 +104,8 @@ class PipelineSummary(BaseSummary):
             ),
             (
                 "📢 Отправка уведомлений",
-                self.notification_summary,
+                self.notification_summary.model_dump() if isinstance(self.notification_summary, BaseSummary)
+                else self.notification_summary,
                 lambda d: [
                     f"успешно={d.get('success_count', 0)}",
                     f"ошибки={d.get('failed_count', 0)}",
@@ -112,4 +115,17 @@ class PipelineSummary(BaseSummary):
         ]
 
         parts = [_format_section(t, d, f) for t, d, f in sections]
+        if self.publication:
+            p = self.publication
+            parts.append('\n'.join([
+                '📄 Публикация TableParser:',
+                f"публикация: {p['id']}",
+                f"запуск: {p['run_id']}",
+                f"версия: {p['revision_id']} (№ {p['revision_number']})",
+                f"статус: {p['status']}",
+                f"период: {p['start']} — {p['end'] or 'без верхней границы'}",
+                f"занятий требуют ревью: {p['needs_review_count']}",
+            ]))
+            if p.get('url'):
+                parts.append(f'<a href="{escape(p["url"], quote=True)}">Открыть публикацию</a>')
         return f"{title}\n\n" + "\n\n".join(parts)

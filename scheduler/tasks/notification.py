@@ -142,8 +142,7 @@ def send_lessons_refresh_notifications(summary_dict: dict) -> dict:
     return pipeline_summary.model_dump()
 
 
-@shared_task(queue="periodic_tasks")
-def send_admin_report(summary_dict: dict):
+def deliver_admin_report(summary_dict: dict):
     """
     Финальная задача — отправка отчёта админу.
     Используем отдельный телеграм-бот для админов.
@@ -161,9 +160,14 @@ def send_admin_report(summary_dict: dict):
         notification = NotificationItem(message=report_text, destinations=staff_chat_ids)
 
         notifier = TelegramNotifier(settings.TELEGRAM_ADMIN_BOT_TOKEN)
-        notifier.send_notification(notification)
-        return summary_dict
+        result = notifier.send_notification(notification)
+        return summary_dict, result.model_dump()
     except Exception as e:
         logger.error("Подготовка или отправка отчёта администраторам завершилась ошибкой",
                      extra={"event": "notification.admin_report.failed", **safe_error_context(e)})
         raise
+
+
+@shared_task(queue="periodic_tasks")
+def send_admin_report(summary_dict: dict):
+    return deliver_admin_report(summary_dict)[0]

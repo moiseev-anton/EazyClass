@@ -208,3 +208,22 @@ class Publication(models.Model):
             models.CheckConstraint(condition=models.Q(end_date__isnull=True) | models.Q(end_date__gte=models.F('start_date')),
                                    name='ingestion_publication_range'),
         ]
+
+
+class PublicationDelivery(models.Model):
+    publication = models.ForeignKey(Publication, on_delete=models.PROTECT, related_name='deliveries')
+    phase = models.CharField(max_length=16)
+    status = models.CharField(max_length=16, default='pending')
+    token = models.UUIDField(null=True)
+    started_at = models.DateTimeField(null=True)
+    finished_at = models.DateTimeField(null=True)
+    result = models.JSONField(default=dict)
+    error_type = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['publication', 'phase'], name='ingestion_delivery_phase'),
+            models.CheckConstraint(condition=models.Q(phase__in=['notifications', 'report']), name='ingestion_delivery_phase_valid'),
+            models.CheckConstraint(condition=models.Q(status__in=['pending', 'sending', 'completed', 'uncertain', 'skipped']),
+                                   name='ingestion_delivery_status'),
+        ]

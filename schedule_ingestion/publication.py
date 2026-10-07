@@ -11,7 +11,7 @@ from scheduler.dtos.lesson_sync_range import LessonSyncRange
 from scheduler.fetched_data_sync.lessons.lessons_sync_manager import LessonsSyncManager, ScrapyFetchResult
 from scheduler.models import Group, Teacher
 from scheduler.schedule_write_guard import schedule_write_guard
-from .models import ExportRevision, Publication, ScheduleWriteEvent
+from .models import ExportRevision, Publication, ScheduleWriteEvent, PublicationDelivery
 from .run_storage import load_export, encode, digest
 
 
@@ -116,6 +116,7 @@ def apply_publication(publication_id):
     with schedule_write_guard():
         publication = Publication.objects.select_for_update().select_related('revision__run').get(pk=publication_id)
         if publication.status != 'pending':
+            ensure_deliveries(publication)
             return publication
         if digest(publication.prepared_payload) != publication.prepared_sha256:
             raise ValueError('Prepared publication hash mismatch')
@@ -132,6 +133,7 @@ def apply_publication(publication_id):
                 if (event.end_date is None or event.end_date >= bounds.start) and group_ids.intersection(event.group_ids):
                     publication.status = 'superseded'
                     publication.save(update_fields=['status'])
+                    ensure_deliveries(publication)
                     return publication
         manager = LessonsSyncManager(start_sync_day=bounds.start, end_sync_day=bounds.end, use_redis=False)
         publication.summary = manager.update_from_data(
@@ -140,4 +142,11 @@ def apply_publication(publication_id):
         publication.status = 'applied'
         publication.applied_at = timezone.now()
         publication.save(update_fields=['summary', 'status', 'applied_at'])
+        ensure_deliveries(publication)
         return publication
+
+
+def ensure_deliveries(publication):
+    for phase in ('notifications', 'report'):
+        PublicationDelivery.objects.get_or_create(publication=publication, phase=phase, defaults={
+            'status': 'skipped' if phase == 'notifications' and publication.status == 'superseded' else 'pending'})

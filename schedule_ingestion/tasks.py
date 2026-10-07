@@ -37,3 +37,50 @@ def source_parse_chain(source_id):
 def start_source_parse(source_id):
     """Each explicit invocation starts a fresh fetch task with its own identity."""
     return source_parse_chain(source_id).apply_async().id
+
+
+@shared_task(queue='periodic_tasks')
+def publish_revision(revision_id, *, request_id, resolved_range, requested_by, automatic):
+    from .publication import prepare_publication, apply_publication
+    publication = prepare_publication(revision_id, request_id=request_id,
+        resolved_range=resolved_range, requested_by=requested_by, automatic=automatic)
+    return str(apply_publication(publication.pk).pk)
+
+
+@shared_task(queue='periodic_tasks')
+def notify_publication(publication_id):
+    from .delivery import deliver_publication
+    deliver_publication(publication_id, 'notifications')
+    return publication_id
+
+
+@shared_task(queue='periodic_tasks')
+def report_publication(publication_id):
+    from .delivery import deliver_publication
+    deliver_publication(publication_id, 'report')
+    return publication_id
+
+
+def publication_chain(revision_id, *, requested_by, automatic=False, start_day_offset=0, end_day_offset=None):
+    import uuid
+    from scheduler.dtos.lesson_sync_range import LessonSyncRange
+    bounds = LessonSyncRange.from_offsets(start_day_offset=start_day_offset, end_day_offset=end_day_offset)
+    return chain(publish_revision.s(str(revision_id), request_id=str(uuid.uuid4()),
+        resolved_range=bounds.to_dict(), requested_by=requested_by, automatic=automatic),
+        notify_publication.s(), report_publication.s())
+
+
+def source_refresh_chain(source_id, *, start_day_offset=0, end_day_offset=None):
+    import uuid
+    from scheduler.dtos.lesson_sync_range import LessonSyncRange
+    bounds = LessonSyncRange.from_offsets(start_day_offset=start_day_offset, end_day_offset=end_day_offset)
+    return chain(fetch_source.s(source_id), parse_run.s(),
+        publish_revision.s(request_id=str(uuid.uuid4()), resolved_range=bounds.to_dict(),
+                           requested_by='celery', automatic=True),
+        notify_publication.s(), report_publication.s())
+
+
+@shared_task(queue='periodic_tasks')
+def start_source_refresh(source_id, *, start_day_offset=0, end_day_offset=None):
+    return source_refresh_chain(source_id, start_day_offset=start_day_offset,
+                               end_day_offset=end_day_offset).apply_async().id
