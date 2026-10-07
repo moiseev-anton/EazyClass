@@ -134,3 +134,15 @@ class ParseExecutionTests(TransactionTestCase):
             result = execute_parse(run.pk, resource_root=root, catalog_source=self.catalog_source)
         self.assertEqual(len(load_export(result.pk)['lessons']), 1)
         self.assertEqual(runtime_manifest(root, catalog_source=self.catalog_source), manifest)
+
+    def test_full_eager_chain_with_only_network_replaced(self):
+        from schedule_ingestion.tasks import source_parse_chain
+        self.source.sheet_gids = {'Sheet': 0}
+        self.source.save()
+        with override_settings(TABLEPARSER_RUNTIME={
+                'resource_root': str(self.root), 'catalog_source': self.catalog_source}):
+            with patch('schedule_ingestion.acquisition.fetch_sheet',
+                       return_value=[[], ['', '', 'А'], ['07.10.2026', '1', 'Физика']]):
+                export_id = source_parse_chain(self.source.pk).apply(throw=True).get()
+        self.assertEqual(len(load_export(export_id)['lessons']), 1)
+        self.assertEqual(ParseAttempt.objects.get().status, 'succeeded')

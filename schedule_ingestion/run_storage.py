@@ -23,7 +23,7 @@ def digest(payload):
 
 
 def record_inputs(*, source_id, sheets, captured_at, reference_date, knowledge_as_of,
-                  parser_manifest, using='default'):
+                  parser_manifest, using='default', expected_configuration=None, acquisition_id=None):
     """sheets maps EVERY configured sheet name to successfully fetched string rows.
 
     A missing/failed sheet must never be represented by an empty successful one.
@@ -42,6 +42,17 @@ def record_inputs(*, source_id, sheets, captured_at, reference_date, knowledge_a
     manifest = encode(parser_manifest)
     with transaction.atomic(using=using):
         source = ScheduleSource.objects.using(using).select_for_update().get(pk=source_id)
+        if acquisition_id is not None:
+            acquisition_id = uuid.UUID(str(acquisition_id))
+            previous = ParseRun.objects.using(using).filter(acquisition_id=acquisition_id).first()
+            if previous:
+                if previous.source_id != source.pk:
+                    raise ValueError('Acquisition ID belongs to another source')
+                return previous
+        configuration = dict(spreadsheet_id=source.spreadsheet_id,
+                             sheet_names=source.sheet_names, sheet_gids=source.sheet_gids)
+        if expected_configuration is not None and configuration != expected_configuration:
+            raise ValueError('Source configuration changed during acquisition')
         names = source.sheet_names
         if (not isinstance(names, list) or not names or
                 any(not isinstance(name, str) or not name.strip() or len(name) > 200 for name in names) or
@@ -58,8 +69,8 @@ def record_inputs(*, source_id, sheets, captured_at, reference_date, knowledge_a
                     any(not isinstance(cell, str) for cell in row) for row in rows):
                 raise ValueError('Sheet rows must be lists of strings')
             payloads.append(encode(rows))
-        run = ParseRun.objects.using(using).create(source=source,
-            source_configuration=encode(dict(spreadsheet_id=source.spreadsheet_id, sheet_names=names)),
+        run = ParseRun.objects.using(using).create(source=source, acquisition_id=acquisition_id,
+            source_configuration=encode(configuration),
             captured_at=captured_at, reference_date=reference_date,
             knowledge_as_of=knowledge_as_of, parser_manifest=manifest)
         for position, (name, payload) in enumerate(zip(names, payloads)):

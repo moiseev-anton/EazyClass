@@ -95,6 +95,7 @@ class ScheduleSource(models.Model):
     name = models.CharField(max_length=200)
     spreadsheet_id = models.CharField(max_length=200)
     sheet_names = models.JSONField(default=list)
+    sheet_gids = models.JSONField(default=dict)
     enabled = models.BooleanField(default=True)
 
 
@@ -116,6 +117,7 @@ class SheetContent(ImmutableRecord):
 class ParseRun(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     source = models.ForeignKey(ScheduleSource, on_delete=models.PROTECT)
+    acquisition_id = models.UUIDField(null=True, unique=True, editable=False)
     source_configuration = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     captured_at = models.DateTimeField()
