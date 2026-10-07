@@ -177,3 +177,34 @@ class ParseAttempt(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=['run'], condition=models.Q(status='running'),
                                                name='ingestion_one_running_parse')]
+
+
+class ScheduleWriteEvent(models.Model):
+    group_ids = models.JSONField()
+    start_date = models.DateField()
+    end_date = models.DateField(null=True)
+    observed_at = models.DateTimeField(db_index=True)
+
+
+class Publication(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    revision = models.ForeignKey(ExportRevision, on_delete=models.PROTECT)
+    automatic = models.BooleanField(default=False)
+    requested_by = models.TextField()
+    requested_at = models.DateTimeField(auto_now_add=True)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True)
+    # Prepared group IDs and values are fixed before queueing/review approval.
+    prepared_payload = models.TextField()
+    prepared_sha256 = models.CharField(max_length=64)
+    status = models.CharField(max_length=16, default='pending')
+    applied_at = models.DateTimeField(null=True)
+    summary = models.JSONField(default=dict)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(status__in=['pending', 'applied', 'superseded']),
+                                   name='ingestion_publication_status'),
+            models.CheckConstraint(condition=models.Q(end_date__isnull=True) | models.Q(end_date__gte=models.F('start_date')),
+                                   name='ingestion_publication_range'),
+        ]

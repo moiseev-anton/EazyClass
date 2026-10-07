@@ -1,4 +1,5 @@
 import logging
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Dict, List, Optional, Set
@@ -16,6 +17,7 @@ from scheduler.dtos.lesson_sync_range import LessonSyncRange
 from scheduler.models import Classroom, Lesson, LessonAnnotation, Period, Subject, Teacher
 from utils import RedisClientManager
 from enums import Defaults, KeyEnum
+from scheduler.schedule_write_guard import schedule_write_guard, schedule_applied
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +56,11 @@ class LessonsSyncManager:
     EMPTY_SUMMARY: ComparisonSummary = {"added": [], "updated": [], "removed": []}
 
     def __init__(self, redis_client=None, start_sync_day: Optional[date] = None,
-                 end_sync_day: Optional[date] = None):
+                 end_sync_day: Optional[date] = None, *, use_redis=True):
         self.date_range = LessonSyncRange(start_sync_day or timezone.localdate(), end_sync_day)
         self.start_sync_day = self.date_range.start
         self.end_sync_day = self.date_range.end
-        self.redis_client = redis_client or RedisClientManager.get_client("scrapy")
+        self.redis_client = (redis_client or RedisClientManager.get_client("scrapy")) if use_redis else None
 
     def update_schedule(self) -> ComparisonSummary:
         """Основной пайплайн: fetch → process → apply → serialize."""
@@ -70,13 +72,24 @@ class LessonsSyncManager:
                 self._update_synced_groups_set(data.scraped_groups, data.unchanged_groups)
             return self.EMPTY_SUMMARY
 
-        new_lessons = self._process_lessons(data.lesson_items, data.scraped_groups)
-        comparison_result = self._compare_lessons(new_lessons, data.scraped_groups)
-        self._apply_db_changes(comparison_result)
-        serialized_summary = self._serialize_summary(comparison_result)
+        serialized_summary = self.update_from_data(data)
         self._save_to_redis(data.scraped_groups, data.unchanged_groups)
 
         return serialized_summary
+
+    def update_from_data(self, data: ScrapyFetchResult, *, observed_at=None) -> ComparisonSummary:
+        """Apply explicit inputs without Redis, under the same lock as legacy writes."""
+        if not data.scraped_groups:
+            return {key: [] for key in self.EMPTY_SUMMARY}
+        with schedule_write_guard():
+            items = self._normalize_lessons_fields(deepcopy(data.lesson_items))
+            new_lessons = self._process_lessons(items, data.scraped_groups)
+            comparison = self._compare_lessons(new_lessons, data.scraped_groups)
+            self._apply_db_changes(comparison)
+            summary = self._serialize_summary(comparison)
+            schedule_applied.send(sender=type(self), group_ids=list(data.scraped_groups),
+                                  date_range=self.date_range, observed_at=observed_at or timezone.now())
+            return summary
 
     def _fetch_data(self) -> ScrapyFetchResult:
         lessons_json = self.redis_client.get(KeyEnum.SCRAPED_LESSONS)
@@ -91,8 +104,6 @@ class LessonsSyncManager:
         unchanged_groups = set(orjson.loads(unchanged_json) or [])
 
         logger.debug("Данные скрайпинга загружены из Redis")
-
-        lesson_items = self._normalize_lessons_fields(lesson_items)
 
         return ScrapyFetchResult(
             scraped_groups=scraped_groups,
