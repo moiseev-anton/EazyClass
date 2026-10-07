@@ -155,3 +155,23 @@ class ExportRevision(ImmutableRecord):
             models.UniqueConstraint(fields=['run', 'request_id'], name='ingestion_export_request'),
             models.CheckConstraint(condition=models.Q(number__gt=0), name='ingestion_export_positive'),
         ]
+
+
+class ParseAttempt(models.Model):
+    class Status(models.TextChoices):
+        RUNNING = 'running'
+        SUCCEEDED = 'succeeded'
+        FAILED = 'failed'
+        ABANDONED = 'abandoned'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run = models.ForeignKey(ParseRun, on_delete=models.PROTECT, related_name='attempts')
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.RUNNING)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True)
+    error_type = models.CharField(max_length=200, blank=True)
+    export = models.ForeignKey(ExportRevision, on_delete=models.PROTECT, null=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['run'], condition=models.Q(status='running'),
+                                               name='ingestion_one_running_parse')]
