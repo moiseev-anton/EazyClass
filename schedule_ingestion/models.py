@@ -89,3 +89,69 @@ class KnowledgeImport(models.Model):
 
     class Meta:
         constraints = [models.CheckConstraint(condition=models.Q(id=1), name="ingestion_single_import")]
+
+
+class ScheduleSource(models.Model):
+    name = models.CharField(max_length=200)
+    spreadsheet_id = models.CharField(max_length=200)
+    sheet_names = models.JSONField(default=list)
+    enabled = models.BooleanField(default=True)
+
+
+class ImmutableRecord(models.Model):
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('Create a new version instead of editing stored data')
+        return super().save(*args, **kwargs)
+
+
+class SheetContent(ImmutableRecord):
+    sha256 = models.CharField(max_length=64, primary_key=True)
+    payload = models.TextField()
+
+
+class ParseRun(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    source = models.ForeignKey(ScheduleSource, on_delete=models.PROTECT)
+    source_configuration = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    captured_at = models.DateTimeField()
+    reference_date = models.DateField()
+    knowledge_as_of = models.DateTimeField()
+    parser_manifest = models.TextField()
+    head_revision = models.PositiveIntegerField(default=0)
+
+
+class RunSheet(ImmutableRecord):
+    run = models.ForeignKey(ParseRun, on_delete=models.PROTECT, related_name='sheets')
+    name = models.CharField(max_length=200)
+    position = models.PositiveIntegerField()
+    content = models.ForeignKey(SheetContent, on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['run', 'name'], name='ingestion_run_sheet_name'),
+            models.UniqueConstraint(fields=['run', 'position'], name='ingestion_run_sheet_position'),
+        ]
+
+
+class ExportRevision(ImmutableRecord):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run = models.ForeignKey(ParseRun, on_delete=models.PROTECT, related_name='exports')
+    number = models.PositiveIntegerField()
+    request_id = models.UUIDField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    author = models.TextField()
+    reason = models.TextField(blank=True)
+    payload = models.TextField()
+    sha256 = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['run', 'number'], name='ingestion_export_number'),
+            models.UniqueConstraint(fields=['run', 'request_id'], name='ingestion_export_request'),
+            models.CheckConstraint(condition=models.Q(number__gt=0), name='ingestion_export_positive'),
+        ]
