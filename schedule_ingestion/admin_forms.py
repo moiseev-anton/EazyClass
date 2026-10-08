@@ -9,6 +9,7 @@ class SourceForm(forms.ModelForm):
     class Meta:
         model = ScheduleSource
         fields = '__all__'
+        widgets = {'sheet_names': forms.HiddenInput(), 'sheet_gids': forms.HiddenInput()}
         help_texts = {
             'spreadsheet_id': 'Часть адреса Google Sheets между /d/ и /edit; не полный URL.',
             'sheet_names': 'JSON-список названий, например ["1 курс", "2 курс"].',

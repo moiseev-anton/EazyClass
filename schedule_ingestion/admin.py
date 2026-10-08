@@ -6,8 +6,7 @@ from django.contrib import admin, messages
 from django.conf import settings
 from django.core import signing
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -42,6 +41,7 @@ class IngestionHistoryAdmin(admin.ModelAdmin):
 @admin.register(ScheduleSource)
 class ScheduleSourceAdmin(admin.ModelAdmin):
     form = SourceForm
+    change_form_template = 'admin/schedule_ingestion/source_form.html'
     list_display = ['name', 'spreadsheet_id', 'enabled']
     list_filter = ['enabled']
     search_fields = ['name', 'spreadsheet_id']
@@ -124,6 +124,8 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
         wrap = self.admin_site.admin_view
         return [
             path('<uuid:revision_id>/review/', wrap(self.review), name='ingestion_review'),
+            path('<uuid:revision_id>/cell/<int:index>/', wrap(self.cell), name='ingestion_cell'),
+            path('<uuid:revision_id>/batch/', wrap(self.batch), name='ingestion_batch'),
             path('<uuid:revision_id>/lesson/<int:index>/', wrap(self.edit), name='ingestion_edit'),
             path('<uuid:revision_id>/add/', wrap(self.edit), name='ingestion_add'),
             path('<uuid:revision_id>/upload/', wrap(self.upload), name='ingestion_upload'),
@@ -145,19 +147,68 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
             delivery_disabled=getattr(settings, 'TABLEPARSER_DISABLE_DELIVERY', False), **context))
 
     def review(self, request, revision_id):
+        from .inline_review import review_state
         obj = self.revision(request, revision_id)
         payload = load_export(obj.pk)
         rows = list(enumerate(payload['lessons']))
         needs_review = sum(row.get('review_status') == 'needs_review' for _, row in rows)
         only_review = request.GET.get('needs_review') == '1'
-        if only_review:
-            rows = [(i, row) for i, row in rows if row.get('review_status') == 'needs_review']
         return self.render(request, obj, 'review.html',
-            page=Paginator(rows, 50).get_page(request.GET.get('page')), payload=payload,
+            payload=payload,
+            state=review_state(payload),
             needs_review=needs_review, only_review=only_review,
             can_review=request.user.has_perm('schedule_ingestion.review_export'),
             can_publish=request.user.has_perm('schedule_ingestion.publish_export'),
             publications=Publication.objects.filter(revision=obj).order_by('-requested_at'))
+
+    def batch(self, request, revision_id):
+        from .inline_review import replace_batch, review_state
+        obj = self.revision(request, revision_id, 'review_export')
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        try:
+            data = json.loads(request.body)
+            payload = replace_batch(load_export(obj.pk), data)
+            from .publication import prepare_payload
+            prepare_payload(payload)
+            saved = save_export(run_id=obj.run_id, expected_revision=obj.number,
+                request_id=data['request_id'], author=request.user.get_username(), reason=data['reason'], **payload)
+        except StaleRevision:
+            latest = obj.run.exports.order_by('-number').first()
+            return JsonResponse({'error': 'Выгрузка уже изменена в другом окне. Ваш черновик сохранён в этой вкладке.',
+                'latest_url': reverse('admin:ingestion_review', args=[latest.pk])}, status=409)
+        except (ValueError, TypeError, KeyError, AttributeError) as error:
+            return JsonResponse({'error': str(error)}, status=400)
+        return JsonResponse({'state': review_state(payload), 'number': saved.number,
+            'url': reverse('admin:ingestion_review', args=[saved.pk])})
+
+    def cell(self, request, revision_id, index):
+        from .inline_review import cell_indices, replace_cell
+        obj = self.revision(request, revision_id, 'review_export')
+        payload = load_export(obj.pk)
+        if index >= len(payload['lessons']):
+            raise Http404
+        indices = cell_indices(payload['lessons'], index)
+        if request.method == 'GET':
+            return JsonResponse({'indices': indices, 'rows': [payload['lessons'][i] for i in indices]})
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+        try:
+            data = json.loads(request.body)
+            payload = replace_cell(payload, indices, data)
+            from .publication import prepare_payload
+            prepare_payload(payload)
+            saved = save_export(run_id=obj.run_id, expected_revision=obj.number,
+                request_id=data['request_id'], author=request.user.get_username(),
+                reason=data['reason'], **payload)
+        except StaleRevision:
+            latest = obj.run.exports.order_by('-number').first()
+            return JsonResponse({'error': 'Другой пользователь уже сохранил новую версию. Ваши правки остались в редакторе.',
+                'latest_url': reverse('admin:ingestion_review', args=[latest.pk])}, status=409)
+        except (ValueError, TypeError, KeyError, AttributeError) as error:
+            return JsonResponse({'error': str(error)}, status=400)
+        return JsonResponse({'payload': payload, 'number': saved.number,
+            'url': reverse('admin:ingestion_review', args=[saved.pk])})
 
     def save(self, request, obj, form, payload):
         from .publication import prepare_payload

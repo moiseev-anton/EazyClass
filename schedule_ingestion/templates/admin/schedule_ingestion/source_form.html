@@ -1,0 +1,8 @@
+{% extends "admin/change_form.html" %}{% load static %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'schedule_ingestion/source.js' %}" defer></script>{% endblock %}
+{% block after_field_sets %}{{ block.super }}
+<fieldset class="module aligned"><h2>Листы таблицы</h2><div style="padding:20px">
+<p>Название листа и его gid указываются вместе. Gid находится в адресе выбранной вкладки Google Sheets.</p>
+<div id="source-sheets"></div><button type="button" id="source-add">+ Добавить лист</button>
+<noscript>Для редактирования списка листов включите JavaScript.</noscript>
+</div></fieldset>{% endblock %}

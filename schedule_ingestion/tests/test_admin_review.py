@@ -38,6 +38,100 @@ class AdminReviewTests(TestCase):
         data.update(values)
         return data
 
+    def test_inline_split_save_retry_and_delete_preserve_full_export(self):
+        original = load_export(self.export.pk)
+        url = reverse('admin:ingestion_cell', args=[self.export.pk, 0])
+        self.assertEqual(self.client.get(url).json()['indices'], [0])
+        data = {'request_id': str(uuid.uuid4()), 'reason': 'Разделение пары', 'rows': [
+            dict(self.edit_data(part=1), base_index=0),
+            dict(self.edit_data(part=2), base_index=None),
+        ]}
+        response = self.client.post(url, json.dumps(data), content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        saved = ExportRevision.objects.get(number=2)
+        payload = load_export(saved.pk)
+        self.assertEqual(len(payload['lessons']), 3)
+        self.assertEqual(payload['lessons'][-1], original['lessons'][-1])
+        self.assertEqual(self.client.post(url, json.dumps(data), content_type='application/json').status_code, 200)
+        self.assertEqual(ExportRevision.objects.count(), 2)
+        next_url = reverse('admin:ingestion_cell', args=[saved.pk, 1])
+        self.assertEqual(self.client.get(next_url).json()['indices'], [0, 1])
+        deleted = self.client.post(next_url, json.dumps({'rows': [], 'reason': 'Удалено', 'request_id': str(uuid.uuid4())}), content_type='application/json')
+        self.assertEqual(deleted.status_code, 200)
+        self.assertEqual(deleted.json()['payload']['lessons'], [original['lessons'][-1]])
+        self.assertEqual(deleted.json()['payload']['groups'], original['groups'])
+        self.assertFalse(Publication.objects.exists())
+        self.assertFalse(Observation.objects.exists())
+
+    def test_inline_rejects_foreign_rows_duplicates_conflicts_and_csrf(self):
+        url = reverse('admin:ingestion_cell', args=[self.export.pk, 0])
+        for rows in ([dict(self.edit_data(), base_index=1)],
+                     [dict(self.edit_data(), base_index=0), dict(self.edit_data(), base_index=None)]):
+            response = self.client.post(url, json.dumps({'rows': rows, 'reason': 'Review', 'request_id': str(uuid.uuid4())}), content_type='application/json')
+            self.assertEqual(response.status_code, 400)
+        self.assertEqual(ExportRevision.objects.count(), 1)
+        payload = load_export(self.export.pk)
+        save_export(run_id=self.export.run_id, expected_revision=1, request_id=uuid.uuid4(), author='other', **payload)
+        data = json.dumps({'rows': [dict(self.edit_data(), base_index=0)], 'reason': 'Review', 'request_id': str(uuid.uuid4())})
+        response = self.client.post(url, data, content_type='application/json')
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('latest_url', response.json())
+        protected = Client(enforce_csrf_checks=True)
+        protected.force_login(self.user)
+        self.assertEqual(protected.post(url, data, content_type='application/json').status_code, 403)
+
+    def test_review_contains_full_payload_without_pagination(self):
+        response = self.client.get(self.url('review') + '?needs_review=1')
+        self.assertContains(response, 'review-payload')
+        self.assertContains(response, 'review.js')
+        self.assertNotContains(response, 'Страница 1 из')
+        self.assertContains(response, 'status-filter')
+
+    def test_batch_saves_multiple_cards_and_additions_as_one_version_and_retries(self):
+        url = reverse('admin:ingestion_batch', args=[self.export.pk])
+        data = {'request_id': str(uuid.uuid4()), 'reason': 'Общее ревью', 'changes': [
+            {'index': 0, 'rows': [dict(self.edit_data(part=1), base_index=0), dict(self.edit_data(part=2), base_index=None)]},
+            {'index': 1, 'rows': [dict(self.edit_data(lesson_number=2, subject='Вторая правка'), base_index=1)]},
+            {'index': None, 'rows': [dict(self.edit_data(lesson_number=3), base_index=None)]},
+        ]}
+        response = self.client.post(url, json.dumps(data), content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['number'], 2)
+        self.assertEqual(len(response.json()['state']['cards']), 3)
+        saved = ExportRevision.objects.get(number=2)
+        self.assertEqual(len(load_export(saved.pk)['lessons']), 4)
+        self.assertEqual(load_export(saved.pk)['lessons'][2]['subject'], 'Вторая правка')
+        self.assertEqual(self.client.post(url, json.dumps(data), content_type='application/json').status_code, 200)
+        self.assertEqual(ExportRevision.objects.count(), 2)
+        self.assertFalse(Publication.objects.exists())
+        self.assertFalse(Observation.objects.exists())
+        data['request_id'] = str(uuid.uuid4())
+        self.assertEqual(self.client.post(url, json.dumps(data), content_type='application/json').status_code, 409)
+
+    def test_batch_invalid_card_rolls_back_all_changes_and_requires_csrf(self):
+        url = reverse('admin:ingestion_batch', args=[self.export.pk])
+        data = {'request_id': str(uuid.uuid4()), 'reason': 'Общее ревью', 'changes': [
+            {'index': 0, 'rows': [dict(self.edit_data(), base_index=0)]},
+            {'index': 1, 'rows': [dict(self.edit_data(date='invalid'), base_index=1)]},
+        ]}
+        self.assertEqual(self.client.post(url, json.dumps(data), content_type='application/json').status_code, 400)
+        self.assertEqual(ExportRevision.objects.count(), 1)
+        protected = Client(enforce_csrf_checks=True)
+        protected.force_login(self.user)
+        self.assertEqual(protected.post(url, json.dumps(data), content_type='application/json').status_code, 403)
+
+    def test_batch_handles_interleaved_original_cells_without_index_drift(self):
+        from schedule_ingestion.inline_review import replace_batch
+        payload = dict(groups=['А-1'], review_items=[], lessons=[
+            self.lesson(review_cell_id='a', part=1), self.lesson(review_cell_id='b', lesson_number=2),
+            self.lesson(review_cell_id='a', part=2)])
+        data = {'request_id': str(uuid.uuid4()), 'reason': 'Review', 'changes': [
+            {'index': 1, 'rows': [dict(self.edit_data(lesson_number=2), base_index=1)]},
+            {'index': 0, 'rows': [dict(self.edit_data(), base_index=0)]}]}
+        result = replace_batch(payload, data)
+        self.assertEqual([r['review_cell_id'] for r in result['lessons']], ['a', 'b'])
+        self.assertEqual([r['lesson_number'] for r in result['lessons']], [1, 2])
+
     @override_settings(TABLEPARSER_RUNTIME={'resource_root': '/release/runtime', 'catalog_source': 'api'})
     def test_source_action_enqueues_parse_only_and_skips_disabled_sources(self):
         from schedule_ingestion.models import ScheduleSource

@@ -1,26 +1,30 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/base_site.html" %}{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'schedule_ingestion/review.css' %}?v=3">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'schedule_ingestion/review.js' %}?v=3" defer></script>{% endblock %}
+{% block content_title %}{% endblock %}
 {% block content %}
-<p><a href="{% url 'admin:schedule_ingestion_parserun_change' revision.run_id %}">Запуск {{ revision.run_id }}</a> · Версия {{ revision.number }} · {{ revision.created_at }} · {{ revision.author }}</p>
-{% if revision.number != revision.run.head_revision %}<p class="errornote">Это историческая версия. Сохранить правки поверх неё нельзя; публикация именно этой версии доступна отдельно.</p>{% endif %}
-<p>Группы: {{ payload.groups|join:", " }}. Занятий: {{ payload.lessons|length }}. Требуют ревью: {{ needs_review }}.</p>
-<p>{{ revision.reason }}</p>
-<p><a href="{% url 'admin:ingestion_download' revision.pk %}">Скачать полную выгрузку JSON</a>
-{% if can_review %} · <a href="{% url 'admin:ingestion_add' revision.pk %}">Добавить занятие</a> · <a href="{% url 'admin:ingestion_upload' revision.pk %}">Загрузить исправленную полную выгрузку</a>{% endif %}
-{% if can_publish %} · <a href="{% url 'admin:ingestion_publish' revision.pk %}">Опубликовать эту версию</a>{% endif %}</p>
-<p>Строки, требующие ревью, также публикуются. Сохранение исправлений создаёт полную версию и не меняет память или модели парсера.</p>
-<p><a href="?">Все занятия</a> · <a href="?needs_review=1">Только требующие ревью</a></p>
-<div style="overflow-x:auto"><table>
-<thead><tr><th>Группа</th><th>Дата</th><th>Пара / часть / подгруппа</th><th>Предмет</th><th>Преподаватель</th><th>Кабинет</th><th>Ревью</th><th>Действия</th></tr></thead>
-<tbody>{% for index, row in page %}<tr>
-<td>{{ row.group }}</td><td style="white-space:nowrap">{{ row.date }}</td><td style="white-space:nowrap">{{ row.lesson_number }} / {{ row.part|default:0 }} / {{ row.subgroup|default:0 }}</td>
-<td>{{ row.subject|default_if_none:"" }}{% if row.raw_cell %}<details><summary>Исходная ячейка</summary><p>{{ row.raw_cell }}</p></details>{% endif %}</td><td>{{ row.teacher|default_if_none:"" }}</td><td>{{ row.classroom|default_if_none:"" }}</td>
-<td>{% if row.review_status == 'needs_review' %}Требует ревью{% elif row.review_status == 'reviewed' %}Проверено{% else %}Без отметки{% endif %}{% if row.review_reason %}<details><summary>Замечание парсера</summary><p>{{ row.review_reason }}</p></details>{% endif %}</td>
-<td>{% if can_review %}<a href="{% url 'admin:ingestion_edit' revision.pk index %}">Исправить</a>{% endif %}</td>
-</tr>{% empty %}<tr><td colspan="8">Занятий в выбранном списке нет.</td></tr>{% endfor %}</tbody></table></div>
-<p>Страница {{ page.number }} из {{ page.paginator.num_pages }}.
-{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if only_review %}&amp;needs_review=1{% endif %}">Назад</a>{% endif %}
-{% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if only_review %}&amp;needs_review=1{% endif %}">Далее</a>{% endif %}</p>
-<h2>Публикации этой версии</h2><ul>{% for publication in publications %}
-<li><a href="{% url 'admin:schedule_ingestion_publication_change' publication.pk %}">{{ publication.pk }}</a>: {{ publication.status }}, {{ publication.start_date }} — {{ publication.end_date|default:"без верхней границы" }}</li>
-{% empty %}<li>Эта версия ещё не публиковалась.</li>{% endfor %}</ul>
-{% endblock %}
+<div id="review-app" data-url="{% url 'admin:ingestion_review' revision.pk %}" data-number="{{ revision.number }}" data-edit="{{ can_review|yesno:'1,0' }}" data-date="{{ revision.run.reference_date|date:'Y-m-d' }}">
+<div class="review-heading"><div><a href="{% url 'admin:schedule_ingestion_parserun_change' revision.run_id %}">← Запуск</a>
+<h1>Выгрузка {{ revision.run.captured_at|date:'d.m.Y H:i' }} <span id="version">v{{ revision.number }}</span></h1></div>
+<div class="top-actions">{% if can_review %}<button type="button" id="save-all" disabled>Сохранить изменения</button>{% endif %}
+{% if can_publish %}<button type="button" class="primary" id="publish">Опубликовать</button>{% endif %}</div></div>
+{% if revision.number != revision.run.head_revision %}<p class="errornote">Историческая версия. Для новых правок откройте последнюю версию запуска.</p>{% endif %}
+<div class="review-tools">
+<label>Поиск <input id="search" type="search" placeholder="Предмет, преподаватель, исходный текст…"></label>
+<label>Группа <select id="group-filter"><option value="">Все группы</option>{% for group in payload.groups %}<option>{{ group }}</option>{% endfor %}</select></label>
+<label>Дата <input id="date-filter" type="date"></label>
+<label>Показать <select id="status-filter"><option value="">Все записи</option><option value="needs">Требуют ревью</option><option value="auto">Автоисправленные</option><option value="dirty">Мои изменения</option></select></label>
+<button type="button" id="clear-filters">Сбросить</button>
+{% if can_review %}<button type="button" id="add-card">+ Добавить занятия</button>{% endif %}
+</div>
+<div class="review-summary"><span id="row-count"></span><span id="draft-count"></span><button type="button" id="discard-all" hidden>Отменить мои изменения</button></div>
+<div id="save-status" role="status" aria-live="polite"></div>
+<div class="review-scroll"><table id="schedule-table"><thead><tr><th>Исходная ячейка</th><th>Группа</th><th>Дата</th><th>Пара</th><th>Часть</th><th>Подгр.</th><th>Предмет</th><th>Преподаватель</th><th>Кабинет</th><th>Ревью</th></tr></thead></table></div>
+<noscript>Для редактора включите JavaScript.</noscript>
+<details class="review-extra"><summary>Дополнительные действия и публикации</summary><p>
+<a data-action="download" href="{% url 'admin:ingestion_download' revision.pk %}">Скачать JSON</a>
+{% if can_review %} · <a data-action="upload" href="{% url 'admin:ingestion_upload' revision.pk %}">Заменить всю выгрузку из JSON</a>{% endif %}</p>
+<p>JSON заменяет полный набор групп и занятий совместимой выгрузкой. Несохранённые изменения редактора в файл не входят.</p>
+<div class="review-history"><ul>{% for publication in publications %}<li><a href="{% url 'admin:schedule_ingestion_publication_change' publication.pk %}">{{ publication.pk }}</a>: {{ publication.status }}</li>{% empty %}<li>Эта версия ещё не публиковалась.</li>{% endfor %}</ul></div></details>
+{% csrf_token %}{{ state|json_script:"review-payload" }}
+</div>{% endblock %}
