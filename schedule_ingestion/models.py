@@ -227,3 +227,18 @@ class PublicationDelivery(models.Model):
             models.CheckConstraint(condition=models.Q(status__in=['pending', 'sending', 'completed', 'uncertain', 'skipped']),
                                    name='ingestion_delivery_status'),
         ]
+
+
+class DeliveryResolution(ImmutableRecord):
+    id = models.UUIDField(primary_key=True, editable=False)
+    delivery = models.ForeignKey(PublicationDelivery, on_delete=models.PROTECT, related_name='resolutions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    decision = models.CharField(max_length=16)
+    actor = models.TextField()
+    reason = models.TextField()
+    worker_stopped = models.BooleanField(default=False)
+    previous = models.JSONField()
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(decision__in=['retry', 'skip']),
+                                              name='ingestion_resolution_decision')]

@@ -61,6 +61,8 @@ def deliver_publication(publication_id, phase):
                 raise DeliveryUncertain('Notification delivery has not completed')
             if notices.status == 'completed':
                 summary = deepcopy(notices.result)
+            else:
+                summary['publication']['notifications_status'] = 'skipped'
         token = uuid.uuid4()
         delivery.status, delivery.token, delivery.started_at = 'sending', token, timezone.now()
         delivery.save(update_fields=['status', 'token', 'started_at'])

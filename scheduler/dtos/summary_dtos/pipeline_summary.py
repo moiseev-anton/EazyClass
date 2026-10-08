@@ -126,6 +126,8 @@ class PipelineSummary(BaseSummary):
                 f"период: {p['start']} — {p['end'] or 'без верхней границы'}",
                 f"занятий требуют ревью: {p['needs_review_count']}",
             ]))
+            if p.get('notifications_status') == 'skipped':
+                parts.append('Уведомления: этап пропущен, доставка не подтверждена.')
             if p.get('url'):
                 parts.append(f'<a href="{escape(p["url"], quote=True)}">Открыть публикацию</a>')
         return f"{title}\n\n" + "\n\n".join(parts)

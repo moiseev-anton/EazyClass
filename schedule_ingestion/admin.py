@@ -1,9 +1,9 @@
 from django.contrib import admin
 
-from .models import ExportRevision, Publication, PublicationDelivery
+from .models import ExportRevision, Publication, PublicationDelivery, DeliveryResolution
 
 
-@admin.register(ExportRevision, Publication, PublicationDelivery)
+@admin.register(ExportRevision, Publication, PublicationDelivery, DeliveryResolution)
 class IngestionHistoryAdmin(admin.ModelAdmin):
     """Read-only history; publication/edit actions will use dedicated services."""
     def has_add_permission(self, request):

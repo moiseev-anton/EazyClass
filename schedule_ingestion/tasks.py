@@ -61,6 +61,18 @@ def report_publication(publication_id):
     return publication_id
 
 
+@shared_task(queue='periodic_tasks')
+def apply_saved_publication(publication_id):
+    from .publication import apply_publication
+    return str(apply_publication(publication_id).pk)
+
+
+def resume_publication_chain(publication_id):
+    """Resume the saved identity and bounds, without fetching or parsing again."""
+    return chain(apply_saved_publication.s(str(publication_id)),
+                 notify_publication.s(), report_publication.s())
+
+
 def publication_chain(revision_id, *, requested_by, automatic=False, start_day_offset=0, end_day_offset=None):
     import uuid
     from scheduler.dtos.lesson_sync_range import LessonSyncRange
