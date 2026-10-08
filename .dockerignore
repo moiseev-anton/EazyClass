@@ -29,6 +29,8 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Локальные данные и логи (не должны попадать в образ)
+data/
+tableparser-releases/
 *.log
 *.logs
 *.sqlite3

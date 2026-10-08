@@ -18,8 +18,12 @@ from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
 from eazyclass.logging_config import build_logging_config
+from eazyclass.tableparser_settings import runtime_profile
 
 load_dotenv(os.getenv("ENV_FILE", ".env.dev"))
+
+TABLEPARSER_RUNTIME = runtime_profile(os.environ)
+TABLEPARSER_PUBLIC_BASE_URL = os.getenv('TABLEPARSER_PUBLIC_BASE_URL', '')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

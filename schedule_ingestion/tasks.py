@@ -8,7 +8,9 @@ from .parse_execution import execute_parse, ParseBusy
 
 
 def runtime_options():
-    profile = settings.TABLEPARSER_RUNTIME
+    profile = getattr(settings, 'TABLEPARSER_RUNTIME', None)
+    if not profile:
+        raise ValueError('TableParser runtime is not configured')
     return dict(resource_root=profile['resource_root'], catalog_source=profile['catalog_source'])
 
 

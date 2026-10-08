@@ -1,0 +1,26 @@
+# Use with docker-compose.yml and `up --no-build` after release validation.
+x-tableparser-environment: &tableparser-environment
+  TABLEPARSER_RESOURCE_ROOT: /opt/tableparser-release/runtime
+  TABLEPARSER_CATALOG_SOURCE: ${TABLEPARSER_CATALOG_SOURCE:?Set the original catalog namespace}
+  TABLEPARSER_PUBLIC_BASE_URL: ${TABLEPARSER_PUBLIC_BASE_URL:?Set the public EazyClass URL}
+
+x-tableparser-volumes: &tableparser-volumes
+  - ${TABLEPARSER_RELEASE_DIR:?Set the absolute release directory}:/opt/tableparser-release:ro
+
+services:
+  django:
+    image: ${TABLEPARSER_DJANGO_IMAGE:?Set the validated immutable image}
+    environment: *tableparser-environment
+    volumes: *tableparser-volumes
+  celery-worker:
+    image: ${TABLEPARSER_WORKER_IMAGE:?Set the validated immutable image with backup tools}
+    environment: *tableparser-environment
+    volumes: *tableparser-volumes
+  celery-beat:
+    image: ${TABLEPARSER_WORKER_IMAGE:?Set the validated immutable image with backup tools}
+    environment: *tableparser-environment
+    volumes: *tableparser-volumes
+  flower:
+    image: ${TABLEPARSER_DJANGO_IMAGE:?Set the validated immutable image}
+    environment: *tableparser-environment
+    volumes: *tableparser-volumes
