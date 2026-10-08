@@ -1,4 +1,5 @@
 import csv
+import sys
 from datetime import date
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -19,6 +20,7 @@ spec = spec_from_file_location(
     Path(__file__).resolve().parents[1] / "tasks" / "extract_raw_lessons.py",
 )
 extract_raw_lessons = module_from_spec(spec)
+sys.modules[spec.name] = extract_raw_lessons
 spec.loader.exec_module(extract_raw_lessons)
 
 
