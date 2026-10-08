@@ -146,10 +146,18 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
             revision=obj, title=f'Выгрузка № {obj.number}',
             delivery_disabled=getattr(settings, 'TABLEPARSER_DISABLE_DELIVERY', False), **context))
 
+    def review_payload(self, obj):
+        from .inline_review import restore_review_origin
+        payload = load_export(obj.pk)
+        first = obj.run.exports.order_by('number').first()
+        if first and first.pk != obj.pk:
+            restore_review_origin(payload, load_export(first.pk))
+        return payload
+
     def review(self, request, revision_id):
         from .inline_review import review_state
         obj = self.revision(request, revision_id)
-        payload = load_export(obj.pk)
+        payload = self.review_payload(obj)
         rows = list(enumerate(payload['lessons']))
         needs_review = sum(row.get('review_status') == 'needs_review' for _, row in rows)
         only_review = request.GET.get('needs_review') == '1'
@@ -168,7 +176,7 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
             return JsonResponse({'error': 'Method not allowed'}, status=405)
         try:
             data = json.loads(request.body)
-            payload = replace_batch(load_export(obj.pk), data)
+            payload = replace_batch(self.review_payload(obj), data)
             from .publication import prepare_payload
             prepare_payload(payload)
             saved = save_export(run_id=obj.run_id, expected_revision=obj.number,

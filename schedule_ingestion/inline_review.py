@@ -30,6 +30,34 @@ def review_state(payload):
     return {'groups': payload['groups'], 'cards': list(cards.values())}
 
 
+def restore_review_origin(payload, initial):
+    """Recover provenance for older exports when the source cell still matches exactly."""
+    def source_key(row):
+        return tuple(row.get(k) for k in ('sheet_name', 'group', 'date', 'lesson_number', 'raw_cell'))
+    sources = {}
+    for row in initial['lessons']:
+        if row.get('raw_cell'):
+            sources.setdefault(source_key(row), []).append(row)
+    for card in review_state(payload)['cards']:
+        rows = card['rows']
+        if any('review_original_rows' in row for row in rows):
+            continue
+        before = sources.get(source_key(rows[0]))
+        if not before:
+            continue
+        fields = ('group', 'date', 'lesson_number', 'part', 'subgroup', 'subject',
+                  'teacher', 'classroom', 'annotation', 'annotations', 'review_status')
+        changed = [[row.get(k) for k in fields] for row in rows] != [
+            [row.get(k) for k in fields] for row in before]
+        required = any(row.get('review_status') == 'needs_review' for row in before)
+        for row in rows:
+            row['review_required'] = required
+            if changed:
+                row['review_original_rows'] = deepcopy(before)
+                row['review_applied'] = True
+    return payload
+
+
 def replace_batch(payload, data):
     if not isinstance(data, dict) or not isinstance(data.get('changes'), list) or not data['changes']:
         raise ValueError('Нет изменений для сохранения.')
@@ -72,6 +100,13 @@ def replace_cell(payload, indices, data):
     if not isinstance(data.get('reason'), str) or not data['reason'].strip():
         raise ValueError('Укажите причину изменения.')
     originals = payload['lessons']
+    first = originals[indices[0]]
+    before_review = first.get('review_original_rows')
+    if before_review is None:
+        before_review = [{k: deepcopy(v) for k, v in originals[i].items()
+                          if k not in ('review_original_rows',)} for i in indices]
+    required_review = any(row.get('review_required', row.get('review_status') == 'needs_review')
+                          for row in before_review)
     replacements, seen, slots = [], set(), set()
     cell_id = originals[indices[0]].get('review_cell_id') or hashlib.sha256(
         json.dumps([data['request_id'], identity(originals[indices[0]], indices[0])], ensure_ascii=False).encode()).hexdigest()[:20]
@@ -91,6 +126,8 @@ def replace_cell(payload, indices, data):
         for key in ('group', 'lesson_number', 'part', 'subgroup', 'subject', 'teacher', 'classroom'):
             row[key] = cleaned[key]
         row.update(date=cleaned['date'].isoformat(), review_cell_id=cell_id,
+                   review_original_rows=before_review, review_required=required_review,
+                   review_applied=True,
                    review_status='reviewed' if cleaned['reviewed'] else 'needs_review')
         old_annotation = annotation_text(row['annotations']) if 'annotations' in row else row.get('annotation', '')
         if cleaned['annotation'] != (old_annotation or ''):

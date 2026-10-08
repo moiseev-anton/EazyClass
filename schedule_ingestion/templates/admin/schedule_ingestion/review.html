@@ -1,6 +1,6 @@
 {% extends "admin/base_site.html" %}{% load static %}
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'schedule_ingestion/review.css' %}?v=3">{% endblock %}
-{% block extrahead %}{{ block.super }}<script src="{% static 'schedule_ingestion/review.js' %}?v=3" defer></script>{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'schedule_ingestion/review.css' %}?v=5">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'schedule_ingestion/review.js' %}?v=5" defer></script>{% endblock %}
 {% block content_title %}{% endblock %}
 {% block content %}
 <div id="review-app" data-url="{% url 'admin:ingestion_review' revision.pk %}" data-number="{{ revision.number }}" data-edit="{{ can_review|yesno:'1,0' }}" data-date="{{ revision.run.reference_date|date:'Y-m-d' }}">
@@ -13,10 +13,16 @@
 <label>Поиск <input id="search" type="search" placeholder="Предмет, преподаватель, исходный текст…"></label>
 <label>Группа <select id="group-filter"><option value="">Все группы</option>{% for group in payload.groups %}<option>{{ group }}</option>{% endfor %}</select></label>
 <label>Дата <input id="date-filter" type="date"></label>
-<label>Показать <select id="status-filter"><option value="">Все записи</option><option value="needs">Требуют ревью</option><option value="auto">Автоисправленные</option><option value="dirty">Мои изменения</option></select></label>
 <button type="button" id="clear-filters">Сбросить</button>
 {% if can_review %}<button type="button" id="add-card">+ Добавить занятия</button>{% endif %}
 </div>
+<div id="status-filter" class="review-tabs" role="group" aria-label="Категории записей">
+<button type="button" data-filter="">Все записи <span class="tab-count">0</span></button>
+<button type="button" data-filter="needs">Нужна проверка <span class="tab-count">0</span></button>
+<button type="button" data-filter="auto">Автоисправленные <span class="tab-count">0</span></button>
+<button type="button" data-filter="dirty">Мои изменения <span class="tab-count">0</span></button>
+</div>
+<div class="review-legend"><label id="unchecked-label" hidden><input type="checkbox" id="unchecked-only"> Только без отметки «Проверено»</label><span class="draft-key">● Не сохранено</span><span class="applied-key">● Сохранено</span></div>
 <div class="review-summary"><span id="row-count"></span><span id="draft-count"></span><button type="button" id="discard-all" hidden>Отменить мои изменения</button></div>
 <div id="save-status" role="status" aria-live="polite"></div>
 <div class="review-scroll"><table id="schedule-table"><thead><tr><th>Исходная ячейка</th><th>Группа</th><th>Дата</th><th>Пара</th><th>Часть</th><th>Подгр.</th><th>Предмет</th><th>Преподаватель</th><th>Кабинет</th><th>Ревью</th></tr></thead></table></div>
