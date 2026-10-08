@@ -8,7 +8,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from kombu.exceptions import OperationalError
 
@@ -37,6 +37,46 @@ class AdminReviewTests(TestCase):
             classroom='100', annotation='Лекция', reviewed='on', reason='Проверена исходная ячейка')
         data.update(values)
         return data
+
+    @override_settings(TABLEPARSER_RUNTIME={'resource_root': '/release/runtime', 'catalog_source': 'api'})
+    def test_source_action_enqueues_parse_only_and_skips_disabled_sources(self):
+        from schedule_ingestion.models import ScheduleSource
+        disabled = ScheduleSource.objects.create(name='Disabled', spreadsheet_id='other', enabled=False)
+        url = reverse('admin:schedule_ingestion_schedulesource_changelist')
+        with patch('schedule_ingestion.tasks.source_parse_chain') as chain:
+            chain.return_value.apply_async.return_value.id = 'test-task'
+            response = self.client.post(url, {'action': 'load_sources', '_selected_action': [self.source.pk, disabled.pk]}, follow=True)
+            self.assertContains(response, 'поставлен в очередь')
+            self.assertContains(response, 'выключен')
+            chain.assert_called_once_with(self.source.pk)
+            chain.return_value.apply_async.assert_called_once_with()
+        self.assertFalse(Publication.objects.exists())
+
+    @override_settings(TABLEPARSER_RUNTIME=None)
+    def test_source_action_rejects_missing_runtime(self):
+        url = reverse('admin:schedule_ingestion_schedulesource_changelist')
+        with patch('schedule_ingestion.tasks.source_parse_chain') as chain:
+            response = self.client.post(url, {'action': 'load_sources', '_selected_action': [self.source.pk]}, follow=True)
+            self.assertContains(response, 'не настроены')
+            chain.assert_not_called()
+
+    @override_settings(TABLEPARSER_RUNTIME={'resource_root': '/release/runtime', 'catalog_source': 'api'})
+    def test_source_action_handles_broker_failure_and_requires_change_permission_and_csrf(self):
+        url = reverse('admin:schedule_ingestion_schedulesource_changelist')
+        data = {'action': 'load_sources', '_selected_action': [self.source.pk]}
+        with patch('schedule_ingestion.tasks.source_parse_chain') as chain:
+            chain.return_value.apply_async.side_effect = OperationalError('offline')
+            response = self.client.post(url, data, follow=True)
+            self.assertContains(response, 'Не удалось подтвердить')
+            csrf_client = Client(enforce_csrf_checks=True)
+            csrf_client.force_login(self.user)
+            self.assertEqual(csrf_client.post(url, data).status_code, 403)
+            viewer = get_user_model().objects.create(username='source-viewer', is_staff=True)
+            viewer.user_permissions.add(Permission.objects.get(codename='view_schedulesource'))
+            self.client.force_login(viewer)
+            chain.reset_mock()
+            self.client.post(url, data)
+            chain.assert_not_called()
 
     def test_review_run_and_history_pages_render_with_escaped_cells(self):
         response = self.client.get(self.url('review') + '?needs_review=1')

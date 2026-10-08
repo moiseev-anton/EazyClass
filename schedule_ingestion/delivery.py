@@ -63,6 +63,14 @@ def deliver_publication(publication_id, phase):
                 summary = deepcopy(notices.result)
             else:
                 summary['publication']['notifications_status'] = 'skipped'
+        if getattr(settings, 'TABLEPARSER_DISABLE_DELIVERY', False):
+            summary['publication']['delivery_disabled'] = True
+            summary['publication']['notifications_status'] = 'skipped'
+            delivery.status = 'skipped'
+            delivery.finished_at = timezone.now()
+            delivery.result = summary
+            delivery.save(update_fields=['status', 'finished_at', 'result'])
+            return deepcopy(summary)
         token = uuid.uuid4()
         delivery.status, delivery.token, delivery.started_at = 'sending', token, timezone.now()
         delivery.save(update_fields=['status', 'token', 'started_at'])

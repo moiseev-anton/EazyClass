@@ -3,6 +3,7 @@ import uuid
 from copy import deepcopy
 
 from django.contrib import admin, messages
+from django.conf import settings
 from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
@@ -17,6 +18,9 @@ from .models import (ExportRevision, Publication, PublicationDelivery, DeliveryR
                      ScheduleSource, ParseRun, ParseAttempt, RunSheet)
 from .admin_forms import SourceForm, LessonReviewForm, UploadRevisionForm, PublicationRangeForm
 from .run_storage import load_export, save_export, StaleRevision
+
+if getattr(settings, 'TABLEPARSER_LOCAL_SANDBOX', False):
+    admin.site.site_header = 'Локальный стенд TableParser · копия БД · рассылки отключены'
 
 
 @admin.register(Publication, PublicationDelivery, DeliveryResolution)
@@ -41,6 +45,30 @@ class ScheduleSourceAdmin(admin.ModelAdmin):
     list_display = ['name', 'spreadsheet_id', 'enabled']
     list_filter = ['enabled']
     search_fields = ['name', 'spreadsheet_id']
+    actions = ['load_sources']
+
+    @admin.action(description='Загрузить листы и разобрать расписание', permissions=['change'])
+    def load_sources(self, request, queryset):
+        from .tasks import runtime_options, source_parse_chain
+        try:
+            runtime_options()
+        except ValueError:
+            self.message_user(request, 'Ресурсы парсера не настроены.', level=messages.ERROR)
+            return
+        for source in queryset.order_by('pk'):
+            if not source.enabled:
+                self.message_user(request, f'Источник «{source}» выключен; запуск пропущен.', level=messages.WARNING)
+                continue
+            try:
+                result = source_parse_chain(source.pk).apply_async()
+            except OperationalError:
+                self.message_user(request, f'Не удалось подтвердить постановку «{source}» в очередь. Проверьте worker перед повтором.', level=messages.ERROR)
+                continue
+            url = reverse('admin:schedule_ingestion_parserun_changelist') + f'?source__id__exact={source.pk}'
+            self.message_user(request, format_html(
+                'Источник «{}» поставлен в очередь ({}). <a href="{}">Открыть запуски</a>. '
+                'Обновите список после обработки. Синхронизация выполняется отдельно из выгрузки.',
+                source, result.id, url))
 
 
 class HistoryInline(admin.TabularInline):
@@ -113,7 +141,8 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
     def render(self, request, obj, template, **context):
         return TemplateResponse(request, 'admin/schedule_ingestion/' + template, dict(
             self.admin_site.each_context(request), opts=self.model._meta, original=obj,
-            revision=obj, title=f'Выгрузка № {obj.number}', **context))
+            revision=obj, title=f'Выгрузка № {obj.number}',
+            delivery_disabled=getattr(settings, 'TABLEPARSER_DISABLE_DELIVERY', False), **context))
 
     def review(self, request, revision_id):
         obj = self.revision(request, revision_id)

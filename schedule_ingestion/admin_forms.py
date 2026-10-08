@@ -9,6 +9,11 @@ class SourceForm(forms.ModelForm):
     class Meta:
         model = ScheduleSource
         fields = '__all__'
+        help_texts = {
+            'spreadsheet_id': 'Часть адреса Google Sheets между /d/ и /edit; не полный URL.',
+            'sheet_names': 'JSON-список названий, например ["1 курс", "2 курс"].',
+            'sheet_gids': 'JSON-карта gid из адресов вкладок, например {"1 курс": 0, "2 курс": 123456}.',
+        }
 
     def clean(self):
         data = super().clean()

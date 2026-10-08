@@ -1,0 +1,51 @@
+name: eazyclass-parser-sandbox
+
+x-app: &app
+  image: ${SANDBOX_IMAGE:?Set the tested sandbox image}
+  env_file:
+    - ${SANDBOX_ENV_FILE:?Set the sandbox-only environment file}
+  environment:
+    DJANGO_SETTINGS_MODULE: eazyclass.local_parser_settings
+    TABLEPARSER_LOCAL_SANDBOX: '1'
+    TABLEPARSER_RESOURCE_ROOT: /release/runtime
+    TABLEPARSER_CATALOG_SOURCE: https://eazyclass.ru/api/v1
+  volumes:
+    - ${SANDBOX_RELEASE_DIR:?Set the release path}:/release:ro
+  depends_on:
+    parser-sandbox-db:
+      condition: service_healthy
+    parser-sandbox-redis:
+      condition: service_healthy
+
+services:
+  parser-sandbox-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tableparser_sandbox
+      POSTGRES_USER: tableparser_sandbox
+      POSTGRES_PASSWORD: ${SANDBOX_DB_PASSWORD:?Set a sandbox-only password}
+    volumes:
+      - sandbox_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tableparser_sandbox -d tableparser_sandbox']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  parser-sandbox-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  web:
+    <<: *app
+    command: python -m django runserver 0.0.0.0:8000 --insecure --noreload
+    ports:
+      - '127.0.0.1:18080:8000'
+  worker:
+    <<: *app
+    command: celery -A eazyclass worker --pool=prefork --concurrency=1 -Q periodic_tasks,default --loglevel=INFO
+
+volumes:
+  sandbox_postgres:

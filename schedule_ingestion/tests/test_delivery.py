@@ -18,6 +18,22 @@ class DeliveryTests(TestCase):
     prepare = PublicationTests.prepare
     apply = PublicationTests.apply
 
+    @override_settings(TABLEPARSER_DISABLE_DELIVERY=True)
+    def test_local_sandbox_skips_both_delivery_phases_without_sending(self):
+        from schedule_ingestion.delivery import deliver_publication
+        publication = self.apply(self.prepare(self.version()))
+        with patch('scheduler.tasks.notification.send_lessons_refresh_notifications.run') as send, \
+                patch('scheduler.tasks.notification.deliver_admin_report') as report:
+            for phase in ('notifications', 'report'):
+                result = deliver_publication(publication.pk, phase)
+                self.assertTrue(result['publication']['delivery_disabled'])
+                self.assertEqual(deliver_publication(publication.pk, phase), result)
+                delivery = PublicationDelivery.objects.get(publication=publication, phase=phase)
+                self.assertEqual(delivery.status, 'skipped')
+                self.assertIsNotNone(delivery.finished_at)
+            send.assert_not_called()
+            report.assert_not_called()
+
     def notified(self, summary):
         return dict(summary, notification_summary={'type': 'NotificationSummary', 'success_count': 2,
             'failed_count': 1, 'blocked_chat_ids': []})

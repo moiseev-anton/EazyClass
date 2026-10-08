@@ -1,0 +1,5 @@
+# Local manual sandbox layered on the already validated server image.
+ARG EAZYCLASS_PARSER_IMAGE=eazyclass-parser-worker:faa9571
+FROM ${EAZYCLASS_PARSER_IMAGE}
+COPY eazyclass/local_parser_settings.py /app/eazyclass/local_parser_settings.py
+COPY schedule_ingestion/ /app/schedule_ingestion/

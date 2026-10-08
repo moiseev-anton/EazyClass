@@ -5,6 +5,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import platform
 import sqlite3
 import sys
 from contextlib import closing, contextmanager
@@ -84,6 +85,10 @@ def main():
     state_hashes = {}
     for name, entry in manifest['runtime_files'].items():
         if entry['role'] != 'code':
+            # Server releases keep the initial import seed outside runtime.
+            # Its logical contents are verified above against PostgreSQL.
+            if name == 'data/knowledge.sqlite3' and not (state / name).exists():
+                continue
             state_hashes[name] = entry['sha256']
             if digest(state / name) != entry['sha256']: raise ValueError('Resource differs: ' + name)
     source_store = SourceStore(source)
@@ -119,7 +124,9 @@ def main():
     (output/'INCOMPLETE.json').write_text('{}',encoding='utf-8')
     implementation = {p.name: digest(p) for p in Path(__file__).resolve().parents[1].glob('*.py')}
     import psycopg2
-    report = dict(postgres_driver_version=psycopg2.__version__, status='running', backend=connection.vendor, counts=snapshot.counts,
+    report = dict(python_version=platform.python_version(),
+                  runtime_contains_sqlite=(state/'data/knowledge.sqlite3').exists(),
+                  postgres_driver_version=psycopg2.__version__, status='running', backend=connection.vendor, counts=snapshot.counts,
                   source_logical_sha256=snapshot.sha256, source_file_sha256=before,
                   reader_contract_equal=True, historical_catalogs_equal=True, cases=[],
                   implementation=implementation,
