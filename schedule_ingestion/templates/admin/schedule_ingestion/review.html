@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p><a href="{% url 'admin:schedule_ingestion_parserun_change' revision.run_id %}">Запуск {{ revision.run_id }}</a> · Версия {{ revision.number }} · {{ revision.created_at }} · {{ revision.author }}</p>
+{% if revision.number != revision.run.head_revision %}<p class="errornote">Это историческая версия. Сохранить правки поверх неё нельзя; публикация именно этой версии доступна отдельно.</p>{% endif %}
+<p>Группы: {{ payload.groups|join:", " }}. Занятий: {{ payload.lessons|length }}. Требуют ревью: {{ needs_review }}.</p>
+<p>{{ revision.reason }}</p>
+<p><a href="{% url 'admin:ingestion_download' revision.pk %}">Скачать полную выгрузку JSON</a>
+{% if can_review %} · <a href="{% url 'admin:ingestion_add' revision.pk %}">Добавить занятие</a> · <a href="{% url 'admin:ingestion_upload' revision.pk %}">Загрузить исправленную полную выгрузку</a>{% endif %}
+{% if can_publish %} · <a href="{% url 'admin:ingestion_publish' revision.pk %}">Опубликовать эту версию</a>{% endif %}</p>
+<p>Строки, требующие ревью, также публикуются. Сохранение исправлений создаёт полную версию и не меняет память или модели парсера.</p>
+<p><a href="?">Все занятия</a> · <a href="?needs_review=1">Только требующие ревью</a></p>
+<div style="overflow-x:auto"><table>
+<thead><tr><th>Группа</th><th>Дата</th><th>Пара / часть / подгруппа</th><th>Предмет</th><th>Преподаватель</th><th>Кабинет</th><th>Ревью</th><th>Действия</th></tr></thead>
+<tbody>{% for index, row in page %}<tr>
+<td>{{ row.group }}</td><td style="white-space:nowrap">{{ row.date }}</td><td style="white-space:nowrap">{{ row.lesson_number }} / {{ row.part|default:0 }} / {{ row.subgroup|default:0 }}</td>
+<td>{{ row.subject|default_if_none:"" }}{% if row.raw_cell %}<details><summary>Исходная ячейка</summary><p>{{ row.raw_cell }}</p></details>{% endif %}</td><td>{{ row.teacher|default_if_none:"" }}</td><td>{{ row.classroom|default_if_none:"" }}</td>
+<td>{% if row.review_status == 'needs_review' %}Требует ревью{% elif row.review_status == 'reviewed' %}Проверено{% else %}Без отметки{% endif %}{% if row.review_reason %}<details><summary>Замечание парсера</summary><p>{{ row.review_reason }}</p></details>{% endif %}</td>
+<td>{% if can_review %}<a href="{% url 'admin:ingestion_edit' revision.pk index %}">Исправить</a>{% endif %}</td>
+</tr>{% empty %}<tr><td colspan="8">Занятий в выбранном списке нет.</td></tr>{% endfor %}</tbody></table></div>
+<p>Страница {{ page.number }} из {{ page.paginator.num_pages }}.
+{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if only_review %}&amp;needs_review=1{% endif %}">Назад</a>{% endif %}
+{% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if only_review %}&amp;needs_review=1{% endif %}">Далее</a>{% endif %}</p>
+<h2>Публикации этой версии</h2><ul>{% for publication in publications %}
+<li><a href="{% url 'admin:schedule_ingestion_publication_change' publication.pk %}">{{ publication.pk }}</a>: {{ publication.status }}, {{ publication.start_date }} — {{ publication.end_date|default:"без верхней границы" }}</li>
+{% empty %}<li>Эта версия ещё не публиковалась.</li>{% endfor %}</ul>
+{% endblock %}

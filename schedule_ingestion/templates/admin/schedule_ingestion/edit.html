@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p><a href="{% url 'admin:ingestion_review' revision.pk %}">Вернуться к версии {{ revision.number }}</a></p>
+{% if latest.number != revision.number %}<p class="errornote">Есть более новая версия: <a href="{% url 'admin:ingestion_review' latest.pk %}">№ {{ latest.number }}</a>. Ваши правки нельзя сохранить поверх устаревшей версии.</p>{% endif %}
+{% if upload %}<h2>Замена полной выгрузки</h2><p>Загрузите все группы и занятия, включая неизменённые. Группу без занятий оставьте в groups, если её расписание нужно очистить при публикации.</p>
+{% else %}<h2>Исправление занятия</h2>
+<p>Исходная ячейка:</p><pre style="white-space:pre-wrap">{{ row.raw_cell }}</pre>{% if row.review_reason %}<p>Исходное замечание парсера: {{ row.review_reason }}</p>{% endif %}{% endif %}
+<p>Будет создана новая полная версия. Исходные замечания парсера сохраняются для истории. Отметка «Строка проверена» не является подтверждением для обучения.</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}
+<input type="submit" value="Сохранить новую версию"></form>
+{% endblock %}

@@ -98,6 +98,9 @@ class ScheduleSource(models.Model):
     sheet_gids = models.JSONField(default=dict)
     enabled = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.name
+
 
 class ImmutableRecord(models.Model):
     class Meta:
@@ -152,6 +155,8 @@ class ExportRevision(ImmutableRecord):
     sha256 = models.CharField(max_length=64)
 
     class Meta:
+        permissions = [('review_export', 'Can review a parser export'),
+                       ('publish_export', 'Can publish a parser export')]
         constraints = [
             models.UniqueConstraint(fields=['run', 'number'], name='ingestion_export_number'),
             models.UniqueConstraint(fields=['run', 'request_id'], name='ingestion_export_request'),
