@@ -4,7 +4,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
-$envPath = Join-Path $projectRoot 'data/tableparser-sandbox/compose.secret'
+$envPath = Join-Path $projectRoot 'tableparser-releases/compose.secret'
+if (-not (Test-Path -LiteralPath $envPath)) {
+    $envPath = Join-Path $projectRoot 'data/tableparser-sandbox/compose.secret'
+}
 if (-not (Test-Path -LiteralPath $envPath)) {
     throw 'Sandbox has not been initialized. See docs/tableparser-local-sandbox.md.'
 }

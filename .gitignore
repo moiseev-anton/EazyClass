@@ -1,5 +1,6 @@
 # Игнорирование виртуальной среды
 venv/
+tableparser-releases/
 .env.dev
 .env
 .htpasswd
