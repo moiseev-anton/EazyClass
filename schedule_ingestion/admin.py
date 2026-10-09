@@ -21,7 +21,8 @@ from .admin_display import (HistoryPresentation, PublicationPresentation, Delive
                             instant, pretty, record_link, STATUS)
 
 if getattr(settings, 'TABLEPARSER_LOCAL_SANDBOX', False):
-    admin.site.site_header = 'Локальный стенд TableParser · копия БД · рассылки отключены'
+    delivery_label = 'рассылки отключены' if getattr(settings, 'TABLEPARSER_DISABLE_DELIVERY', True) else 'реальная рассылка включена'
+    admin.site.site_header = 'Локальный стенд TableParser · копия БД · ' + delivery_label
 
 
 class IngestionHistoryAdmin(HistoryPresentation, admin.ModelAdmin):

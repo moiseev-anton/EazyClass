@@ -1,4 +1,4 @@
-"""Local manual sandbox only: separate database/Redis, no outgoing deliveries."""
+"""Local manual sandbox: isolated DB/Redis, delivery explicitly opt-in."""
 import os
 
 from django.core.exceptions import ImproperlyConfigured
@@ -21,7 +21,7 @@ for alias, cache in CACHES.items():
     cache['LOCATION'] = 'redis://parser-sandbox-redis:6379/4'
 REDIS_SCRAPY_URL = 'redis://parser-sandbox-redis:6379/2'
 TELEGRAM_REDIS_STORAGE_URL = 'redis://parser-sandbox-redis:6379/3'
-TABLEPARSER_DISABLE_DELIVERY = True
+TABLEPARSER_DISABLE_DELIVERY = os.environ.get('SANDBOX_ENABLE_DELIVERY') != '1'
 TABLEPARSER_LOCAL_SANDBOX = True
 TABLEPARSER_PUBLIC_BASE_URL = 'http://127.0.0.1:18080'
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver']
@@ -33,4 +33,9 @@ CSRF_COOKIE_NAME = 'tableparser_sandbox_csrf'
 SECURE_SSL_REDIRECT = False
 DEBUG = False
 TELEGRAM_BOT_TOKEN = TELEGRAM_ADMIN_BOT_TOKEN = VK_BOT_TOKEN = None
+if not TABLEPARSER_DISABLE_DELIVERY:
+    TELEGRAM_BOT_TOKEN = os.environ.get('SANDBOX_TELEGRAM_BOT_TOKEN')
+    TELEGRAM_ADMIN_BOT_TOKEN = os.environ.get('SANDBOX_TELEGRAM_ADMIN_BOT_TOKEN')
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_ADMIN_BOT_TOKEN:
+        raise ImproperlyConfigured('Sandbox delivery requires both sandbox Telegram bot tokens')
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
