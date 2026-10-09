@@ -134,6 +134,41 @@ class RecoveryTests(TestCase):
                     self.assertEqual(report.call_args.args[0]['publication']['start'], publication.start_date.isoformat())
         self.assertEqual(Lesson.objects.count(), 1)
 
+    def check_report_failure_recovery(self, decision):
+        from schedule_ingestion.delivery import DeliveryUncertain
+        from schedule_ingestion.tasks import resume_publication_chain
+        publication = self.apply(self.prepare(self.version()))
+        def notified(summary):
+            return dict(summary, notification_summary={'type': 'NotificationSummary',
+                'success_count': 1, 'failed_count': 0, 'blocked_chat_ids': []})
+        with patch('scheduler.tasks.notification.send_lessons_refresh_notifications.run', side_effect=notified) as notify:
+            with patch('scheduler.tasks.notification.deliver_admin_report', side_effect=TimeoutError('Outcome unknown')) as report:
+                with self.assertRaises(TimeoutError):
+                    resume_publication_chain(publication.pk).apply(throw=True).get()
+                with self.assertRaises(DeliveryUncertain):
+                    resume_publication_chain(publication.pk).apply(throw=True).get()
+                notify.assert_called_once()
+                report.assert_called_once()
+            publication.refresh_from_db()
+            self.assertEqual(publication.status, 'applied')
+            self.assertEqual(publication.deliveries.get(phase='notifications').status, 'completed')
+            failed = publication.deliveries.get(phase='report')
+            self.assertEqual((failed.status, failed.error_type), ('uncertain', 'TimeoutError'))
+            self.resolve(publication, failed, decision=decision, reason='Checked administrative bot outcome')
+            with patch('scheduler.tasks.notification.deliver_admin_report', return_value=({}, {'success_count': 1})) as recovered:
+                for _ in range(2):
+                    resume_publication_chain(publication.pk).apply(throw=True).get()
+                self.assertEqual(recovered.call_count, 1 if decision == 'retry' else 0)
+                notify.assert_called_once()
+        self.assertEqual(publication.deliveries.get(phase='report').status,
+                         'completed' if decision == 'retry' else 'skipped')
+
+    def test_report_timeout_can_be_retried_without_resending_notifications(self):
+        self.check_report_failure_recovery('retry')
+
+    def test_report_timeout_can_be_skipped_without_resending_notifications(self):
+        self.check_report_failure_recovery('skip')
+
 
 @skipUnless(apps.is_installed('django_celery_beat') and connection.vendor == 'postgresql', 'Requires PostgreSQL')
 class ConcurrentRecoveryTests(TransactionTestCase):
