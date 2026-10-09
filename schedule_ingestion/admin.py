@@ -44,7 +44,9 @@ class IngestionHistoryAdmin(HistoryPresentation, admin.ModelAdmin):
 class ScheduleSourceAdmin(admin.ModelAdmin):
     form = SourceForm
     change_form_template = 'admin/schedule_ingestion/source_form.html'
-    list_display = ['name', 'spreadsheet_id', 'enabled']
+    list_display = ['id', 'name', 'spreadsheet_id', 'enabled']
+    list_display_links = ['id', 'name']
+    readonly_fields = ['id']
     list_filter = ['enabled']
     search_fields = ['name', 'spreadsheet_id']
     actions = ['load_sources']

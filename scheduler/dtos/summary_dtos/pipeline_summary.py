@@ -119,9 +119,8 @@ class PipelineSummary(BaseSummary):
             p = self.publication
             parts.append('\n'.join([
                 '📄 Публикация TableParser:',
-                f"публикация: {p['id']}",
-                f"запуск: {p['run_id']}",
-                f"версия: {p['revision_id']} (№ {p['revision_number']})",
+                f"выгрузка: {escape(p.get('captured_at') or 'дата не указана')}",
+                f"версия: № {p['revision_number']}",
                 f"статус: {p['status']}",
                 f"период: {p['start']} — {p['end'] or 'без верхней границы'}",
                 f"занятий требуют ревью: {p['needs_review_count']}",

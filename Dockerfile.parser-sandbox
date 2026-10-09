@@ -3,3 +3,4 @@ ARG EAZYCLASS_PARSER_IMAGE=eazyclass-parser-worker:faa9571
 FROM ${EAZYCLASS_PARSER_IMAGE}
 COPY eazyclass/local_parser_settings.py /app/eazyclass/local_parser_settings.py
 COPY schedule_ingestion/ /app/schedule_ingestion/
+COPY scheduler/dtos/summary_dtos/pipeline_summary.py /app/scheduler/dtos/summary_dtos/pipeline_summary.py

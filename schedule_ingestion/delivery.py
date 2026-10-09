@@ -25,6 +25,7 @@ def pipeline_summary(publication):
             skipped=0, no_change=0, errors=0, total_lessons=len(payload['lessons']),
             closing_reason='tableparser_' + publication.status),
         publication=dict(id=str(publication.pk), run_id=str(revision.run_id),
+            captured_at=timezone.localtime(revision.run.captured_at).strftime('%d.%m.%Y %H:%M'),
             revision_id=str(revision.pk), revision_number=revision.number, status=publication.status,
             start=publication.start_date.isoformat(), end=publication.end_date.isoformat() if publication.end_date else None,
             needs_review_count=sum(row.get('review_status') == 'needs_review' for row in payload['lessons'])))

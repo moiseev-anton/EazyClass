@@ -55,7 +55,8 @@ class DeliveryTests(TestCase):
             self.assertEqual(summary['publication']['needs_review_count'], 1)
             from scheduler.dtos import PipelineSummary
             message = PipelineSummary.deserialize(summary).to_message()
-            self.assertIn(str(publication.revision_id), message)
+            self.assertNotIn(str(publication.revision_id), message)
+            self.assertIn(summary['publication']['captured_at'], message)
             self.assertIn('ошибки=1', message)
 
     def test_send_error_is_uncertain_and_retry_does_not_send_again(self):
