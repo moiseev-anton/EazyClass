@@ -23,7 +23,8 @@ def digest(payload):
 
 
 def record_inputs(*, source_id, sheets, captured_at, reference_date, knowledge_as_of,
-                  parser_manifest, using='default', expected_configuration=None, acquisition_id=None):
+                  parser_manifest, using='default', expected_configuration=None, acquisition_id=None,
+                  resolved_range=None, force=False):
     """sheets maps EVERY configured sheet name to successfully fetched string rows.
 
     A missing/failed sheet must never be represented by an empty successful one.
@@ -40,6 +41,11 @@ def record_inputs(*, source_id, sheets, captured_at, reference_date, knowledge_a
     if not isinstance(parser_manifest, dict) or not parser_manifest:
         raise ValueError('Parser release/resource manifest is required')
     manifest = encode(parser_manifest)
+    if type(force) is not bool:
+        raise ValueError('force must be a boolean')
+    if resolved_range is not None:
+        from scheduler.dtos.lesson_sync_range import LessonSyncRange
+        resolved_range = LessonSyncRange.from_dict(resolved_range).to_dict()
     with transaction.atomic(using=using):
         source = ScheduleSource.objects.using(using).select_for_update().get(pk=source_id)
         if acquisition_id is not None:
@@ -48,6 +54,8 @@ def record_inputs(*, source_id, sheets, captured_at, reference_date, knowledge_a
             if previous:
                 if previous.source_id != source.pk:
                     raise ValueError('Acquisition ID belongs to another source')
+                if previous.sync_range != resolved_range or previous.force_refresh != force:
+                    raise ValueError('Acquisition processing options changed')
                 return previous
         configuration = dict(spreadsheet_id=source.spreadsheet_id,
                              sheet_names=source.sheet_names, sheet_gids=source.sheet_gids)
@@ -69,16 +77,23 @@ def record_inputs(*, source_id, sheets, captured_at, reference_date, knowledge_a
                     any(not isinstance(cell, str) for cell in row) for row in rows):
                 raise ValueError('Sheet rows must be lists of strings')
             payloads.append(encode(rows))
+        from .sheet_selection import select_sheets
+        selection = select_sheets(source_id=source.pk, configuration=configuration,
+            hashes={name: digest(payload) for name, payload in zip(names, payloads)},
+            reference_date=reference_date, manifest=manifest, resolved_range=resolved_range,
+            force=force, using=using)
         run = ParseRun.objects.using(using).create(source=source, acquisition_id=acquisition_id,
             source_configuration=encode(configuration),
             captured_at=captured_at, reference_date=reference_date,
-            knowledge_as_of=knowledge_as_of, parser_manifest=manifest)
+            knowledge_as_of=knowledge_as_of, parser_manifest=manifest,
+            sync_range=resolved_range, force_refresh=force)
         for position, (name, payload) in enumerate(zip(names, payloads)):
             content, _ = SheetContent.objects.using(using).get_or_create(
                 sha256=digest(payload), defaults=dict(payload=payload))
             if content.payload != payload:
                 raise ValueError('Stored sheet content hash mismatch')
-            RunSheet.objects.using(using).create(run=run, name=name, position=position, content=content)
+            RunSheet.objects.using(using).create(run=run, name=name, position=position, content=content,
+                selected=selection[name] != RunSheet.Selection.UNCHANGED, selection_reason=selection[name])
         return run
 
 
@@ -92,7 +107,8 @@ def load_tables(run_id, *, using='default'):
     for row in rows:
         if digest(row.content.payload) != row.content_id:
             raise ValueError('Stored sheet content hash mismatch')
-        tables.append(RawTable(row.name, json.loads(row.content.payload), run.reference_date))
+        if row.selected:
+            tables.append(RawTable(row.name, json.loads(row.content.payload), run.reference_date))
     return tables
 
 

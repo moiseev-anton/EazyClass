@@ -51,7 +51,7 @@ class ScheduleSourceAdmin(admin.ModelAdmin):
     search_fields = ['name', 'spreadsheet_id']
     actions = ['load_sources']
 
-    @admin.action(description='Загрузить листы и разобрать расписание', permissions=['change'])
+    @admin.action(description='Загрузить все листы и разобрать расписание', permissions=['change'])
     def load_sources(self, request, queryset):
         from .tasks import runtime_options, source_parse_chain
         try:
@@ -98,7 +98,11 @@ class AttemptInline(HistoryInline):
 class SheetInline(HistoryInline):
     model = RunSheet
     verbose_name_plural = 'Загруженные листы'
-    fields = readonly_fields = ['name', 'position', 'content_id']
+    fields = readonly_fields = ['name', 'selection_label', 'position', 'content_id']
+
+    @admin.display(description='Обработка')
+    def selection_label(self, obj):
+        return obj.get_selection_reason_display()
 
 
 class ExportInline(HistoryInline):
@@ -114,18 +118,18 @@ class ExportInline(HistoryInline):
 
 @admin.register(ParseRun)
 class ParseRunAdmin(IngestionHistoryAdmin):
-    list_display = ['run_label', 'source', 'captured_at', 'head_revision', 'latest_export']
+    list_display = ['run_label', 'source', 'captured_at', 'sheet_summary', 'head_revision', 'latest_export']
     ordering = ['-captured_at', '-created_at']
     list_select_related = ['source']
     search_fields = ['source__name']
-    readonly_fields = ['run_label', 'latest_export', 'configuration_json', 'manifest_json']
+    readonly_fields = ['run_label', 'latest_export', 'configuration_json', 'manifest_json', 'sheet_summary']
     fieldsets = [
-        ('Запуск', {'fields': ['source', 'captured_at', 'head_revision', 'latest_export'],
+        ('Запуск', {'fields': ['source', 'captured_at', 'sheet_summary', 'head_revision', 'latest_export'],
                     'description': 'Время получения исходных листов и созданные из них версии выгрузки.'}),
         ('Воспроизведение и диагностика', {'classes': ['collapse'],
             'description': 'Created at — регистрация запуска. Reference date — опорная дата определения года. '
                            'Knowledge as of — срез знаний, доступных парсеру. Настройки и манифест фиксируют условия разбора.',
-            'fields': ['created_at', 'reference_date', 'knowledge_as_of', 'configuration_json', 'manifest_json', 'id', 'acquisition_id']})]
+            'fields': ['created_at', 'reference_date', 'knowledge_as_of', 'sync_range', 'force_refresh', 'configuration_json', 'manifest_json', 'id', 'acquisition_id']})]
     list_filter = ['source']
     date_hierarchy = 'captured_at'
     inlines = [SheetInline, AttemptInline, ExportInline]
@@ -134,10 +138,25 @@ class ParseRunAdmin(IngestionHistoryAdmin):
     def run_label(self, obj):
         return instant(obj.captured_at)
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('sheets')
+
+    @admin.display(description='Листы')
+    def sheet_summary(self, obj):
+        sheets = list(obj.sheets.all())
+        selected = sum(sheet.selected for sheet in sheets)
+        if sheets and not selected:
+            return f'Без изменений — пропущено {len(sheets)}'
+        return f'На разбор {selected} из {len(sheets)}'
+
     @admin.display(description='Последняя выгрузка')
     def latest_export(self, obj):
         revision = obj.exports.order_by('-number').first()
-        return format_html('<a href="{}">Открыть v{}</a>', reverse('admin:ingestion_review', args=[revision.pk]), revision.number) if revision else 'Пока нет выгрузки'
+        if revision:
+            return format_html('<a href="{}">Открыть v{}</a>', reverse('admin:ingestion_review', args=[revision.pk]), revision.number)
+        if obj.sheets.exists() and not any(sheet.selected for sheet in obj.sheets.all()):
+            return 'Не требуется'
+        return 'Пока нет выгрузки'
 
     @admin.display(description='Настройки источника на момент загрузки')
     def configuration_json(self, obj):

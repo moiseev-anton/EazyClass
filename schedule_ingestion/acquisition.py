@@ -10,12 +10,20 @@ from .parser_runtime import runtime_manifest
 from .run_storage import record_inputs
 
 
-def acquire_source(source_id, *, acquisition_id, resource_root, catalog_source, using='default'):
+def acquire_source(source_id, *, acquisition_id, resource_root, catalog_source, using='default',
+                   resolved_range=None, force=False):
+    if type(force) is not bool:
+        raise ValueError('force must be a boolean')
+    if resolved_range is not None:
+        from scheduler.dtos.lesson_sync_range import LessonSyncRange
+        resolved_range = LessonSyncRange.from_dict(resolved_range).to_dict()
     acquisition_id = uuid.UUID(str(acquisition_id))
     previous = ParseRun.objects.using(using).filter(acquisition_id=acquisition_id).first()
     if previous:
         if previous.source_id != source_id:
             raise ValueError('Acquisition ID belongs to another source')
+        if previous.sync_range != resolved_range or previous.force_refresh != force:
+            raise ValueError('Acquisition processing options changed')
         return previous
     source = ScheduleSource.objects.using(using).get(pk=source_id)
     configuration = deepcopy(dict(spreadsheet_id=source.spreadsheet_id,
@@ -33,4 +41,4 @@ def acquire_source(source_id, *, acquisition_id, resource_root, catalog_source, 
     return record_inputs(source_id=source.pk, sheets=rows, captured_at=started_at,
         reference_date=timezone.localtime(started_at).date(), knowledge_as_of=started_at,
         parser_manifest=manifest, expected_configuration=configuration,
-        acquisition_id=acquisition_id, using=using)
+        acquisition_id=acquisition_id, using=using, resolved_range=resolved_range, force=force)

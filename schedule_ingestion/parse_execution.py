@@ -41,6 +41,8 @@ def execute_parse(run_id, *, resource_root, catalog_source, using='default'):
             raise ParseBusy('This run is already being parsed')
         if run.head_revision:
             raise ValueError('Run already has an export; do not replace it with automatic parsing')
+        if not run.sheets.using(using).filter(selected=True).exists():
+            raise ValueError('No sheets selected for parsing')
         attempt = ParseAttempt.objects.using(using).create(run=run)
     try:
         from eazyclass_tableparser import RuntimeResources, create_context, parse_tables
