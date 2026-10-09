@@ -7,6 +7,26 @@ EazyClass — серверная часть системы для работы �
 
 Правила, карта событий и этапы улучшения логирования: [docs/logging.md](docs/logging.md).
 
+## TableParser: загрузка и ревью расписания
+
+Настройка основной локальной среды и production:
+[docs/tableparser-env-setup.md](docs/tableparser-env-setup.md).
+Порядок серверного выпуска, первоначального импорта знаний и отката:
+[docs/tableparser-server-release.md](docs/tableparser-server-release.md).
+
+- `docker-compose.tableparser.yml` — необходимое дополнение к основному или
+  dev Compose: выбирает образы с пакетом парсера и подключает ресурсы только
+  для чтения. Обычный Dockerfile пакет TableParser сам не устанавливает.
+- `scripts/tableparser-local.ps1` — управление основной локальной средой
+  с этим дополнением; админка на порту 8000.
+- `docker-compose.parser-sandbox.yml`, `Dockerfile.parser-sandbox` и
+  `scripts/parser-sandbox.ps1` — отдельный стенд на порту 18080. Для production
+  не используются; сохранены для изолированной ручной проверки и диагностики.
+- `tools/tableparser-validation/` — инструменты воспроизводимых проверок выпуска.
+
+Комплект `tableparser-releases/`, локальные env-файлы и резервные копии не входят
+в Git. Перенос кода через Git не переносит обученные ресурсы и знания парсера.
+
 ## Возможности
 
 - хранение учебного расписания: факультеты, группы, преподаватели, аудитории,

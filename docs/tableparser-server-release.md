@@ -1,5 +1,12 @@
 # Выпуск TableParser на сервер
 
+Текущая основная локальная среда настроена и проверена вручную владельцем.
+Актуальные подготовленные образы приложения: `eazyclass-parser:b415ca5` и
+`eazyclass-parser-worker:b415ca5`; комплект ресурсов — 0.1.1. Они собраны локально,
+но ещё не перенесены на production. Разделы с образами `faa9571` ниже — история
+первоначальной репетиции, а не рекомендация использовать старый интерфейс.
+Текущие параметры запуска: [настройка окружения](tableparser-env-setup.md).
+
 ## Что подготовлено
 
 Сервер использует память в PostgreSQL. Неизменяемый комплект выпуска содержит
@@ -73,6 +80,7 @@ python manage.py import_tableparser_knowledge /opt/tableparser-release/seed/know
 python manage.py import_tableparser_knowledge /opt/tableparser-release/seed/knowledge.sqlite3 --apply
 python manage.py check_tableparser_release /opt/tableparser-release/release.json \
   --expected-sha256 APPROVED_MANIFEST_SHA256 --require-imported
+python manage.py collectstatic --noinput
 ```
 
 4. Проверить разбор сохранённого контрольного входа и интерфейс ревью без
@@ -106,6 +114,9 @@ TABLEPARSER_PUBLIC_BASE_URL=https://YOUR_EAZYCLASS_HOST
 Включение процессов: `up -d --no-build django celery-worker celery-beat flower`.
 Ключ `--no-build` обязателен: базовый compose содержит инструкции сборки обычных
 образов. Overlay сохраняет существующие тома static/media/rclone и LOG_SERVICE.
+`collectstatic` выполнить из нового Django-образа в общий том статики перед
+открытием обновлённой админки. Новые JS/CSS не появляются в production только
+от замены образа; локальный runserver обслуживает их иначе.
 Никакие записи PeriodicTask этим файлом не создаются.
 
 ## Следующие версии и откат
