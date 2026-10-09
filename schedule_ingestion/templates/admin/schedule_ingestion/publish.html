@@ -1,17 +1,31 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/base_site.html" %}{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'schedule_ingestion/publication.css' %}?v=1">{% endblock %}
+{% block content_title %}{% endblock %}
 {% block content %}
-<p><a href="{% url 'admin:ingestion_review' revision.pk %}">Вернуться к выгрузке</a></p>
-<h2>Публикация версии № {{ revision.number }}</h2>
-{% if revision.number != revision.run.head_revision %}<p class="errornote">Выбрана историческая версия. Она может заменить более новые данные расписания.</p>{% endif %}
-<p>Группы: {{ payload.groups|join:", " }}. Занятий во всей выгрузке: {{ payload.lessons|length }}. Требуют ревью: {{ needs_review }} — они тоже будут опубликованы.</p>
-<p>Для перечисленных групп занятия, отсутствующие в выгрузке, удаляются во всём выбранном периоде. Если период — «сегодня и далее», отсутствие ноябрьских занятий удалит их, даже если выгрузка содержит только октябрь.</p>
+<div class="publication-page">
+<a class="back-link" href="{% url 'admin:ingestion_review' revision.pk %}">← К выгрузке</a>
+<header class="publication-heading"><h1>Выгрузка {{ revision.run.captured_at|date:'d.m.Y H:i' }} <span>v{{ revision.number }}</span></h1><p>Публикация расписания</p></header>
+{% if revision.number != revision.run.head_revision %}<p class="errornote">Историческая версия — может заменить более новые данные.</p>{% endif %}
+<section class="publication-overview" aria-label="Состав выгрузки">
+<div class="publication-groups"><h2>Группы <span>{{ payload.groups|length }}</span></h2><div class="group-chips">{% for group in payload.groups %}<span>{{ group }}</span>{% empty %}<span>Нет групп</span>{% endfor %}</div></div>
+<div class="publication-metrics"><div><strong>{{ payload.lessons|length }}</strong><span>занятий в выгрузке</span></div><div class="review-metric"><strong>{{ needs_review }}</strong><span>требуют ревью</span><small>Тоже будут опубликованы</small></div></div>
+</section>
+<section class="publication-period">
 {% if preview %}
-<h3>Проверьте период перед отправкой</h3><p>С {{ preview.bounds.start }}{% if preview.bounds.end %} по {{ preview.bounds.end }}, включительно{% else %} и далее, без верхней границы{% endif %}.</p>
-<p>Публикуется именно версия № {{ revision.number }} ({{ revision.pk }}).
-{% if delivery_disabled %}На локальном стенде изменится только копия расписания. Уведомления и административный отчёт будут пропущены.
-{% else %}После синхронизации выполнятся уведомления и административный отчёт.{% endif %}</p>
+<h2>Период публикации</h2>
+<div class="period-grid"><div class="period-date"><span>С</span><strong>{{ display_bounds.start|date:'d.m.Y' }}</strong></div><div class="period-date"><span>По</span><strong>{% if display_bounds.end %}{{ display_bounds.end|date:'d.m.Y' }}{% else %}Без ограничения{% endif %}</strong></div></div>
+<p class="period-help">Обе границы включаются.</p>
+<p class="period-effect">Расписание выбранных групп в этом периоде будет заменено выгрузкой.</p>
 {{ form.non_field_errors }}
-<form method="post">{% csrf_token %}<input type="hidden" name="confirmation" value="{{ confirmation }}"><input type="submit" value="Подтвердить публикацию"></form>
-<p><a href="{% url 'admin:ingestion_publish' revision.pk %}">Изменить период</a></p>
-{% else %}<form method="post">{% csrf_token %}{{ form.as_p }}<input type="submit" value="Проверить период"></form>{% endif %}
+<form method="post">{% csrf_token %}<input type="hidden" name="confirmation" value="{{ confirmation }}"><div class="publication-actions"><button type="submit" class="primary">Подтвердить публикацию</button><a href="{% url 'admin:ingestion_publish' revision.pk %}">Изменить период</a></div></form>
+{% else %}
+<h2>Период публикации</h2>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}
+<div class="period-grid"><div class="offset-field"><label for="{{ form.start_day_offset.id_for_label }}">Начало</label>{{ form.start_day_offset }}{{ form.start_day_offset.errors }}</div><div class="offset-field"><label for="{{ form.end_day_offset.id_for_label }}">Конец</label>{{ form.end_day_offset }}{{ form.end_day_offset.errors }}</div></div>
+<p class="period-help">Сдвиги в днях от сегодня. Пустой конец — без верхней границы. Обе границы включаются.</p>
+<div class="publication-actions"><button type="submit" class="primary">Проверить период</button></div></form>
+{% endif %}
+</section>
+{% if delivery_disabled %}<p class="publication-footnote">Локальный стенд · рассылки отключены</p>{% endif %}
+</div>
 {% endblock %}

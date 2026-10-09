@@ -26,6 +26,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function isAuto(row) { return row.review_status === 'confirmed' || Boolean(row.automatic_review_rule) || [true, 'True', 'true'].includes(row.teacher_proposal_applied) || ['confirmed','ml_proposal','extraction_ml_proposal','extraction_identity_proposal','prior_confirmation_proposal'].includes(row.parse_source) || (row.parse_source || '').startsWith('verified_'); }
   const wasRequired = card => card.rows.some(row => row.review_required === true || row.review_status === 'needs_review' || row.review_original_rows?.some(r => r.review_status === 'needs_review'));
+  function autoReasons(row) {
+    if (!isAuto(row)) return [];
+    const rules = {
+      teacher_catalog_format_v1:'Имя преподавателя приведено к формату справочника',
+      verified_teacher_initials_v2:'Преподаватель исправлен по ранее подтверждённым инициалам',
+      verified_classroom_visual_v1:'Кабинет исправлен по ранее подтверждённому сходному написанию',
+      verified_classroom_extra_digit_v1:'Исправлена лишняя цифра в кабинете по прежним подтверждениям',
+      verified_subject_spelling_v1:'Написание предмета исправлено по прежним подтверждениям',
+      verified_subject_parentheses_v1:'Скобки в предмете приняты по прежним подтверждениям',
+      verified_subject_parentheses_layout_v1:'Расположение скобок принято по прежним подтверждениям',
+      verified_absent_teacher_v1:'Отсутствие преподавателя принято по прежним подтверждениям'
+    };
+    const reasons = String(row.automatic_review_rule || '').split(';').filter(Boolean).map(rule => rules[rule] || 'Применено правило: ' + rule);
+    if ([true,'True','true'].includes(row.teacher_proposal_applied) && row.teacher_proposal_reason) reasons.push(row.teacher_proposal_reason);
+    if (['extraction_ml_proposal','extraction_identity_proposal'].includes(row.parse_source) && row.extraction_proposal_reason) reasons.push(row.extraction_proposal_reason);
+    if (!reasons.length) {
+      const sources = {confirmed:'Использован ранее подтверждённый разбор',prior_confirmation_proposal:'Подставлен результат прежнего подтверждения',ml_proposal:'Применено предложение модели',extraction_ml_proposal:'Применено предложенное моделью выделение полей',extraction_identity_proposal:'Применено предложение выделения полей'};
+      reasons.push(sources[row.parse_source] || 'Подробная причина автоисправления в выгрузке не указана');
+    }
+    return reasons;
+  }
   const applied = card => card.rows.some(row => row.review_applied === true);
   const changedCard = card => Boolean(drafts[keyOf(card)]) || applied(card);
   function matchesSearch(card) {
@@ -85,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const review = el('td', undefined, 'reason'); review.rowSpan = visibleRows.length;
           review.append(el('span', !rows.length ? 'Удалено' : needs ? 'Требует ревью' : rows.every(r => r.review_status === 'reviewed') ? 'Проверено' : card.rows.some(isAuto) ? 'Автоисправлено' : 'Разобрано', 'badge'));
           const reasons = [...new Set(card.rows.map(r => r.review_reason).filter(Boolean))]; if (reasons.length) review.append(el('div', reasons.join('; '), 'muted')); tr.append(review);
+          const automatic = [...new Set(card.rows.flatMap(autoReasons))].filter(reason => !reasons.includes(reason));
+          if (automatic.length) review.append(el('div', automatic.join('; '), 'muted'));
           if (applied(card)) review.append(el('div', 'Правки сохранены', 'applied-label'));
         }
         section.append(tr);

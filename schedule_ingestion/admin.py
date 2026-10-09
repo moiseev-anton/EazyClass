@@ -323,5 +323,7 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
             else:
                 preview = dict(revision=str(obj.pk), user=str(request.user.pk), request=str(uuid.uuid4()), bounds=bounds.to_dict())
                 token = signing.dumps(preview, salt='ingestion-publication')
+        display_bounds = LessonSyncRange.from_dict(preview['bounds']) if preview else None
         return self.render(request, obj, 'publish.html', form=form, preview=preview, confirmation=token,
+            display_bounds=display_bounds,
             payload=payload, needs_review=sum(row.get('review_status') == 'needs_review' for row in payload['lessons']))

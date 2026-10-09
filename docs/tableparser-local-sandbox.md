@@ -76,7 +76,7 @@ PostgreSQL и Redis наружу не опубликованы. Стенд ис�
 
 Конфигурация: `docker-compose.parser-sandbox.yml`, настройки
 `eazyclass/local_parser_settings.py`. Локальные секреты и пути находятся в
-`tableparser-releases/compose.secret`. Образ: `eazyclass-parser-sandbox:gui-v5`.
+`tableparser-releases/compose.secret`. Образ: `eazyclass-parser-sandbox:gui-v7`.
 Он основан на проверенном серверном worker; поверх добавлены действия admin,
 режим пропуска доставки и настройки стенда. Пакет/модели парсера не менялись.
 
