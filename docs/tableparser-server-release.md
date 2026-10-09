@@ -1,11 +1,9 @@
 # Выпуск TableParser на сервер
 
-Текущая основная локальная среда настроена и проверена вручную владельцем.
-Актуальные подготовленные образы приложения: `eazyclass-parser:b415ca5` и
-`eazyclass-parser-worker:b415ca5`; комплект ресурсов — 0.1.1. Они собраны локально,
-но ещё не перенесены на production. Разделы с образами `faa9571` ниже — история
-первоначальной репетиции, а не рекомендация использовать старый интерфейс.
-Текущие параметры запуска: [настройка окружения](tableparser-env-setup.md).
+Обычная сборка теперь устанавливает пакет автоматически через основной Dockerfile.
+Ресурсы 0.1.1 и первоначальные знания уже перенесены на production.
+Повседневное обновление: [настройка окружения](tableparser-env-setup.md).
+Примеры старых образов в отчётах ниже сохранены как история проверок.
 
 ## Что подготовлено
 
@@ -42,24 +40,24 @@ python -m schedule_ingestion.release_bundle \
 
 ## Сборка образов
 
-Из проверенного коммита EazyClass собрать два базовых образа:
+Указать TABLEPARSER_RELEASE_DIR в `.env`, затем из проверенного коммита:
 
 ```sh
-docker build --target django -t eazyclass-base:RELEASE_ID .
-docker build --target backup-tools -t eazyclass-worker-base:RELEASE_ID .
-docker build --build-arg EAZYCLASS_BASE_IMAGE=eazyclass-base:RELEASE_ID \
-  -t eazyclass-parser:RELEASE_ID /srv/tableparser/releases/RELEASE_ID/image
-docker build --build-arg EAZYCLASS_BASE_IMAGE=eazyclass-worker-base:RELEASE_ID \
-  -t eazyclass-parser-worker:RELEASE_ID /srv/tableparser/releases/RELEASE_ID/image
+docker compose build django celery-worker celery-beat flower
 ```
 
-Работать с закреплёнными тегами, не переиспользовать их; записать ID/digest обоих
-итоговых образов, коммит приложения и SHA256 комплекта. После доставки в registry
-предпочтительны ссылки `image@sha256:...`. Сборка проверяет wheel, устанавливает
-все версии из проверенного install-report и выполняет `pip check`. Для зависимостей
-фиксируются версии, но не хеши всех скачиваемых дистрибутивов; это ещё не автономная
-сборка без сети. Итоговые образы нужно проверить перед переносом на сервер.
-Каталог `data/`, `.env` и локальные снимки исключены из основного Docker-контекста.
+Dockerfile автоматически получает `image/` релиза через именованный контекст,
+проверяет SHA256 wheel, устанавливает пакет и зависимости и выполняет `pip check`.
+Модели и SQLite-снимок не включаются в образ: они подключаются отдельно.
+Сборка требует сети для скачивания зависимостей; версии закреплены, но хеши всех
+скачиваемых дистрибутивов не фиксируются. Конфликты requirements и релиза останавливают сборку.
+
+Для обычного обновления на том же сервере дополнительных шагов с образами нет.
+При переносе готовых образов на другой сервер присвоить итоговым образам Django
+и worker отдельные теги выпуска, записать их ID, коммит приложения и SHA256 релиза.
+Доставить через docker save/load или registry. На целевом сервере выбрать эти теги
+через необязательный docker-compose.tableparser.yml и использовать `--no-build`.
+Второй этап установки пакета поверх образа больше не требуется.
 
 ## Первый запуск: сначала репетиция на копии БД
 
@@ -98,7 +96,7 @@ python manage.py collectstatic --noinput
    не запускать. Границы `(0, None)` / `(1, None)` сохраняют прежнюю семантику
    удаления отсутствующих занятий на всём заданном периоде.
 
-Для Compose подготовлен `docker-compose.tableparser.yml`. Переменные:
+Только для необязательного режима готовых образов подключить `docker-compose.tableparser.yml`. Переменные:
 
 ```text
 TABLEPARSER_RELEASE_DIR=/srv/tableparser/releases/RELEASE_ID
@@ -112,8 +110,7 @@ TABLEPARSER_PUBLIC_BASE_URL=https://YOUR_EAZYCLASS_HOST
 -f docker-compose.tableparser.yml ...`). Сначала `config --quiet`, затем одноразовые
 команды через `run --rm --no-deps django python manage.py ...` на уже поднятой БД.
 Включение процессов: `up -d --no-build django celery-worker celery-beat flower`.
-Ключ `--no-build` обязателен: базовый compose содержит инструкции сборки обычных
-образов. Overlay сохраняет существующие тома static/media/rclone и LOG_SERVICE.
+В этом режиме `--no-build` сохраняет выбранные теги релиза без пересборки. Overlay сохраняет существующие тома static/media/rclone и LOG_SERVICE.
 `collectstatic` выполнить из нового Django-образа в общий том статики перед
 открытием обновлённой админки. Новые JS/CSS не появляются в production только
 от замены образа; локальный runserver обслуживает их иначе.

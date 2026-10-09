@@ -1,3 +1,17 @@
+# TableParser package is installed during the ordinary Compose build.
+x-tableparser-environment: &tableparser-environment
+  TABLEPARSER_RESOURCE_ROOT: /opt/tableparser-release/runtime
+  TABLEPARSER_CATALOG_SOURCE: ${TABLEPARSER_CATALOG_SOURCE:?Set the original catalog namespace}
+  TABLEPARSER_PUBLIC_BASE_URL: ${TABLEPARSER_PUBLIC_BASE_URL:?Set the public EazyClass URL}
+
+x-tableparser-mount: &tableparser-mount
+  type: bind
+  source: ${TABLEPARSER_RELEASE_DIR:?Set the absolute release directory}
+  target: /opt/tableparser-release
+  read_only: true
+  bind:
+    create_host_path: false
+
 # Per-container size limit; this is rotation, not a guaranteed retention period.
 x-local-logging: &local-logging
   driver: json-file
@@ -31,14 +45,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      additional_contexts:
+        tableparser_package: ${TABLEPARSER_RELEASE_DIR:?Set the absolute release directory}/image
       target: django
     container_name: django
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
+      - *tableparser-mount
       - .:/app:delegated
     ports:
       - "8000:8000"
     environment:
+      <<: *tableparser-environment
       LOG_SERVICE: django
     env_file:
       - .env.dev
@@ -52,14 +70,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      additional_contexts:
+        tableparser_package: ${TABLEPARSER_RELEASE_DIR:?Set the absolute release directory}/image
       target: backup-tools
     container_name: celery_worker
     command: celery -A eazyclass worker --pool=prefork --concurrency=1
     volumes:
+      - *tableparser-mount
       - .:/app:delegated
       - ./data:/worker_input
       - ./rclone:/root/.config/rclone
     environment:
+      <<: *tableparser-environment
       LOG_SERVICE: celery-worker
     env_file:
       - .env.dev
@@ -72,12 +94,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      additional_contexts:
+        tableparser_package: ${TABLEPARSER_RELEASE_DIR:?Set the absolute release directory}/image
       target: backup-tools
     container_name: celery_beat
     command: celery -A eazyclass beat --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
+      - *tableparser-mount
       - .:/app:delegated
     environment:
+      <<: *tableparser-environment
       LOG_SERVICE: celery-beat
     env_file:
       - .env.dev
@@ -90,14 +116,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      additional_contexts:
+        tableparser_package: ${TABLEPARSER_RELEASE_DIR:?Set the absolute release directory}/image
       target: django
     container_name: celery_flower
     command: celery -A eazyclass flower --address=0.0.0.0 --port=5555
     volumes:
+      - *tableparser-mount
       - .:/app:delegated
     ports:
       - "5555:5555"
     environment:
+      <<: *tableparser-environment
       LOG_SERVICE: flower
     env_file:
       - .env.dev

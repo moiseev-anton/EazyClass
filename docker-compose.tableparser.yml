@@ -1,4 +1,5 @@
-# Use with docker-compose.yml and `up --no-build` after release validation.
+# Optional legacy/prebuilt-image mode only. Normal builds use the main/dev file alone.
+# Use `up --no-build --pull never` to retain the selected release images.
 x-tableparser-environment: &tableparser-environment
   TABLEPARSER_RESOURCE_ROOT: /opt/tableparser-release/runtime
   TABLEPARSER_CATALOG_SOURCE: ${TABLEPARSER_CATALOG_SOURCE:?Set the original catalog namespace}

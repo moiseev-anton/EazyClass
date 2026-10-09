@@ -14,11 +14,13 @@ EazyClass — серверная часть системы для работы �
 Порядок серверного выпуска, первоначального импорта знаний и отката:
 [docs/tableparser-server-release.md](docs/tableparser-server-release.md).
 
-- `docker-compose.tableparser.yml` — необходимое дополнение к основному или
-  dev Compose: выбирает образы с пакетом парсера и подключает ресурсы только
-  для чтения. Обычный Dockerfile пакет TableParser сам не устанавливает.
+- Основной и dev Compose автоматически устанавливают пакет TableParser из
+  `${TABLEPARSER_RELEASE_DIR}/image` и подключают ресурсы только для чтения.
+  Нужны Docker Compose 2.17+ и BuildKit с поддержкой дополнительных контекстов.
+- `docker-compose.tableparser.yml` — необязательный режим готовых образов
+  для переноса/отката. При обычной сборке этот файл не подключается.
 - `scripts/tableparser-local.ps1` — управление основной локальной средой
-  с этим дополнением; админка на порту 8000.
+  с автоматической сборкой; админка на порту 8000.
 - `docker-compose.parser-sandbox.yml`, `Dockerfile.parser-sandbox` и
   `scripts/parser-sandbox.ps1` — отдельный стенд на порту 18080. Для production
   не используются; сохранены для изолированной ручной проверки и диагностики.
@@ -112,25 +114,25 @@ Copy-Item env.example .env.dev
 Собрать и запустить сервисы:
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose --env-file .env.dev -f docker-compose.dev.yml up --build
 ```
 
 Применить миграции:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec django python manage.py migrate
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec django python manage.py migrate
 ```
 
 Создать администратора:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec django python manage.py createsuperuser
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec django python manage.py createsuperuser
 ```
 
 Заполнить стандартный шаблон времени занятий:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec django python manage.py filltemplate
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec django python manage.py filltemplate
 ```
 
 
@@ -279,6 +281,20 @@ Production compose-файл поднимает:
 - Certbot.
 
 Перед запуском необходимо создать и заполнить `.env`.
+`TABLEPARSER_RELEASE_DIR` указывает на уже подготовленный каталог релиза
+(например `/srv/tableparser/releases/0.1.1`). Копировать пакет внутрь репозитория
+или отдельно добавлять его в образ больше не требуется.
+
+Обычное обновление кода без изменений схемы БД:
+
+```bash
+git pull --ff-only
+docker compose up -d --build django celery-worker celery-beat flower
+```
+
+Миграции и первоначальный импорт не выполняются автоматически.
+Для обновления со сменой схемы БД и для перехода с готовых образов см.
+[порядок обновления](docs/tableparser-env-setup.md#обновление-на-сервере).
 
 Если используется внешний Docker network из compose-файла:
 

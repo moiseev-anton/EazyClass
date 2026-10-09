@@ -30,6 +30,9 @@ pip-delete-this-directory.txt
 
 # Локальные данные и логи (не должны попадать в образ)
 data/
+rclone/
+*.dump
+*.secret
 tableparser-releases/
 *.log
 *.logs

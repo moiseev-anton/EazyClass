@@ -19,7 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+# Compose supplies only release/image, not models or the knowledge snapshot.
+COPY --from=tableparser_package / /opt/tableparser-install/
+RUN cd /opt/tableparser-install \
+    && sha256sum -c wheel.sha256 \
+    && pip install --no-cache-dir --prefix=/install \
+       -r /app/requirements.txt -r constraints.txt ./*.whl
 
 
 # =============================================================================
@@ -39,6 +44,7 @@ WORKDIR /app
 
 # Копируем установленные пакеты из builder
 COPY --from=builder /install /usr/local
+RUN python -m pip check
 
 # Копируем весь проект (один раз — кэшируется для всех последующих стадий)
 COPY . .

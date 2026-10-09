@@ -5,10 +5,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $composeArgs = @('compose', '--env-file', (Join-Path $projectRoot '.env.dev'),
-    '-f', (Join-Path $projectRoot 'docker-compose.dev.yml'),
-    '-f', (Join-Path $projectRoot 'docker-compose.tableparser.yml'))
+    '-f', (Join-Path $projectRoot 'docker-compose.dev.yml'))
 switch ($Action) {
-    'start' { & docker @composeArgs up -d --no-build django celery-worker celery-beat }
+    'start' { & docker @composeArgs up -d --build django celery-worker celery-beat }
     'stop' { & docker @composeArgs stop django celery-worker celery-beat }
     'status' { & docker @composeArgs ps }
     'logs' { & docker @composeArgs logs --tail 100 django celery-worker celery-beat }
