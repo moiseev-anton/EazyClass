@@ -3,6 +3,34 @@
 Это настройки обычного EazyClass (`eazyclass.settings`), а не изолированного
 стенда на 18080. Файл `tableparser-releases/compose.secret` к ним не относится.
 
+## Подготовленная конфигурация этого проекта
+
+`.env.dev`, `.env` и `env.example` согласованы. Три переменные
+`RESOURCE_ROOT`, `CATALOG_SOURCE`, `PUBLIC_BASE_URL` читает Django; три переменные
+`RELEASE_DIR`, `DJANGO_IMAGE`, `WORKER_IMAGE` с префиксом `TABLEPARSER_` нужны Compose.
+Локальные образы: `eazyclass-parser:b415ca5` и `eazyclass-parser-worker:b415ca5`.
+Продовые значения в `.env` подготовлены для переноса комплекта в
+`/srv/tableparser/releases/0.1.1`; сам удалённый сервер не изменялся.
+
+Для основной локальной среды использовать:
+
+```powershell
+./scripts/tableparser-local.ps1 status
+./scripts/tableparser-local.ps1 start
+./scripts/tableparser-local.ps1 check
+./scripts/tableparser-local.ps1 logs
+```
+
+Скрипт всегда подключает правильный overlay и `.env.dev`; `start` использует
+готовые образы без пересборки. `scripts/parser-sandbox.ps1` управляет отдельным
+стендом на 18080. Обычный dev-compose без overlay не подключает выпуск парсера.
+
+9 октября 2026 основная локальная среда переключена на эти образы. Перед импортом
+сохранена резервная копия `tableparser-releases/before-main-switch-20261009.dump`.
+Знания импортированы в `scheduler_db`; проверка выпуска вернула `ready` и
+`knowledge_verified=true`. Django, worker и beat запущены. Существующие источник
+и две периодические задачи сохранены. Тестовые наборы при переключении не запускались.
+
 ## Локально через Docker Compose
 
 В `.env.dev`:
@@ -11,12 +39,12 @@
 TABLEPARSER_RELEASE_DIR=C:/Users/lenovo/Desktop/EazyClassProject/tableparser-releases/0.1.1
 TABLEPARSER_CATALOG_SOURCE=https://eazyclass.ru/api/v1
 TABLEPARSER_PUBLIC_BASE_URL=http://127.0.0.1:8000
-TABLEPARSER_DJANGO_IMAGE=eazyclass-parser:YOUR_NEW_RELEASE_TAG
-TABLEPARSER_WORKER_IMAGE=eazyclass-parser-worker:YOUR_NEW_RELEASE_TAG
+TABLEPARSER_DJANGO_IMAGE=eazyclass-parser:b415ca5
+TABLEPARSER_WORKER_IMAGE=eazyclass-parser-worker:b415ca5
 ```
 
-Последние две переменные — теги действительно собранных образов с установленным
-пакетом парсера, не буквальные значения с YOUR_NEW_RELEASE_TAG. Обычный Dockerfile
+Последние две переменные — теги подготовленных локально образов с установленным
+пакетом парсера. При следующем выпуске теги нужно заменить. Обычный Dockerfile
 и requirements.txt сами по себе пакет парсера пока не устанавливают. Сборка образов
 описана в [инструкции выпуска](tableparser-server-release.md#сборка-образов).
 Нужны образы из текущего кода; старые `faa9571` не содержат последних доработок.
@@ -40,8 +68,8 @@ Overlay подключает комплект только для чтения �
 TABLEPARSER_RELEASE_DIR=/srv/tableparser/releases/0.1.1
 TABLEPARSER_CATALOG_SOURCE=https://eazyclass.ru/api/v1
 TABLEPARSER_PUBLIC_BASE_URL=https://eazyclass.ru
-TABLEPARSER_DJANGO_IMAGE=eazyclass-parser:YOUR_NEW_RELEASE_TAG
-TABLEPARSER_WORKER_IMAGE=eazyclass-parser-worker:YOUR_NEW_RELEASE_TAG
+TABLEPARSER_DJANGO_IMAGE=eazyclass-parser:b415ca5
+TABLEPARSER_WORKER_IMAGE=eazyclass-parser-worker:b415ca5
 ```
 
 В RELEASE_DIR должен находиться перенесённый комплект с `runtime/`, `seed/`,
