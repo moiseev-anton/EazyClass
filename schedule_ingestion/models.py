@@ -6,6 +6,11 @@ representations participate in parser evidence hashes and conflict detection.
 import uuid
 
 from django.db import models
+from django.utils import timezone
+
+
+def _display_time(value):
+    return timezone.localtime(value).strftime('%d.%m.%Y %H:%M') if value else '—'
 
 
 class CatalogSnapshot(models.Model):
@@ -118,6 +123,10 @@ class SheetContent(ImmutableRecord):
 
 
 class ParseRun(models.Model):
+    def __str__(self):
+        instant = _display_time
+        return f'Запуск {instant(self.captured_at)} · {self.source}'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     source = models.ForeignKey(ScheduleSource, on_delete=models.PROTECT)
     acquisition_id = models.UUIDField(null=True, unique=True, editable=False)
@@ -144,6 +153,10 @@ class RunSheet(ImmutableRecord):
 
 
 class ExportRevision(ImmutableRecord):
+    def __str__(self):
+        instant = _display_time
+        return f'Выгрузка {instant(self.run.captured_at)} · v{self.number}'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     run = models.ForeignKey(ParseRun, on_delete=models.PROTECT, related_name='exports')
     number = models.PositiveIntegerField()
@@ -192,6 +205,10 @@ class ScheduleWriteEvent(models.Model):
 
 
 class Publication(models.Model):
+    def __str__(self):
+        instant = _display_time
+        return f'Публикация {instant(self.requested_at)} · v{self.revision.number}'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     revision = models.ForeignKey(ExportRevision, on_delete=models.PROTECT)
     automatic = models.BooleanField(default=False)
@@ -216,6 +233,11 @@ class Publication(models.Model):
 
 
 class PublicationDelivery(models.Model):
+    def __str__(self):
+        instant = _display_time
+        phase = {'notifications': 'Рассылка', 'report': 'Отчёт'}.get(self.phase, self.phase)
+        return f'{phase} · {instant(self.publication.requested_at)}'
+
     publication = models.ForeignKey(Publication, on_delete=models.PROTECT, related_name='deliveries')
     phase = models.CharField(max_length=16)
     status = models.CharField(max_length=16, default='pending')
@@ -235,6 +257,11 @@ class PublicationDelivery(models.Model):
 
 
 class DeliveryResolution(ImmutableRecord):
+    def __str__(self):
+        instant = _display_time
+        decision = {'retry': 'Повторить', 'skip': 'Пропустить'}.get(self.decision, self.decision)
+        return f'{decision} · {instant(self.created_at)}'
+
     id = models.UUIDField(primary_key=True, editable=False)
     delivery = models.ForeignKey(PublicationDelivery, on_delete=models.PROTECT, related_name='resolutions')
     created_at = models.DateTimeField(auto_now_add=True)

@@ -17,13 +17,14 @@ from .models import (ExportRevision, Publication, PublicationDelivery, DeliveryR
                      ScheduleSource, ParseRun, ParseAttempt, RunSheet)
 from .admin_forms import SourceForm, LessonReviewForm, UploadRevisionForm, PublicationRangeForm
 from .run_storage import load_export, save_export, StaleRevision
+from .admin_display import (HistoryPresentation, PublicationPresentation, DeliveryPresentation,
+                            instant, pretty, record_link, STATUS)
 
 if getattr(settings, 'TABLEPARSER_LOCAL_SANDBOX', False):
     admin.site.site_header = 'Локальный стенд TableParser · копия БД · рассылки отключены'
 
 
-@admin.register(Publication, PublicationDelivery, DeliveryResolution)
-class IngestionHistoryAdmin(admin.ModelAdmin):
+class IngestionHistoryAdmin(HistoryPresentation, admin.ModelAdmin):
     """Read-only history; publication/edit actions will use dedicated services."""
     def has_add_permission(self, request):
         return False
@@ -35,7 +36,7 @@ class IngestionHistoryAdmin(admin.ModelAdmin):
         return False
 
     def get_readonly_fields(self, request, obj=None):
-        return [field.name for field in self.model._meta.fields]
+        return list(dict.fromkeys([field.name for field in self.model._meta.fields] + list(self.readonly_fields)))
 
 
 @admin.register(ScheduleSource)
@@ -82,16 +83,25 @@ class HistoryInline(admin.TabularInline):
 
 class AttemptInline(HistoryInline):
     model = ParseAttempt
-    fields = readonly_fields = ['id', 'status', 'started_at', 'finished_at', 'error_type', 'export']
+    verbose_name_plural = 'Попытки разбора'
+    fields = readonly_fields = ['attempt_status', 'started_at', 'finished_at', 'error_type']
+    ordering = ['-started_at']
+
+    @admin.display(description='Состояние')
+    def attempt_status(self, obj):
+        return STATUS.get(obj.status, obj.status)
 
 
 class SheetInline(HistoryInline):
     model = RunSheet
+    verbose_name_plural = 'Загруженные листы'
     fields = readonly_fields = ['name', 'position', 'content_id']
 
 
 class ExportInline(HistoryInline):
     model = ExportRevision
+    verbose_name_plural = 'Версии выгрузки'
+    ordering = ['-number']
     fields = readonly_fields = ['number', 'created_at', 'author', 'reason', 'open_revision']
 
     @admin.display(description='Выгрузка')
@@ -101,17 +111,62 @@ class ExportInline(HistoryInline):
 
 @admin.register(ParseRun)
 class ParseRunAdmin(IngestionHistoryAdmin):
-    list_display = ['id', 'source', 'captured_at', 'reference_date', 'head_revision']
+    list_display = ['run_label', 'source', 'captured_at', 'head_revision', 'latest_export']
+    ordering = ['-captured_at', '-created_at']
+    list_select_related = ['source']
+    search_fields = ['source__name']
+    readonly_fields = ['run_label', 'latest_export', 'configuration_json', 'manifest_json']
+    fieldsets = [
+        ('Запуск', {'fields': ['source', 'captured_at', 'head_revision', 'latest_export'],
+                    'description': 'Время получения исходных листов и созданные из них версии выгрузки.'}),
+        ('Воспроизведение и диагностика', {'classes': ['collapse'],
+            'description': 'Created at — регистрация запуска. Reference date — опорная дата определения года. '
+                           'Knowledge as of — срез знаний, доступных парсеру. Настройки и манифест фиксируют условия разбора.',
+            'fields': ['created_at', 'reference_date', 'knowledge_as_of', 'configuration_json', 'manifest_json', 'id', 'acquisition_id']})]
     list_filter = ['source']
     date_hierarchy = 'captured_at'
     inlines = [SheetInline, AttemptInline, ExportInline]
 
+    @admin.display(description='Запуск', ordering='captured_at')
+    def run_label(self, obj):
+        return instant(obj.captured_at)
+
+    @admin.display(description='Последняя выгрузка')
+    def latest_export(self, obj):
+        revision = obj.exports.order_by('-number').first()
+        return format_html('<a href="{}">Открыть v{}</a>', reverse('admin:ingestion_review', args=[revision.pk]), revision.number) if revision else 'Пока нет выгрузки'
+
+    @admin.display(description='Настройки источника на момент загрузки')
+    def configuration_json(self, obj):
+        return pretty(obj.source_configuration)
+
+    @admin.display(description='Версия парсера и ресурсов')
+    def manifest_json(self, obj):
+        return pretty(obj.parser_manifest)
+
 
 @admin.register(ExportRevision)
 class ExportRevisionAdmin(IngestionHistoryAdmin):
-    list_display = ['number', 'run', 'created_at', 'author', 'review_link']
+    list_display = ['number', 'source_label', 'run_link', 'created_at', 'author', 'review_link']
+    ordering = ['-run__captured_at', '-run_id', '-number']
+    list_select_related = ['run__source']
+    list_filter = ['run__source']
+    readonly_fields = ['source_label', 'run_link', 'review_link']
+    fieldsets = [
+        ('Выгрузка', {'fields': ['source_label', 'run_link', 'number', 'created_at', 'author', 'review_link']}),
+        ('Комментарий к сохранению', {'fields': ['reason'], 'description': 'Причина создания всей версии. В старом редакторе — введённый комментарий к правке занятия; в общем редакторе — «Ревью выгрузки».'}),
+        ('Технические сведения', {'classes': ['collapse'], 'fields': ['id', 'request_id', 'sha256'],
+                                'description': 'Request ID защищает от повторного сохранения одного запроса. SHA256 проверяет целостность выгрузки.'})]
     search_fields = ['author', 'reason']
     exclude = ['payload']
+
+    @admin.display(description='Источник', ordering='run__source__name')
+    def source_label(self, obj):
+        return obj.run.source.name
+
+    @admin.display(description='Запуск', ordering='run__captured_at')
+    def run_link(self, obj):
+        return record_link('parserun', obj.run_id, instant(obj.run.captured_at))
 
     def get_readonly_fields(self, request, obj=None):
         return [f for f in super().get_readonly_fields(request, obj) if f != 'payload'] + ['review_link']
@@ -327,3 +382,92 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
         return self.render(request, obj, 'publish.html', form=form, preview=preview, confirmation=token,
             display_bounds=display_bounds,
             payload=payload, needs_review=sum(row.get('review_status') == 'needs_review' for row in payload['lessons']))
+
+
+class DeliveryInline(DeliveryPresentation, HistoryInline):
+    model = PublicationDelivery
+    verbose_name_plural = 'Рассылка и отчёт'
+    fields = readonly_fields = ['phase_label', 'delivery_status', 'finished_at', 'delivery_result', 'open_delivery']
+
+    @admin.display(description='Состояние')
+    def delivery_status(self, obj):
+        return STATUS.get(obj.status, obj.status)
+
+    @admin.display(description='Подробности')
+    def open_delivery(self, obj):
+        return record_link('publicationdelivery', obj.pk, 'Открыть')
+
+
+@admin.register(Publication)
+class PublicationAdmin(PublicationPresentation, IngestionHistoryAdmin):
+    list_display = ['publication_label', 'source_label', 'export_link', 'period_label', 'state_label', 'requested_by', 'changes_label']
+    list_select_related = ['revision__run__source']
+    list_filter = ['status', 'revision__run__source', 'automatic']
+    search_fields = ['revision__run__source__name', 'requested_by']
+    ordering = ['-requested_at']
+    date_hierarchy = 'requested_at'
+    readonly_fields = ['source_label', 'export_link', 'period_label', 'state_label', 'changes_label', 'group_labels', 'summary_json', 'prepared_json']
+    inlines = [DeliveryInline]
+    fieldsets = [
+        ('Публикация расписания', {'fields': ['source_label', 'export_link', 'state_label', 'period_label', 'group_labels'],
+                                 'description': 'Применение конкретной версии выгрузки к расписанию за выбранный период.'}),
+        ('Результат', {'fields': ['changes_label', 'requested_by', 'requested_at', 'applied_at', 'automatic']}),
+        ('Подробный результат синхронизации', {'classes': ['collapse'], 'fields': ['summary_json']}),
+        ('Технические сведения', {'classes': ['collapse'], 'fields': ['id', 'prepared_sha256', 'prepared_json']})]
+
+    @admin.display(description='Публикация', ordering='requested_at')
+    def publication_label(self, obj):
+        return instant(obj.requested_at)
+
+
+@admin.register(PublicationDelivery)
+class PublicationDeliveryAdmin(DeliveryPresentation, IngestionHistoryAdmin):
+    list_display = ['phase_label', 'publication_link', 'state_label', 'started_at', 'finished_at', 'error_type']
+    list_select_related = ['publication__revision__run__source']
+    list_filter = ['status', 'phase', 'publication__revision__run__source']
+    search_fields = ['publication__revision__run__source__name', 'error_type']
+    ordering = ['-publication__requested_at', '-pk']
+    readonly_fields = ['phase_label', 'publication_link', 'state_label', 'delivery_result', 'result_json', 'resolution_links']
+    fieldsets = [
+        ('Доставка', {'fields': ['phase_label', 'publication_link', 'state_label', 'delivery_result'],
+                     'description': 'Отдельный этап после синхронизации расписания: уведомления или административный отчёт.'}),
+        ('Выполнение', {'fields': ['started_at', 'finished_at', 'error_type', 'resolution_links']}),
+        ('Результат задачи', {'classes': ['collapse'], 'fields': ['result_json']}),
+        ('Технические сведения', {'classes': ['collapse'], 'fields': ['id', 'token']})]
+
+    @admin.display(description='Ручные решения')
+    def resolution_links(self, obj):
+        from django.utils.html import format_html_join
+        return format_html_join(' · ', '<a href="{}">{}</a>', (
+            (reverse('admin:schedule_ingestion_deliveryresolution_change', args=[r.pk]), str(r))
+            for r in obj.resolutions.order_by('-created_at'))) or 'Ручных решений не было'
+
+
+@admin.register(DeliveryResolution)
+class DeliveryResolutionAdmin(IngestionHistoryAdmin):
+    list_display = ['resolved_at', 'decision_label', 'delivery_link', 'actor', 'reason']
+    list_select_related = ['delivery__publication__revision__run__source']
+    list_filter = ['decision']
+    search_fields = ['actor', 'reason', 'delivery__publication__revision__run__source__name']
+    ordering = ['-created_at']
+    readonly_fields = ['decision_label', 'delivery_link', 'previous_json']
+    fieldsets = [
+        ('Ручное решение по доставке', {'fields': ['decision_label', 'delivery_link', 'actor', 'created_at', 'reason'],
+                                     'description': 'Журнал решений после неопределённого результата отправки. Обычные успешные рассылки записей здесь не создают.'}),
+        ('Диагностика', {'classes': ['collapse'], 'fields': ['worker_stopped', 'previous_json', 'id']})]
+
+    @admin.display(description='Когда', ordering='created_at')
+    def resolved_at(self, obj):
+        return instant(obj.created_at)
+
+    @admin.display(description='Решение', ordering='decision')
+    def decision_label(self, obj):
+        return {'retry':'Повторить доставку', 'skip':'Пропустить доставку'}.get(obj.decision, obj.decision)
+
+    @admin.display(description='Доставка')
+    def delivery_link(self, obj):
+        return record_link('publicationdelivery', obj.delivery_id, str(obj.delivery))
+
+    @admin.display(description='Состояние до решения')
+    def previous_json(self, obj):
+        return pretty(obj.previous)

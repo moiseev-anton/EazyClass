@@ -1,4 +1,5 @@
 {% extends "admin/change_form.html" %}{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'schedule_ingestion/history.css' %}">{% endblock %}
 {% block extrahead %}{{ block.super }}<script src="{% static 'schedule_ingestion/source.js' %}" defer></script>{% endblock %}
 {% block after_field_sets %}{{ block.super }}
 <fieldset class="module aligned"><h2>Листы таблицы</h2><div style="padding:20px">
