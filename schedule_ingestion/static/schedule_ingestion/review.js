@@ -134,6 +134,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const records = el('div'); panel.append(records); let rows = formRows(card);
     const changed = () => touch(card, rows);
+    const sourceFor = row => card.rows[card.indices.indexOf(row.base_index)] || card.rows[0] || {};
+    function subjectCandidates(source) {
+      try {
+        const proposal = typeof source.subject_proposal === 'string' ? JSON.parse(source.subject_proposal) : source.subject_proposal;
+        return [...new Set((proposal?.candidates || []).map(candidate => candidate?.subject).filter(value => typeof value === 'string' && value.trim()))];
+      } catch (_) { return []; }
+    }
+    function candidateControl(field, values, row) {
+      values = [...new Set(values)].filter(value => value && value !== row[field]);
+      if (!values.length) return null;
+      const wrap = el('div', undefined, 'candidate-control');
+      if (values.length === 1) {
+        wrap.append(button('Подставить: ' + values[0], () => { row[field] = values[0]; changed(); drawRecords(); }));
+        return wrap;
+      }
+      const select = el('select'), prompt = el('option', 'Подставить предложенный вариант…');
+      prompt.value = ''; select.append(prompt);
+      values.forEach(value => { const option = el('option', value); option.value = value; select.append(option); });
+      select.onchange = () => { if (!select.value) return; row[field] = select.value; changed(); drawRecords(); };
+      wrap.append(select);
+      return wrap;
+    }
     function drawRecords() {
       records.replaceChildren();
       rows.forEach((row, index) => {
@@ -142,7 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const wrapper = el('label', label, ['subject','teacher','annotation'].includes(key) ? 'wide' : ''), input = el(type === 'select' ? 'select' : 'input');
           if (type === 'select') state.groups.forEach(g => { const option = el('option', g); option.value = g; input.append(option); }); else input.type = type;
           input.value = row[key] ?? ''; if (type === 'number') { input.min = key === 'lesson_number' ? 1 : 0; input.step = 1; if (key === 'part') input.max = 2; if (key === 'subgroup') input.max = 9; }
-          input.oninput = () => { row[key] = input.value; changed(); }; wrapper.append(input); record.append(wrapper);
+          input.oninput = () => { row[key] = input.value; changed(); }; wrapper.append(input);
+          const source = sourceFor(row);
+          const candidates = key === 'subject' ? subjectCandidates(source) : key === 'teacher' ? (card.teacher_candidates?.length ? card.teacher_candidates : [source.suggested_teacher]) : [];
+          const candidate = candidateControl(key, candidates, row); if (candidate) wrapper.append(candidate);
+          record.append(wrapper);
         }
         if (card.index !== null) { const label = el('label', 'Строка проверена', 'check'), check = el('input'); check.type = 'checkbox'; check.checked = row.reviewed; check.onchange = () => { row.reviewed = check.checked; changed(); }; label.append(check); record.append(label); }
         const tools = el('div', undefined, 'row-tools'); tools.append(button('Копировать', () => { rows.splice(index + 1, 0, {...clone(row), base_index:null}); changed(); drawRecords(); }), button('Удалить', () => { rows.splice(index, 1); changed(); drawRecords(); })); record.append(tools); records.append(record);

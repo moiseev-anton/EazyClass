@@ -87,6 +87,16 @@ class AdminReviewTests(TestCase):
         self.assertNotContains(response, 'Страница 1 из')
         self.assertContains(response, 'status-filter')
 
+    def test_review_state_exposes_only_teacher_candidate_names_for_its_card(self):
+        from schedule_ingestion.inline_review import review_item_id, review_state
+        payload = load_export(self.export.pk)
+        row = payload['lessons'][0]
+        payload['review_items'] = [dict(id=review_item_id(row), teacher_suggestion=dict(candidates=[
+            dict(teacher='Иванов И.И.', rank_score=.99), dict(teacher='Петров П.П.', rank_score=.1)]))]
+        state = review_state(payload)
+        card = state['cards'][0]
+        self.assertEqual(card['teacher_candidates'], ['Иванов И.И.', 'Петров П.П.'])
+
     def test_batch_saves_multiple_cards_and_additions_as_one_version_and_retries(self):
         url = reverse('admin:ingestion_batch', args=[self.export.pk])
         data = {'request_id': str(uuid.uuid4()), 'reason': 'Общее ревью', 'changes': [

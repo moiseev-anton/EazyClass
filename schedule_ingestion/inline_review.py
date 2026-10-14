@@ -20,13 +20,33 @@ def cell_indices(rows, index):
     return [i for i, row in enumerate(rows) if identity(row, i) == key]
 
 
+def review_item_id(row):
+    if row.get('review_cell_id'):
+        return row['review_cell_id']
+    context = {key: str(row.get(key, '')) for key in ('sheet_name', 'group', 'date', 'lesson_number')}
+    return hashlib.sha256(json.dumps([row.get('raw_cell', ''), context], ensure_ascii=False,
+                                     sort_keys=True).encode()).hexdigest()[:20]
+
+
 def review_state(payload):
+    """Return editable cards with only the candidate names needed by the UI."""
+    proposals = {item.get('id'): item for item in payload.get('review_items', [])
+                 if isinstance(item, dict) and isinstance(item.get('id'), str)}
     cards = {}
     for index, row in enumerate(payload['lessons']):
         key = identity(row, index)
         card = cards.setdefault(key, {'index': index, 'indices': [], 'rows': []})
         card['indices'].append(index)
         card['rows'].append(row)
+    for card in cards.values():
+        first = card['rows'][0]
+        item = proposals.get(review_item_id(first))
+        # TeacherAdvisor only supports a single parsed lesson, so its candidates
+        # are meaningful for a one-row card only.
+        candidates = item.get('teacher_suggestion', {}).get('candidates', []) if item else []
+        card['teacher_candidates'] = [entry['teacher'] for entry in candidates
+                                      if isinstance(entry, dict) and isinstance(entry.get('teacher'), str)
+                                      and entry['teacher'].strip()]
     return {'groups': payload['groups'], 'cards': list(cards.values())}
 
 
