@@ -7,6 +7,10 @@ from .google_sheets import SheetTransportError
 from .parse_execution import execute_parse, ParseBusy
 
 
+def skipped(value):
+    return isinstance(value, dict) and value.get('status') == 'unchanged'
+
+
 def runtime_options():
     profile = getattr(settings, 'TABLEPARSER_RUNTIME', None)
     if not profile:
@@ -15,9 +19,14 @@ def runtime_options():
 
 
 @shared_task(bind=True, queue='periodic_tasks', max_retries=3, default_retry_delay=60)
-def fetch_source(self, source_id):
+def fetch_source(self, source_id, *, resolved_range=None, force=False):
     try:
-        run = acquire_source(source_id, acquisition_id=self.request.id, **runtime_options())
+        run = acquire_source(source_id, acquisition_id=self.request.id,
+            resolved_range=resolved_range, force=force, **runtime_options())
+        if resolved_range is not None and not run.sheets.filter(selected=True).exists():
+            # Propagate a terminal value rather than dropping the Celery chain:
+            # callers waiting on its final AsyncResult must still receive success.
+            return dict(status='unchanged', run_id=str(run.pk), sheets=run.sheets.count())
         return str(run.pk)
     except SheetTransportError as error:
         raise self.retry(exc=error)
@@ -25,6 +34,8 @@ def fetch_source(self, source_id):
 
 @shared_task(bind=True, queue='periodic_tasks', max_retries=3, default_retry_delay=60)
 def parse_run(self, run_id):
+    if skipped(run_id):
+        return run_id
     try:
         return str(execute_parse(run_id, **runtime_options()).pk)
     except ParseBusy as error:
@@ -43,6 +54,8 @@ def start_source_parse(source_id):
 
 @shared_task(queue='periodic_tasks')
 def publish_revision(revision_id, *, request_id, resolved_range, requested_by, automatic):
+    if skipped(revision_id):
+        return revision_id
     from .publication import prepare_publication, apply_publication
     publication = prepare_publication(revision_id, request_id=request_id,
         resolved_range=resolved_range, requested_by=requested_by, automatic=automatic)
@@ -51,6 +64,8 @@ def publish_revision(revision_id, *, request_id, resolved_range, requested_by, a
 
 @shared_task(queue='periodic_tasks')
 def notify_publication(publication_id):
+    if skipped(publication_id):
+        return publication_id
     from .delivery import deliver_publication
     deliver_publication(publication_id, 'notifications')
     return publication_id
@@ -58,6 +73,8 @@ def notify_publication(publication_id):
 
 @shared_task(queue='periodic_tasks')
 def report_publication(publication_id):
+    if skipped(publication_id):
+        return publication_id
     from .delivery import deliver_publication
     deliver_publication(publication_id, 'report')
     return publication_id
@@ -84,17 +101,17 @@ def publication_chain(revision_id, *, requested_by, automatic=False, start_day_o
         notify_publication.s(), report_publication.s())
 
 
-def source_refresh_chain(source_id, *, start_day_offset=0, end_day_offset=None):
+def source_refresh_chain(source_id, *, start_day_offset=0, end_day_offset=None, force=False):
     import uuid
     from scheduler.dtos.lesson_sync_range import LessonSyncRange
     bounds = LessonSyncRange.from_offsets(start_day_offset=start_day_offset, end_day_offset=end_day_offset)
-    return chain(fetch_source.s(source_id), parse_run.s(),
+    return chain(fetch_source.s(source_id, resolved_range=bounds.to_dict(), force=force), parse_run.s(),
         publish_revision.s(request_id=str(uuid.uuid4()), resolved_range=bounds.to_dict(),
                            requested_by='celery', automatic=True),
         notify_publication.s(), report_publication.s())
 
 
 @shared_task(queue='periodic_tasks')
-def start_source_refresh(source_id, *, start_day_offset=0, end_day_offset=None):
+def start_source_refresh(source_id, *, start_day_offset=0, end_day_offset=None, force=False):
     return source_refresh_chain(source_id, start_day_offset=start_day_offset,
-                               end_day_offset=end_day_offset).apply_async().id
+                               end_day_offset=end_day_offset, force=force).apply_async().id

@@ -136,14 +136,26 @@ class ParseRun(models.Model):
     reference_date = models.DateField()
     knowledge_as_of = models.DateTimeField()
     parser_manifest = models.TextField()
+    sync_range = models.JSONField(null=True, blank=True)
+    force_refresh = models.BooleanField(default=False)
     head_revision = models.PositiveIntegerField(default=0)
 
 
 class RunSheet(ImmutableRecord):
+    class Selection(models.TextChoices):
+        FULL = 'full', 'Полный разбор'
+        NEW = 'new', 'Ещё не опубликован'
+        CHANGED = 'changed', 'Контент изменился'
+        CONTEXT = 'context', 'Изменились условия разбора'
+        RANGE = 'range', 'Период ещё не обработан'
+        UNCHANGED = 'unchanged', 'Без изменений — пропущен'
+
     run = models.ForeignKey(ParseRun, on_delete=models.PROTECT, related_name='sheets')
     name = models.CharField(max_length=200)
     position = models.PositiveIntegerField()
     content = models.ForeignKey(SheetContent, on_delete=models.PROTECT)
+    selected = models.BooleanField(default=True)
+    selection_reason = models.CharField(max_length=16, choices=Selection.choices, default=Selection.FULL)
 
     class Meta:
         constraints = [
