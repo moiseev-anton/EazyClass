@@ -257,7 +257,8 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
             from .publication import prepare_payload
             prepare_payload(payload)
             saved = save_export(run_id=obj.run_id, expected_revision=obj.number,
-                request_id=data['request_id'], author=request.user.get_username(), reason=data['reason'], **payload)
+                request_id=data['request_id'], author=request.user.get_username(), reason=data['reason'],
+                learn_confirmed=True, **payload)
         except StaleRevision:
             latest = obj.run.exports.order_by('-number').first()
             return JsonResponse({'error': 'Выгрузка уже изменена в другом окне. Ваш черновик сохранён в этой вкладке.',
@@ -285,7 +286,7 @@ class ExportRevisionAdmin(IngestionHistoryAdmin):
             prepare_payload(payload)
             saved = save_export(run_id=obj.run_id, expected_revision=obj.number,
                 request_id=data['request_id'], author=request.user.get_username(),
-                reason=data['reason'], **payload)
+                reason=data['reason'], learn_confirmed=True, **payload)
         except StaleRevision:
             latest = obj.run.exports.order_by('-number').first()
             return JsonResponse({'error': 'Другой пользователь уже сохранил новую версию. Ваши правки остались в редакторе.',

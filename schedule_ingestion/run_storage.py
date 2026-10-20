@@ -113,11 +113,11 @@ def load_tables(run_id, *, using='default'):
 
 
 def save_export(*, run_id, expected_revision, request_id, groups, lessons, review_items,
-                author, reason='', using='default'):
+                author, reason='', using='default', learn_confirmed=False):
     """Append a whole version, with optimistic review locking and retry identity.
 
-    needs_review is allowed and preserved. This service neither confirms knowledge
-    nor dispatches synchronization; the caller must explicitly publish a version.
+    needs_review is allowed and preserved. Only explicit human review callers may
+    enable learn_confirmed. Publication is always a separate operation.
     """
     if type(expected_revision) is not int or expected_revision < 0:
         raise ValueError('Expected revision must be a non-negative integer')
@@ -144,11 +144,15 @@ def save_export(*, run_id, expected_revision, request_id, groups, lessons, revie
             return previous
         if run.head_revision != expected_revision:
             raise StaleRevision('Export changed; reload before saving edits')
+        prior = load_export(run.exports.get(number=run.head_revision).pk, using=using) if learn_confirmed else None
         revision = ExportRevision.objects.using(using).create(run=run,
             number=expected_revision + 1, request_id=request_id, author=author, reason=reason,
             payload=payload, sha256=sha)
         run.head_revision = revision.number
         run.save(using=using, update_fields=['head_revision'])
+        if learn_confirmed:
+            from .review_learning import learn_review
+            learn_review(revision, prior, json.loads(payload), using=using)
         return revision
 
 

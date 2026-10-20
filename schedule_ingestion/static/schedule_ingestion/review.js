@@ -146,7 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!values.length) return null;
       const wrap = el('div', undefined, 'candidate-control');
       if (values.length === 1) {
-        wrap.append(button('Подставить: ' + values[0], () => { row[field] = values[0]; changed(); drawRecords(); }));
+        wrap.append(el('span', values[0], 'candidate-value'));
+        wrap.append(button('Подставить', () => { row[field] = values[0]; changed(); drawRecords(); }));
         return wrap;
       }
       const select = el('select'), prompt = el('option', 'Подставить предложенный вариант…');

@@ -17,4 +17,4 @@
 #schedule-table>.review-card.applied:not(.dirty)>tr>.source{border-left-color:#39956d;background:color-mix(in srgb,#39956d 9%,var(--body-bg))}
 .review-before{margin:12px 0;overflow:auto}.review-before summary{cursor:pointer;padding:8px 0;color:var(--body-quiet-color)}
 #schedule-table .review-before th{position:static;font-size:11px}#schedule-table .review-before td{font-size:12px}
-.candidate-control{margin-top:2px}.candidate-control button,.candidate-control select{height:30px!important;padding:4px 8px!important;font-size:12px;text-align:left}
+.candidate-control{margin-top:2px}.candidate-value{display:block;white-space:normal;overflow-wrap:anywhere;margin-bottom:4px}.candidate-control button,.candidate-control select{height:30px!important;padding:4px 8px!important;font-size:12px;text-align:left}
